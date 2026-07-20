@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Online Safe - 我的保险箱</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS Config -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#dce9ff",
+                        "surface-variant": "#d3e4fe",
+                        "on-background": "#0b1c30",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-card": "#FFFFFF",
+                        "surface-bright": "#f8f9ff",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#dae2fd",
+                        "on-tertiary-fixed": "#002113",
+                        "inverse-primary": "#bec6e0",
+                        "border-subtle": "#E2E8F0",
+                        "on-secondary-container": "#fefcff",
+                        "on-surface-variant": "#45464d",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-error": "#ffffff",
+                        "surface-tint": "#565e74",
+                        "primary": "#000000",
+                        "on-primary-container": "#7c839b",
+                        "security-warn": "#D97706",
+                        "surface-container-low": "#eff4ff",
+                        "surface-dim": "#cbdbf5",
+                        "on-secondary-fixed": "#00174b",
+                        "secondary-container": "#316bf3",
+                        "secondary": "#0051d5",
+                        "surface-base": "#F8FAFC",
+                        "inverse-surface": "#213145",
+                        "surface": "#f8f9ff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "tertiary-fixed": "#6ffbbe",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-container-highest": "#d3e4fe",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "on-tertiary-container": "#009668",
+                        "on-surface": "#0b1c30",
+                        "tertiary": "#000000",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a",
+                        "primary-container": "#131b2e",
+                        "security-crit": "#DC2626",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "outline-variant": "#c6c6cd",
+                        "on-tertiary": "#ffffff",
+                        "surface-container": "#e5eeff",
+                        "primary-fixed-dim": "#bec6e0",
+                        "security-high": "#059669",
+                        "background": "#f8f9ff",
+                        "tertiary-container": "#002113",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#76777d",
+                        "on-primary-fixed": "#131b2e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "1280px",
+                        "stack-md": "16px",
+                        "gutter": "24px",
+                        "stack-lg": "32px",
+                        "stack-sm": "8px",
+                        "margin-page": "16px" // Mobile override based on prompt
+                    },
+                    "fontFamily": {
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-md": ["JetBrains Mono"],
+                        "headline-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["26px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom Utilities for material icons */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Mobile Specific Resets */
+        body {
+            -webkit-tap-highlight-color: transparent;
+            background-color: #F7F9FC; /* Fallback to standard hex if needed, but using surface-base mostly */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-base text-on-surface antialiased min-h-screen flex flex-col font-sans">
+<!-- TopAppBar -->
+<header class="bg-surface-bright dark:bg-inverse-surface fixed top-0 w-full z-50 shadow-sm dark:shadow-none border-b border-border-subtle dark:border-outline-variant">
+<div class="flex justify-between items-center h-16 px-margin-page w-full max-w-[390px] mx-auto">
+<button aria-label="Menu" class="p-2 -ml-2 text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 duration-150 rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<div class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-inverse-on-surface">
+                Online Safe
+            </div>
+<button aria-label="Account" class="p-2 -mr-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors active:scale-95 duration-150 rounded-full">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-[390px] mx-auto pt-20 px-margin-page pb-stack-lg flex flex-col gap-stack-md">
+<!-- Header Section -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-end">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">我的保险箱</h1>
+<span class="font-body-sm text-body-sm text-on-surface-variant mb-1">共 128 条记录</span>
+</div>
+<!-- Status Bar -->
+<div class="bg-surface-container-low text-secondary rounded-lg p-2 flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-lg fill" data-icon="lock_open">lock_open</span>
+<span class="font-label-sm text-label-sm">已解锁，数据仅在本地可见</span>
+</div>
+</div>
+<!-- Primary Action -->
+<button class="w-full bg-[#155EEF] hover:bg-[#004ee6] text-white rounded-lg py-3 px-4 flex items-center justify-center gap-2 transition-colors active:scale-[0.98] duration-150 font-body-md text-body-md font-medium shadow-sm">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+            新增记录
+        </button>
+<!-- Search & Filter Controls -->
+<div class="flex flex-col gap-stack-sm sticky top-[72px] z-40 bg-surface-base py-2 -mx-4 px-4">
+<!-- Search Input -->
+<div class="relative w-full">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="search">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2.5 border border-[#D0D5DD] rounded-[10px] leading-5 bg-surface-card placeholder-outline focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary font-body-sm text-body-sm transition-shadow" placeholder="搜索记录名称、平台或字段" type="text"/>
+</div>
+<!-- Filters Row -->
+<div class="flex items-center justify-between w-full mt-2">
+<div class="flex gap-2">
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-card border border-border-subtle rounded-full text-on-surface-variant hover:bg-surface-bright transition-colors font-label-sm text-label-sm shadow-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="filter_list">filter_list</span>
+                        筛选
+                    </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-card border border-border-subtle rounded-full text-on-surface-variant hover:bg-surface-bright transition-colors font-label-sm text-label-sm shadow-sm">
+                        排序: 最近更新
+                        <span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+<div class="flex items-center gap-1 bg-surface-card border border-border-subtle rounded-lg p-0.5 shadow-sm">
+<button aria-label="List View" class="p-1.5 rounded-md bg-surface-container-high text-secondary">
+<span class="material-symbols-outlined text-[18px]" data-icon="view_list">view_list</span>
+</button>
+<button aria-label="Grid View" class="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-bright">
+<span class="material-symbols-outlined text-[18px]" data-icon="grid_view">grid_view</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Record Cards List -->
+<div class="flex flex-col gap-stack-sm w-full mt-2">
+<!-- Card 1 (Secure) -->
+<div class="bg-surface-card rounded-[16px] p-4 border border-border-subtle shadow-sm flex flex-col gap-3 relative hover:shadow-md transition-shadow cursor-pointer">
+<div class="absolute top-3 right-3 text-on-surface-variant">
+<button class="p-1 rounded-full hover:bg-surface-bright active:bg-surface-container"><span class="material-symbols-outlined text-[20px]" data-icon="more_horiz">more_horiz</span></button>
+</div>
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center border border-border-subtle shrink-0">
+<img alt="Google Logo" class="w-6 h-6 object-contain" data-alt="A clean, minimalist 2D logo of a stylized 'G' representing a generic tech company, styled in bold primary colors on a white background, corporate clean aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrlpwA1CN17wSOsUC0GqFquGVVQsAKI6PJn_e0oHut1pLwC5LGlRh17JtaEYjOuVL57_XTwWdvrxgaW9nYNfaczjC4kiZ_pLFdNoOh8_V-qmirT2Xzk5H352ZIBZo0_Sj_bZxjYgMlLPGDlLnbzsfUD2FkotEz_Hw8ycdVUf8OIF550-6Dfm3o0ldv-eSQp9ZlACXT5Mo4nI8roO0l_qplrW-5_wHQRfY_yfKg91lrxZPwxrtUFAByKWPeeE-n6YNQ4u08Y9dKqf-K"/>
+</div>
+<div class="flex flex-col gap-1 w-full pr-6">
+<h3 class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Google 个人主账号</h3>
+<p class="font-body-sm text-[12px] text-on-surface-variant">Google 账号 · Web 渠道</p>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-2">
+<!-- Status Tag -->
+<div class="flex items-center gap-1 bg-[#ECFDF5] text-[#059669] px-2 py-0.5 rounded-full border border-[#A7F3D0]">
+<span class="material-symbols-outlined text-[14px] fill" data-icon="check_circle">check_circle</span>
+<span class="font-label-sm text-[11px]">安全</span>
+</div>
+<span class="font-label-sm text-[12px] text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="visibility_off">visibility_off</span>
+                            敏感字段已隐藏
+                        </span>
+</div>
+<span class="font-label-sm text-[11px] text-outline">10分钟前</span>
+</div>
+</div>
+<!-- Card 2 (Warning) -->
+<div class="bg-surface-card rounded-[16px] p-4 border border-border-subtle shadow-sm flex flex-col gap-3 relative hover:shadow-md transition-shadow cursor-pointer">
+<div class="absolute top-3 right-3 text-on-surface-variant">
+<button class="p-1 rounded-full hover:bg-surface-bright active:bg-surface-container"><span class="material-symbols-outlined text-[20px]" data-icon="more_horiz">more_horiz</span></button>
+</div>
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center border border-border-subtle shrink-0">
+<img alt="Adobe Logo" class="w-6 h-6 object-contain" data-alt="A clean, minimalist 2D logo of a stylized 'A' representing a generic creative software company, styled in red and white on a white background, corporate clean aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_eZ2i4a-JAxzpIYmR_WZFvagYJzTNvPFAOZ-hS-YnFA5QgbIF9-5c0SJklMIo3Ug7T_bgdn-izWCxpzkoTAoxFnTX8r3Y3jDPinav7AGQmdwm3F5zCaHLhnX5gFp2P6Vp5WYGv0zNMJp0A81AfTlBF0TiAWBc1TS663W1qtJLct-601NM8N6MBBfEeq2ukJvTD9OcJJbzgi-Ml3Nk0CF3xrguzaAmkE6RB26QXdYlysSztYCXTU-58Yc4IVyq7LUHy5rKa37VkQu7"/>
+</div>
+<div class="flex flex-col gap-1 w-full pr-6">
+<h3 class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Adobe Creative Cloud</h3>
+<p class="font-body-sm text-[12px] text-on-surface-variant">未设置平台 · 未设置渠道</p>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-2">
+<!-- Status Tag -->
+<div class="flex items-center gap-1 bg-[#FFFBEB] text-[#D97706] px-2 py-0.5 rounded-full border border-[#FDE68A]">
+<span class="material-symbols-outlined text-[14px] fill" data-icon="warning">warning</span>
+<span class="font-label-sm text-[11px]">建议更新</span>
+</div>
+<span class="font-label-sm text-[12px] text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="visibility_off">visibility_off</span>
+                            敏感字段已隐藏
+                        </span>
+</div>
+<span class="font-label-sm text-[11px] text-outline">昨天 14:30</span>
+</div>
+</div>
+<!-- Card 3 (Secure) -->
+<div class="bg-surface-card rounded-[16px] p-4 border border-border-subtle shadow-sm flex flex-col gap-3 relative hover:shadow-md transition-shadow cursor-pointer">
+<div class="absolute top-3 right-3 text-on-surface-variant">
+<button class="p-1 rounded-full hover:bg-surface-bright active:bg-surface-container"><span class="material-symbols-outlined text-[20px]" data-icon="more_horiz">more_horiz</span></button>
+</div>
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center border border-border-subtle shrink-0">
+<span class="material-symbols-outlined text-[24px] text-on-surface-variant" data-icon="credit_card">credit_card</span>
+</div>
+<div class="flex flex-col gap-1 w-full pr-6">
+<h3 class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">招商银行信用卡</h3>
+<p class="font-body-sm text-[12px] text-on-surface-variant">支付信息</p>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-2">
+<!-- Status Tag -->
+<div class="flex items-center gap-1 bg-[#ECFDF5] text-[#059669] px-2 py-0.5 rounded-full border border-[#A7F3D0]">
+<span class="material-symbols-outlined text-[14px] fill" data-icon="check_circle">check_circle</span>
+<span class="font-label-sm text-[11px]">安全</span>
+</div>
+<span class="font-label-sm text-[12px] text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="visibility_off">visibility_off</span>
+                            敏感字段已隐藏
+                        </span>
+</div>
+<span class="font-label-sm text-[11px] text-outline">3天前</span>
+</div>
+</div>
+</div>
+<!-- Empty State (Hidden by default, structure provided) -->
+<div class="hidden flex-col items-center justify-center py-12 px-4 text-center">
+<div class="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-[32px] text-secondary" data-icon="inventory_2">inventory_2</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm font-bold text-on-surface mb-2">你的保险箱还是空的</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-6">创建第一条记录，开始整理需要保护的账号资料</p>
+<button class="bg-[#155EEF] hover:bg-[#004ee6] text-white rounded-lg py-2.5 px-6 flex items-center justify-center gap-2 transition-colors font-body-md text-body-md font-medium">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+                新增第一条记录
+            </button>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Assuming typical mobile app structure based on guidelines, though prompt didn't explicitly ask for it, it completes the app shell) -->
+<nav class="fixed bottom-0 w-full max-w-[390px] left-1/2 -translate-x-1/2 bg-surface-card border-t border-border-subtle pb-safe pt-2 px-2 z-50 flex justify-around items-center">
+<!-- Vaults (Active) -->
+<button class="flex flex-col items-center gap-1 p-2 min-w-[64px]">
+<div class="px-4 py-1 bg-secondary-container text-on-secondary-container rounded-full">
+<span class="material-symbols-outlined fill" data-icon="lock">lock</span>
+</div>
+<span class="font-label-sm text-[10px] font-bold text-on-surface">Vaults</span>
+</button>
+<!-- Security Report -->
+<button class="flex flex-col items-center gap-1 p-2 min-w-[64px] text-on-surface-variant hover:text-on-surface">
+<div class="px-4 py-1 rounded-full">
+<span class="material-symbols-outlined" data-icon="security">security</span>
+</div>
+<span class="font-label-sm text-[10px]">Report</span>
+</button>
+<!-- Generator -->
+<button class="flex flex-col items-center gap-1 p-2 min-w-[64px] text-on-surface-variant hover:text-on-surface">
+<div class="px-4 py-1 rounded-full">
+<span class="material-symbols-outlined" data-icon="password">password</span>
+</div>
+<span class="font-label-sm text-[10px]">Gen</span>
+</button>
+<!-- Settings -->
+<button class="flex flex-col items-center gap-1 p-2 min-w-[64px] text-on-surface-variant hover:text-on-surface">
+<div class="px-4 py-1 rounded-full">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</div>
+<span class="font-label-sm text-[10px]">Settings</span>
+</button>
+</nav>
+<!-- Add bottom padding to main to account for bottom nav -->
+<style>
+        main { padding-bottom: 80px; }
+        /* Safe area support for iOS */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
+    </style>
+</body></html>

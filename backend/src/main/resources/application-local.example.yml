@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    # 仅限本机开发：MySQL 8 的认证可能需要 JDBC 获取服务器公钥。
+    # 生产环境必须使用 TLS，并配置受信任的证书，不应复用此连接串。
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/online_safe?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 10000
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: ${SESSION_COOKIE_SECURE:false}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.security: INFO
+
+app:
+  registration:
+    # 仅限本机开发的默认邀请码；生产环境必须通过 REGISTRATION_INVITATION_CODE 配置。
+    invitation-code: ${REGISTRATION_INVITATION_CODE:ONLINE_SAFE}

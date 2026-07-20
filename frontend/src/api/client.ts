@@ -1,0 +1,66 @@
+export type ApiError = {
+  status: number
+  code?: string
+  message?: string
+  fieldErrors?: Record<string, string>
+}
+
+export class ApiRequestError extends Error {
+  readonly status: number
+  readonly code?: string
+  readonly fieldErrors: Record<string, string>
+
+  constructor(error: ApiError) {
+    super(error.message || '请求未能完成，请稍后再试。')
+    this.name = 'ApiRequestError'
+    this.status = error.status
+    this.code = error.code
+    this.fieldErrors = error.fieldErrors ?? {}
+  }
+}
+
+type CsrfToken = { token: string; headerName: string; parameterName: string }
+type CsrfResponse = { cookieName: string; headerName: string; parameterName: string }
+let csrfToken: CsrfToken | undefined
+
+export async function refreshCsrfToken(): Promise<void> {
+  const response = await fetch('/api/csrf', { credentials: 'include' })
+  if (!response.ok) throw await toApiError(response)
+  const payload = await response.json() as CsrfResponse
+  const token = readCookie(payload.cookieName)
+  if (!token) throw new Error('未获取到 CSRF Cookie，请刷新页面后重试。')
+  csrfToken = { token, headerName: payload.headerName, parameterName: payload.parameterName }
+}
+
+export async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const method = (options.method ?? 'GET').toUpperCase()
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && !csrfToken) {
+    await refreshCsrfToken()
+  }
+
+  const headers = new Headers(options.headers)
+  headers.set('Accept', 'application/json')
+  if (options.body) headers.set('Content-Type', 'application/json')
+  if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    headers.set(csrfToken.headerName, csrfToken.token)
+  }
+
+  const response = await fetch(path, { ...options, method, headers, credentials: 'include' })
+  if (!response.ok) throw await toApiError(response)
+  if (response.status === 204) return undefined as T
+  return response.json() as Promise<T>
+}
+
+async function toApiError(response: Response): Promise<ApiRequestError> {
+  let body: ApiError = { status: response.status }
+  try { body = await response.json() as ApiError } catch { /* response has no JSON body */ }
+  return new ApiRequestError(body)
+}
+
+function readCookie(name: string): string | undefined {
+  const prefix = `${encodeURIComponent(name)}=`
+  for (const cookie of document.cookie.split('; ')) {
+    if (cookie.startsWith(prefix)) return decodeURIComponent(cookie.slice(prefix.length))
+  }
+  return undefined
+}

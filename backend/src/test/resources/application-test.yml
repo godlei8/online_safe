@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:online_safe;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  session:
+    jdbc:
+      initialize-schema: always
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+app:
+  registration:
+    invitation-code: TEST_INVITE_CODE
