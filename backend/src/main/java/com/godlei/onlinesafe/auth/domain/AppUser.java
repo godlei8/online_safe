@@ -47,6 +47,9 @@ public class AppUser {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
+
     @Version
     @Column(name = "version", nullable = false)
     private long version;
@@ -116,7 +119,23 @@ public class AppUser {
         return updatedAt;
     }
 
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
+
     public long getVersion() {
         return version;
+    }
+
+    public void recordLogin(Instant at) {
+        this.lastLoginAt = Objects.requireNonNull(at);
+    }
+
+    public void disable() {
+        this.status = AppUserStatus.DISABLED;
+    }
+
+    public void enable() {
+        this.status = AppUserStatus.ACTIVE;
     }
 }

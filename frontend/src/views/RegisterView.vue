@@ -131,119 +131,114 @@ async function submit() {
       {{ errorMessage }}
     </v-alert>
 
-    <v-window v-model="currentStep" class="auth-registration-window">
-      <v-window-item :value="1">
-        <form @submit.prevent="continueToPassword">
-          <v-text-field
-            v-model="phone"
-            label="手机号"
-            placeholder="请输入中国大陆手机号"
-            prepend-inner-icon="mdi-cellphone"
-            autocomplete="tel"
-            inputmode="numeric"
-            hint="仅支持中国大陆手机号，当前版本不进行短信验证。"
-            :error-messages="fieldMessages('phone')"
-            @blur="validateAccount(['phone'])"
-            @update:model-value="clearServerError('phone')"
-          />
-          <v-text-field
-            v-model="username"
-            class="mt-2"
-            label="用户名"
-            placeholder="设置你的登录用户名"
-            prepend-inner-icon="mdi-account-outline"
-            autocomplete="username"
-            hint="3–32 位，可使用字母、数字、下划线和连字符。"
-            :error-messages="fieldMessages('username')"
-            @blur="validateAccount(['username'])"
-            @update:model-value="clearServerError('username')"
-          />
-          <v-text-field
-            v-model="invitationCode"
-            class="mt-2"
-            label="邀请码"
-            placeholder="请输入邀请码"
-            prepend-inner-icon="mdi-ticket-confirmation-outline"
-            autocomplete="off"
-            hint="邀请码由管理员或你的邀请渠道提供。"
-            :error-messages="fieldMessages('invitationCode')"
-            @blur="validateAccount(['invitationCode'])"
-            @update:model-value="clearServerError('invitationCode')"
-          />
-          <v-btn type="submit" color="primary" block class="auth-submit">继续</v-btn>
-        </form>
-      </v-window-item>
+    <!-- 不用 v-window：其 overflow:hidden 会裁切 outlined 字段上浮标签 -->
+    <form v-if="currentStep === 1" class="auth-step-form" @submit.prevent="continueToPassword">
+      <v-text-field
+        v-model="phone"
+        label="手机号"
+        placeholder="请输入中国大陆手机号"
+        prepend-inner-icon="mdi-cellphone"
+        autocomplete="tel"
+        inputmode="numeric"
+        hint="仅支持中国大陆手机号，当前版本不进行短信验证。"
+        :error-messages="fieldMessages('phone')"
+        @blur="validateAccount(['phone'])"
+        @update:model-value="clearServerError('phone')"
+      />
+      <v-text-field
+        v-model="username"
+        class="mt-2"
+        label="用户名"
+        placeholder="设置你的登录用户名"
+        prepend-inner-icon="mdi-account-outline"
+        autocomplete="username"
+        hint="3–32 位，可使用字母、数字、下划线和连字符。"
+        :error-messages="fieldMessages('username')"
+        @blur="validateAccount(['username'])"
+        @update:model-value="clearServerError('username')"
+      />
+      <v-text-field
+        v-model="invitationCode"
+        class="mt-2"
+        label="邀请码"
+        placeholder="请输入邀请码"
+        prepend-inner-icon="mdi-ticket-confirmation-outline"
+        autocomplete="off"
+        hint="邀请码由管理员或你的邀请渠道提供。"
+        :error-messages="fieldMessages('invitationCode')"
+        @blur="validateAccount(['invitationCode'])"
+        @update:model-value="clearServerError('invitationCode')"
+      />
+      <v-btn type="submit" color="primary" block class="auth-submit">继续</v-btn>
+    </form>
 
-      <v-window-item :value="2">
-        <form @submit.prevent="submit">
-          <v-text-field
-            v-model="password"
-            label="设置登录密码"
-            placeholder="请输入至少 8 位密码"
-            prepend-inner-icon="mdi-lock-outline"
-            autocomplete="new-password"
-            :type="showPassword ? 'text' : 'password'"
-            :error-messages="fieldMessages('password')"
-            @blur="validatePassword(['password'])"
-            @update:model-value="clearServerError('password')"
-          >
-            <template #append-inner>
-              <v-btn
-                class="password-toggle"
-                :icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-                variant="text"
-                density="compact"
-                :aria-label="showPassword ? '隐藏登录密码' : '显示登录密码'"
-                @click="showPassword = !showPassword"
-              />
-            </template>
-          </v-text-field>
-          <ul class="password-rules" aria-label="密码规则">
-            <li v-for="rule in passwordRules" :key="rule.label" :class="{ 'password-rules__item--passed': rule.passed }">
-              <v-icon :icon="rule.passed ? 'mdi-check-circle' : 'mdi-circle-outline'" size="16" />
-              {{ rule.label }}
-            </li>
-          </ul>
-          <v-text-field
-            v-model="confirmPassword"
-            class="mt-3"
-            label="确认密码"
-            placeholder="请再次输入登录密码"
-            prepend-inner-icon="mdi-lock-check-outline"
-            autocomplete="new-password"
-            :type="showConfirmPassword ? 'text' : 'password'"
-            :error-messages="fieldMessages('confirmPassword')"
-            @blur="validatePassword(['confirmPassword'])"
-            @update:model-value="clearServerError('confirmPassword')"
-          >
-            <template #append-inner>
-              <v-btn
-                class="password-toggle"
-                :icon="showConfirmPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-                variant="text"
-                density="compact"
-                :aria-label="showConfirmPassword ? '隐藏确认密码' : '显示确认密码'"
-                @click="showConfirmPassword = !showConfirmPassword"
-              />
-            </template>
-          </v-text-field>
-          <div class="auth-terms" :class="{ 'auth-terms--error': fieldMessages('agreedToTerms').length }">
-            <v-checkbox v-model="agreedToTerms" density="comfortable" hide-details @update:model-value="clearServerError('agreedToTerms')">
-              <template #label>
-                <span>我已阅读并同意<a href="#" @click.prevent>《服务条款》</a>及<a href="#" @click.prevent>《数据安全政策》</a></span>
-              </template>
-            </v-checkbox>
-            <p v-if="fieldMessages('agreedToTerms').length" class="auth-field-error">{{ fieldMessages('agreedToTerms')[0] }}</p>
-          </div>
-          <div class="auth-form-actions">
-            <v-btn variant="text" color="secondary" :disabled="submitting" @click="returnToAccount">上一步</v-btn>
-            <v-btn type="submit" color="primary" :loading="submitting" :disabled="submitting">
-              {{ submitting ? '正在创建…' : '创建账号' }}
-            </v-btn>
-          </div>
-        </form>
-      </v-window-item>
-    </v-window>
+    <form v-else class="auth-step-form" @submit.prevent="submit">
+      <v-text-field
+        v-model="password"
+        label="登录密码"
+        placeholder="请输入至少 8 位密码"
+        prepend-inner-icon="mdi-lock-outline"
+        autocomplete="new-password"
+        :type="showPassword ? 'text' : 'password'"
+        :error-messages="fieldMessages('password')"
+        @blur="validatePassword(['password'])"
+        @update:model-value="clearServerError('password')"
+      >
+        <template #append-inner>
+          <v-btn
+            class="password-toggle"
+            :icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
+            variant="text"
+            density="compact"
+            :aria-label="showPassword ? '隐藏登录密码' : '显示登录密码'"
+            @click="showPassword = !showPassword"
+          />
+        </template>
+      </v-text-field>
+      <ul class="password-rules" aria-label="密码规则">
+        <li v-for="rule in passwordRules" :key="rule.label" :class="{ 'password-rules__item--passed': rule.passed }">
+          <v-icon :icon="rule.passed ? 'mdi-check-circle' : 'mdi-circle-outline'" size="16" />
+          {{ rule.label }}
+        </li>
+      </ul>
+      <v-text-field
+        v-model="confirmPassword"
+        class="mt-3"
+        label="确认密码"
+        placeholder="请再次输入登录密码"
+        prepend-inner-icon="mdi-lock-check-outline"
+        autocomplete="new-password"
+        :type="showConfirmPassword ? 'text' : 'password'"
+        :error-messages="fieldMessages('confirmPassword')"
+        @blur="validatePassword(['confirmPassword'])"
+        @update:model-value="clearServerError('confirmPassword')"
+      >
+        <template #append-inner>
+          <v-btn
+            class="password-toggle"
+            :icon="showConfirmPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
+            variant="text"
+            density="compact"
+            :aria-label="showConfirmPassword ? '隐藏确认密码' : '显示确认密码'"
+            @click="showConfirmPassword = !showConfirmPassword"
+          />
+        </template>
+      </v-text-field>
+      <div class="auth-terms" :class="{ 'auth-terms--error': fieldMessages('agreedToTerms').length }">
+        <v-checkbox v-model="agreedToTerms" density="comfortable" hide-details @update:model-value="clearServerError('agreedToTerms')">
+          <template #label>
+            <span>我已阅读并同意<a href="#" @click.prevent>《服务条款》</a>及<a href="#" @click.prevent>《数据安全政策》</a></span>
+          </template>
+        </v-checkbox>
+        <p v-if="fieldMessages('agreedToTerms').length" class="auth-field-error">{{ fieldMessages('agreedToTerms')[0] }}</p>
+      </div>
+      <div class="auth-form-actions">
+        <v-btn variant="text" color="secondary" :disabled="submitting" @click="returnToAccount">上一步</v-btn>
+        <v-btn type="submit" color="primary" :loading="submitting" :disabled="submitting">
+          {{ submitting ? '正在创建…' : '创建账号' }}
+        </v-btn>
+      </div>
+    </form>
 
     <p class="auth-alternate-action">已有账号？<router-link to="/login">去登录</router-link></p>
   </AuthShell>

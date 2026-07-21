@@ -30,10 +30,10 @@
 - 本机可用 Java 为 Amazon Corretto 21.0.10 LTS，没有发现 JDK 25；Maven 命令可用，版本为 3.9.9。
 - 本机未安装或未配置 Docker，且用户明确开发环境暂不使用 Docker；本轮不创建 Docker 开发依赖，真实 MySQL 验证使用本机 MySQL 8.4 环境。
 - 本机存在 MySQL 8.4.8 客户端/安装目录，可进一步确认服务状态，用于无 Docker 时的本地 MySQL 验证。
-- 为保持技术文档的 Java 25 目标，项目 POM 仍以 Java 25 为正式目标；本轮可用 Maven 属性临时覆盖为 Java 21 完成兼容性构建，最终必须在 Java 25 CI 或开发环境补跑。
-- 后端基础工程已完成并通过 Java 21 兼容构建：`mvnw.cmd "-Djava.version=21" test` 运行 8 项测试全部通过，`package -DskipTests` 成功生成可运行 jar。
+- 本机默认按 Java 21 构建（`pom.xml` 的 `java.version=21`），避免「按 25 编译、用 21 运行」导致进程在 Flyway 之后崩溃；有 JDK 25 时可 `-Djava.version=25`。
+- 后端测试：`mvnw.cmd test`（13 项）通过；真实 MySQL 启动已验证 Flyway repair + migrate。
 - Spring Boot 4.1 使用 Jackson 3，应用代码的 `ObjectMapper` 必须导入 `tools.jackson.databind.ObjectMapper`，不能使用 Spring Boot 3 常见的 `com.fasterxml.jackson.databind` 包名。
-- 本机 MySQL 安装目录存在但服务未运行，因此 Flyway 的真实 MySQL 8.4 执行待开发者配置数据库账号并启动服务后完成；H2 集成测试已验证 JPA、Spring Session、注册、登录和 CSRF 主流程。
+- MySQL DDL 非事务：半成功迁移会留下 `success=0`。根治方案为 `FlywayConfig` 启动前 `repair()` + 幂等迁移脚本（`IF NOT EXISTS` / 条件 DDL），不再依赖手工修 `flyway_schema_history`。
 
 - 需求要求零知识方向的客户端加密：服务端和管理员不能读取用户记录明文。
 - “记录名称、平台、渠道、标签”等内容同样可能泄露用户使用情况，应默认纳入加密载荷；服务端仅保留同步、版本、所有权和状态所需的最少元数据。
@@ -179,7 +179,7 @@
 - Login reference: `安全登录 (v3) - 统一风格版` (`7762b4ad9ac04f01bff0ddd6b412fb36`).
 - Registration reference: `创建账户 (v2)` (`1aaa6f930bc54addb8e930eb4dd32e42`).
 - Visual system: 50/50 desktop split, Sentinel Navy introduction panel, white authentication card with an Action Blue left accent, #F8FAFC canvas, restrained 8px radius, light elevation, and compliance footer.
-- Local reference images: `frontend/design-reference/stitch-login-v3.png` and `frontend/design-reference/stitch-register-v2.png`.
+- 本地参考图：`../frontend/design-reference/stitch-login-v3.png` 和 `../frontend/design-reference/stitch-register-v2.png`。
 
 ### 2026-07-20: Homepage optimization task started
 
@@ -203,3 +203,18 @@
 - Stitch generated the mobile homepage variant `7717a41a92a34c4a91c1cf475bed0fd1` titled `保险箱首页 (移动端)`, MOBILE, 780×1768 canvas based on a 390px target. It uses a single column, compact app bar/drawer navigation, full-width add action, collapsed filter button, sort control, and metadata-only cards.
 - Mobile visual QA found English bottom-navigation labels (`Vault`, `Report`, `Gen`, `Settings`) remaining in the generated image; this violates the Chinese-only UI rule and requires one targeted correction.
 - Stitch returned a completed DOM update event for mobile screen `7717a41a92a34c4a91c1cf475bed0fd1`, replacing the four labels with `保险箱 / 安全报告 / 生成器 / 设置` and changing the active color class. The exported screenshot/HTML URL still served a cached pre-edit copy during immediate verification, so the Stitch canvas event is the authoritative confirmation of the patch; the stale export should not be treated as the final visual state.
+
+### 2026-07-21: Admin console design task started
+
+- The admin area must be a separate authenticated route and must not expose any user's account/password/2FA plaintext.
+- Admin requirements include user management, invitation-code management, system-template management, security logs, registration policy, announcements, user count, storage usage, service health, encrypted backups, and maintenance operations.
+- Admin can enable/disable users and revoke sessions, but cannot unlock a user's vault, obtain the vault master password/recovery key, or migrate a user's plaintext credentials.
+- The admin homepage should therefore emphasize operational status, actionable alerts, and aggregate metrics; it should not display credential records or sensitive user content.
+- Admin navigation should map to `/admin`, `/admin/users`, `/admin/invitations`, `/admin/templates`, `/admin/security-logs`, and `/admin/settings`.
+- Admin dashboard information architecture should include user count/status, encrypted storage usage, service health, security alerts, recent safe admin activity, and clear links to the six admin modules. Any user examples must be aggregate or redacted.
+- Apply Design.md tokens: `#F7F9FC` canvas, white surfaces, `#155EEF` primary action, `#101828` headings, `#475467` secondary text, `#D0D5DD` borders, 16px large cards, 10px controls, light elevation, Chinese UI copy, and icon+text+color status feedback.
+- No admin screen existed in the project before this task. Stitch generated `管理后台首页 (系统概览)` as screen `e81db235f42a4b13b88152960ae0f62a`, DESKTOP, 2560×2510, using the existing `assets/81edc99eeb404081a72fad143af36f6c` design system.
+- Generated structure includes admin navigation, four aggregate metric cards, security reminders, service health, redacted security events, quick links, and the explicit client-encryption/admin-visibility boundary.
+- Stitch generated the mobile admin variant `管理后台首页 (移动端)` as screen `61624571ebd3464886055f90d676a3c8`, MOBILE, 780×2566 canvas based on a 390px target. It uses a compact top bar, 2×2 metric grid, stacked security alerts, quick-action grid, and system-health list without sensitive vault data.
+- Mobile admin visual QA found the system-health status chips still use the English word `Normal`; this conflicts with the project Chinese-first rule and needs a targeted label correction.
+- Stitch returned a completed DOM update event for mobile admin screen `61624571ebd3464886055f90d676a3c8`, replacing all four system-health `Normal` labels with `正常` while preserving layout and styling.

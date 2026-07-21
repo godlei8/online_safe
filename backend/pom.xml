@@ -18,7 +18,9 @@
     <description>Online Safe credential vault backend</description>
 
     <properties>
-        <java.version>25</java.version>
+        <!-- 本机与 CI 默认按 JDK 21 编译/运行，避免 class 版本不一致导致进程在 Flyway 之后崩溃。 -->
+        <!-- 具备 JDK 25 时可：mvnw -Djava.version=25 ... -->
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 

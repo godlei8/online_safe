@@ -28,7 +28,38 @@ export default createVuetify({
     },
   },
   defaults: {
-    VBtn: { rounded: 'lg', height: 48, elevation: 0 },
-    VTextField: { variant: 'outlined', density: 'comfortable', rounded: 'lg', color: 'primary', persistentHint: true },
+    // 工具栏/筛选区默认紧凑；认证页主按钮通过 .auth-submit 等局部样式保持 48px
+    VBtn: { rounded: 'lg', height: 40, elevation: 0 },
+    VTextField: {
+      variant: 'outlined',
+      density: 'compact',
+      rounded: 'lg',
+      color: 'primary',
+      persistentHint: true,
+      hideDetails: 'auto',
+    },
+    VSelect: {
+      variant: 'outlined',
+      density: 'compact',
+      rounded: 'lg',
+      color: 'primary',
+      hideDetails: 'auto',
+    },
+    VAutocomplete: {
+      variant: 'outlined',
+      density: 'compact',
+      rounded: 'lg',
+      color: 'primary',
+      hideDetails: 'auto',
+    },
+    VCombobox: {
+      variant: 'outlined',
+      density: 'compact',
+      rounded: 'lg',
+      color: 'primary',
+      hideDetails: 'auto',
+    },
+    VAlert: { density: 'compact', rounded: 'lg' },
+    VPagination: { density: 'compact' },
   },
 })

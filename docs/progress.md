@@ -19,7 +19,7 @@
 - 复测通过：`mvnw.cmd "-Djava.version=21" test`，8项测试全部通过。
 - 打包通过：`mvnw.cmd "-Djava.version=21" package -DskipTests`，生成 Spring Boot 可运行 jar。
 - 执行 Git 空白检查、敏感值扫描和尾随空格检查；未发现真实凭据或格式问题。敏感扫描命中仅为 Maven Wrapper 的变量和 README/配置中的本机密码占位符。
-- 本机 MySQL 服务未运行，未执行真实 MySQL 迁移；启动说明已写入 `backend/README.md`。
+- 本机 MySQL 服务未运行，未执行真实 MySQL 迁移；启动说明已写入 `../backend/README.md`。
 
 ### 注册需求调整
 
@@ -133,14 +133,36 @@
 
 - **Status:** in_progress
 - Confirmed project `Online Security Vault` and source screen `4f0ecf185e974a07b7fb216362900c54`.
-- Downloaded the source screenshot to `frontend/design-reference/stitch-vault-dashboard-current.png` for comparison.
+- 已下载来源截图至 `../frontend/design-reference/stitch-vault-dashboard-current.png` 用于对比。
 - Edited the existing homepage concept in Stitch using the product requirements and `Design.md`; Stitch created optimized screen `3bc78f70199b4793b6184bee023880f8` rather than overwriting the source.
-- Downloaded the optimized screenshot to `frontend/design-reference/stitch-vault-dashboard-optimized.png` and visually checked the desktop result: Chinese navigation/status copy, clearer search/filter/sort row, stronger add-record action, metadata-only cards, and hidden-sensitive-field treatment are present.
+- 已下载优化截图至 `../frontend/design-reference/stitch-vault-dashboard-optimized.png`，并检查桌面端结果：中文导航与状态文案、搜索/筛选/排序行、更明确的新增记录操作、仅元数据卡片及敏感字段隐藏提示均已体现。
 - Remaining: create or verify a mobile homepage variant and record the final Stitch IDs/implementation notes.
 - Mobile variant `7717a41a92a34c4a91c1cf475bed0fd1` was generated and visually checked. Layout and first-screen priorities are correct, but bottom navigation still contains English labels; a targeted Stitch correction is pending.
 - Applied the targeted mobile correction in Stitch. The returned project update event confirms bottom navigation labels changed to `保险箱 / 安全报告 / 生成器 / 设置` and the active tab styling was corrected. Immediate exported HTML/screenshot verification returned a cached pre-edit copy, which was recorded as a verification limitation rather than retried blindly.
-- Updated `frontend/DESIGN_REFERENCE.md` with the source, optimized desktop, and optimized mobile Stitch screen IDs and local reference assets.
+- 已更新 `DESIGN_REFERENCE.md`，记录来源、优化后桌面端和优化后移动端的 Stitch 界面标识及本地参考资源。
 - Homepage Stitch optimization phase is complete. No frontend production code was changed in this task; the local `VaultHomeView.vue` remains a placeholder for the next implementation phase.
+
+### 管理员后台首页 Stitch 原型
+
+- **Status:** in_progress
+- Reopened the planning workflow for a new Phase 17 task.
+- Next: read the admin sections of the requirements and inspect the existing Stitch project screens before generating the admin console.
+
+- Read the admin role, page routes, management modules, security boundaries, and responsive requirements from the product document; read the relevant Design.md color, typography, spacing, component, and status rules.
+- Confirmed no admin screen existed in Stitch before this task.
+- 已在项目 `10594920934536828879` 中生成桌面端管理后台界面 `e81db235f42a4b13b88152960ae0f62a`，并保存参考图至 `../frontend/design-reference/stitch-admin-dashboard.png`。
+- Visually verified the desktop composition: aggregate-only metrics, service health, redacted security log, admin navigation, quick links, and client-encryption boundary are present.
+- Remaining: create and verify the mobile admin dashboard variant, then document the final screen IDs.
+- 已生成移动端管理后台界面 `61624571ebd3464886055f90d676a3c8`，并保存 `../frontend/design-reference/stitch-admin-dashboard-mobile.png`；视觉检查确认 2×2 指标、告警、快捷操作和系统健康列表适配移动端布局。
+- Applied a targeted Stitch DOM correction to replace all mobile system-health `Normal` labels with `正常`; the returned project update event confirmed all four replacements.
+- 已更新 `DESIGN_REFERENCE.md`，补充桌面端和移动端管理后台界面标识及本地参考资源；未修改前端生产代码。
+
+### 2026-07-21: Flyway 根治
+
+- **Status:** complete
+- 根因：MySQL DDL 自动提交 + 进程中断 → 历史表 `success=0`；以及 Java 编译/运行版本不一致导致迁移后崩溃。
+- 已落地：`FlywayConfig`（repair → migrate）、V1/V2/V4/V6 幂等 SQL、`java.version=21`、文档与紧急脚本说明。
+- 验证：`mvnw.cmd test` 13 通过；本机 MySQL 启动日志显示 repair + `migrationsExecuted=0, success=true`。
 
 ## 5-Question Reboot Check
 

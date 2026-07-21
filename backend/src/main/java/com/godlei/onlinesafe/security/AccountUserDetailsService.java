@@ -6,6 +6,7 @@ import com.godlei.onlinesafe.auth.application.UsernameNormalizer;
 import com.godlei.onlinesafe.auth.domain.AppUser;
 import com.godlei.onlinesafe.auth.domain.AppUserStatus;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
+@Primary
 public class AccountUserDetailsService implements UserDetailsService {
 
     private final AppUserRepository userRepository;

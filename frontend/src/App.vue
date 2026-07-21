@@ -2,22 +2,28 @@
 import { onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminAuthStore } from '@/stores/adminAuth'
 
 const auth = useAuthStore()
+const adminAuth = useAdminAuthStore()
 const { smAndDown } = useDisplay()
 const initializationError = ref('')
 const showInitializationError = ref(false)
 const retryingConnection = ref(false)
+const ready = ref(false)
 
 async function initialize() {
   try {
-    await auth.bootstrap()
+    await Promise.all([auth.bootstrap(), adminAuth.bootstrap()])
     initializationError.value = ''
     showInitializationError.value = false
   } catch {
     initializationError.value = '暂时无法连接本地服务，部分操作可能不可用。'
     showInitializationError.value = true
     auth.ready = true
+    adminAuth.ready = true
+  } finally {
+    ready.value = true
   }
 }
 
@@ -36,7 +42,7 @@ onMounted(initialize)
 <template>
   <v-app>
     <v-main>
-      <router-view v-if="auth.ready" />
+      <router-view v-if="ready" />
       <div v-else class="d-flex align-center justify-center" style="min-height: 100vh">
         <v-progress-circular indeterminate color="primary" aria-label="正在初始化会话" />
       </div>

@@ -20,5 +20,5 @@ server:
         secure: false
 
 app:
-  registration:
-    invitation-code: TEST_INVITE_CODE
+  invitation:
+    encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=

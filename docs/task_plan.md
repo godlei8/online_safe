@@ -162,3 +162,10 @@ Complete
 - [x] 基于需求和 Design.md 在 Stitch 中优化首页，并保留现有产品视觉系统
 - [x] 记录 Stitch 优化结果与后续前端落地要点
 - **Status:** complete
+
+### Phase 17: 管理员后台首页 Stitch 原型
+- [x] 提取需求文档中管理员权限、后台模块和安全边界
+- [x] 核对 Design.md 与现有 Stitch 设计系统
+- [x] 在同一 Stitch 项目中生成管理员登录后的后台管理首页
+- [x] 视觉复核并记录 screen ID、页面结构和前端落地要点
+- **Status:** complete

@@ -1,5 +1,9 @@
 package com.godlei.onlinesafe.common.web;
 
+import com.godlei.onlinesafe.admin.application.InvalidInvitationOperationException;
+import com.godlei.onlinesafe.admin.application.InvalidUserOperationException;
+import com.godlei.onlinesafe.admin.application.InvitationNotFoundException;
+import com.godlei.onlinesafe.admin.application.UserNotFoundException;
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
 import com.godlei.onlinesafe.auth.application.RegistrationConflictException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,6 +49,35 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return response(HttpStatus.CONFLICT, "ACCOUNT_IDENTIFIER_ALREADY_EXISTS", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvitationNotFoundException.class)
+    ResponseEntity<ApiError> handleInvitationNotFound(
+            InvitationNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, "INVITATION_NOT_FOUND", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidInvitationOperationException.class)
+    ResponseEntity<ApiError> handleInvalidInvitation(
+            InvalidInvitationOperationException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    ResponseEntity<ApiError> handleUserNotFound(UserNotFoundException exception, HttpServletRequest request) {
+        return response(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidUserOperationException.class)
+    ResponseEntity<ApiError> handleInvalidUser(
+            InvalidUserOperationException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);
     }
 
     @ExceptionHandler(AuthenticationException.class)
