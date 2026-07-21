@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
-import { emptyItemPayload, type VaultItemPayload } from '@/domain/vaultPayload'
+import {
+  cloneVaultItemPayload,
+  emptyItemPayload,
+  type VaultItemPayload,
+} from '@/domain/vaultPayload'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import { useVaultStore } from '@/stores/vault'
 import VaultItemForm from '@/components/vault/VaultItemForm.vue'
@@ -31,6 +35,13 @@ const dialogOpen = computed({
   },
 })
 
+function friendlyError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback
+  // 业务侧已写中文的提示直接展示；浏览器英文异常不透出
+  if (/[\u4e00-\u9fff]/.test(error.message)) return error.message
+  return fallback
+}
+
 watch(
   () => [editor.visible.value, editor.editingId.value, editor.templateId.value] as const,
   async ([visible, itemId, tmplId]) => {
@@ -42,17 +53,17 @@ watch(
       if (itemId) {
         const item = await vault.getItem(itemId)
         if (token !== loadToken.value) return
-        form.value = structuredClone(item.payload)
+        form.value = cloneVaultItemPayload(item.payload)
       } else if (tmplId) {
         const payload = await vault.buildPayloadFromTemplate(tmplId)
         if (token !== loadToken.value) return
-        form.value = payload
+        form.value = cloneVaultItemPayload(payload)
       } else {
         form.value = emptyItemPayload()
       }
     } catch (error) {
       if (token !== loadToken.value) return
-      errorMessage.value = error instanceof Error ? error.message : '加载失败'
+      errorMessage.value = friendlyError(error, '加载记录失败，请重试')
       form.value = emptyItemPayload()
     } finally {
       if (token === loadToken.value) loading.value = false
@@ -78,7 +89,7 @@ async function save() {
     editor.close()
     emit('saved', id)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '保存失败'
+    errorMessage.value = friendlyError(error, '保存失败，请重试')
   } finally {
     saving.value = false
   }

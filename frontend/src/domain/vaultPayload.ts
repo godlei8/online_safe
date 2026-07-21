@@ -98,6 +98,11 @@ export function emptyItemPayload(): VaultItemPayload {
   }
 }
 
+/** 深拷贝为纯对象，避免 structuredClone 无法处理 Vue/Pinia Proxy */
+export function cloneVaultItemPayload(payload: VaultItemPayload): VaultItemPayload {
+  return vaultItemPayloadSchema.parse(JSON.parse(JSON.stringify(payload)))
+}
+
 export function fieldsFromTemplate(template: PrivateTemplatePayload): VaultField[] {
   return template.fields.map((field, index) => ({
     id: crypto.randomUUID(),
