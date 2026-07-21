@@ -1,5 +1,13 @@
 # Docker 生产部署实施记录 v1.0
 
+## 2026-07-21 生产上线结果
+
+- 域名 `safe.godlei8.top` 已解析至生产服务器 `124.222.9.209`。
+- Caddy 已作为唯一公网入口启动，主机仅开放其 `80/443` 端口；MySQL、后端和前端容器未直接映射宿主机端口。
+- Caddy 已完成 Let's Encrypt 证书签发，`https://safe.godlei8.top` 返回 HTTP/2 `200`，并启用 HTTP 自动跳转 HTTPS 与 HSTS。
+- Docker 服务状态：MySQL、后端均为 `healthy`，前端与 Caddy 正常运行。
+- 管理员初始口令已在公网暴露前重置，仅保存在服务器受限文件 `/opt/online-safe/initial-admin.txt`（权限 `600`），不进入代码库或部署记录。
+
 ## 目标
 
 为在线账密保险箱新增生产 Profile、Docker 镜像和 Docker Compose 编排，并部署到已确认可用的 Linux 服务器。
