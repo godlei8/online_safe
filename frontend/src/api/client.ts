@@ -1,3 +1,5 @@
+import { clearDekFromSession } from '@/crypto/dekSession'
+
 export type ApiError = {
   status: number
   code?: string
@@ -22,6 +24,41 @@ export class ApiRequestError extends Error {
 type CsrfToken = { token: string; headerName: string; parameterName: string }
 type CsrfResponse = { cookieName: string; headerName: string; parameterName: string }
 let csrfToken: CsrfToken | undefined
+let handlingUnauthorized = false
+
+/** 登录失败等预期 401，不应当作会话过期 */
+function shouldTreatAsSessionExpiry(path: string): boolean {
+  if (path === '/api/csrf') return false
+  if (path === '/api/auth/login' || path === '/api/admin/auth/login') return false
+  if (path.startsWith('/api/auth/register')) return false
+  if (path.startsWith('/api/auth/password-reset')) return false
+  return path.startsWith('/api/')
+}
+
+async function handleSessionExpired(path: string): Promise<void> {
+  if (handlingUnauthorized) return
+  handlingUnauthorized = true
+  try {
+    clearDekFromSession()
+    const [{ useVaultStore }, { useAuthStore }] = await Promise.all([
+      import('@/stores/vault'),
+      import('@/stores/auth'),
+    ])
+    useVaultStore().clearDek()
+    useAuthStore().$patch({
+      session: { authenticated: false, userId: null, username: null, role: null },
+      ready: true,
+    })
+    const onAdminSurface = path.startsWith('/api/admin') || window.location.pathname.startsWith('/admin')
+    const loginPath = onAdminSurface ? '/admin/login' : '/login'
+    if (!window.location.pathname.startsWith(loginPath)) {
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+      window.location.assign(`${loginPath}?redirect=${redirect}`)
+    }
+  } finally {
+    handlingUnauthorized = false
+  }
+}
 
 export async function refreshCsrfToken(): Promise<void> {
   const response = await fetch('/api/csrf', { credentials: 'include' })
@@ -46,7 +83,12 @@ export async function requestJson<T>(path: string, options: RequestInit = {}): P
   }
 
   const response = await fetch(path, { ...options, method, headers, credentials: 'include' })
-  if (!response.ok) throw await toApiError(response)
+  if (!response.ok) {
+    if (response.status === 401 && shouldTreatAsSessionExpiry(path)) {
+      void handleSessionExpired(path)
+    }
+    throw await toApiError(response)
+  }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }

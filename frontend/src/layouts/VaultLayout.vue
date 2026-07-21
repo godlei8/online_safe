@@ -15,17 +15,12 @@ const editor = useVaultItemEditor()
 const signingOut = ref(false)
 const showNavigationHint = ref(false)
 const navigationHint = ref('')
-const confirmPassword = ref('')
-const showPassword = ref(false)
-const confirming = ref(false)
-const confirmError = ref('')
 
 const userInitial = computed(() => (auth.session.username?.trim().slice(0, 1) || '我').toUpperCase())
 const activeNav = computed(() => {
   if (route.name === 'vault-templates') return 'templates'
   return 'vault'
 })
-const showConfirmDialog = computed(() => vault.initialized === true && !vault.dekReady)
 
 function notifyUnavailable(name: string) {
   navigationHint.value = `${name}正在开发中。`
@@ -39,25 +34,6 @@ async function logout() {
     await router.replace('/login')
   } finally {
     signingOut.value = false
-  }
-}
-
-async function submitConfirmPassword() {
-  confirmError.value = ''
-  if (!confirmPassword.value) {
-    confirmError.value = '请输入登录密码'
-    return
-  }
-  confirming.value = true
-  try {
-    await vault.openWithPassword(confirmPassword.value)
-    confirmPassword.value = ''
-  } catch (error) {
-    const message = error instanceof Error ? error.message : ''
-    confirmError.value =
-      message && /[\u4e00-\u9fff]/.test(message) ? message : '登录密码不正确，请重试'
-  } finally {
-    confirming.value = false
   }
 }
 
@@ -203,9 +179,7 @@ watch(
 
       <div class="vault-panel">
         <router-view v-if="vault.dekReady" />
-        <div v-else class="pa-8 text-medium-emphasis">
-          会话仍有效。请确认登录密码以继续查看账密。
-        </div>
+        <div v-else class="pa-8 text-medium-emphasis">正在准备保险箱…</div>
       </div>
 
       <nav class="vault-mobile-nav" aria-label="移动端导航">
@@ -239,43 +213,6 @@ watch(
         </button>
       </nav>
     </main>
-
-    <v-dialog :model-value="showConfirmDialog" persistent max-width="440">
-      <v-card class="pa-2">
-        <v-card-title class="text-h6">确认登录密码以继续</v-card-title>
-        <v-card-text>
-          <p class="mb-4">
-            页面刷新后内存中的密钥已清除。请再次输入登录密码以继续查看账密（这不是单独的保险箱解锁步骤）。
-          </p>
-          <v-text-field
-            v-model="confirmPassword"
-            label="登录密码"
-            placeholder="请输入登录密码"
-            autocomplete="current-password"
-            :type="showPassword ? 'text' : 'password'"
-            :error-messages="confirmError"
-            @keyup.enter="submitConfirmPassword"
-          >
-            <template #append-inner>
-              <v-btn
-                class="password-toggle"
-                :icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-                variant="text"
-                density="compact"
-                @click="showPassword = !showPassword"
-              />
-            </template>
-          </v-text-field>
-        </v-card-text>
-        <v-card-actions class="px-4 pb-4">
-          <v-btn variant="text" @click="logout">退出登录</v-btn>
-          <v-spacer />
-          <v-btn color="primary" :loading="confirming" :disabled="confirming" @click="submitConfirmPassword">
-            继续查看
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
 
     <VaultItemFormDialog @saved="onSaved" />
     <v-snackbar v-model="showNavigationHint" color="secondary" location="bottom" :timeout="2800">

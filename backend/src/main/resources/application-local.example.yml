@@ -17,6 +17,8 @@ spring:
 server:
   servlet:
     session:
+      # 与 application.yml 一致：空闲 1 小时后会话过期，需重新登录
+      timeout: 1h
       cookie:
         secure: ${SESSION_COOKIE_SECURE:false}
 

@@ -46,7 +46,7 @@ export const useAuthStore = defineStore('auth', {
           setEphemeralLoginPassword(null)
         }
       } catch {
-        // 打开信封失败时保留临时密码，供后续确认对话框使用
+        // 打开信封失败时保留临时密码，供首次初始化 setup 页使用
       }
     },
     async register(payload: RegistrationPayload) {

@@ -20,7 +20,7 @@
 | --- | --- |
 | 浏览器（libsodium.js） | Argon2id 派生、DEK 生成与包装、记录/模板加解密 |
 | 服务端 | 纯密文仓库：校验信封结构、所有者隔离、乐观锁；**不解密、不派生密钥** |
-| Pinia | 仅内存保存 DEK 与解密缓存；禁止持久化插件 |
+| Pinia | 内存保存 DEK 与解密缓存；标签页 `sessionStorage` 暂存 DEK 供刷新恢复；禁止 localStorage / 持久化插件 |
 
 ### 2.1 密钥模型
 
@@ -32,7 +32,7 @@
 约定：
 
 1. 首次初始化保险箱：客户端生成 DEK；用登录密码派生密钥包装；上传 `vault_key_bundle`（`wrapped_dek_recovery*` 仅兼容写库，密钥立即丢弃，不向用户展示）。
-2. 登录成功：下载 key-bundle → 登录密码派生 KEK → 解包 DEK → 存入 Pinia 内存（用户无感知「解锁」步骤）。
+2. 登录成功：下载 key-bundle → 登录密码派生 KEK → 解包 DEK → 存入 Pinia 与标签页 `sessionStorage`（用户无感知「解锁」步骤）。
 3. 密保重置登录密码：服务端清除该用户密钥信封与全部密文；下次登录走 setup 重建空保险箱。**无恢复密钥重包装**。
 4. 密保答案只存哈希，不参与 DEK。
 5. 记录加密 AAD：`ownerId|itemId|payloadVersion`（UTF-8）。
@@ -192,4 +192,4 @@ Controller → Service → Repository；`ownerId` 仅来自 `AppUserPrincipal.us
 3. 敏感字段详情默认明文。
 4. 私人模板可 CRUD，并可从模板预填新建表单（无值）。
 5. 数据库与 API 响应中无账密明文；跨用户访问 404。
-6. 退出登录后内存 DEK 清空；刷新后可「确认登录密码以继续」，文案不称解锁。
+6. 退出登录后清除内存与 `sessionStorage` 中的 DEK；同一标签页刷新可自 `sessionStorage` 恢复，无需再输登录密码。

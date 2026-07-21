@@ -26,7 +26,9 @@
 
 ## 3. 刷新页面与会话恢复
 
-- Session Cookie 仍在，但内存 DEK 丢失时：在保险箱布局内弹出轻量「确认登录密码以继续」，**不**称为解锁保险箱，也无 `/vault/unlock` 路由品牌。
+- 登录成功解包 DEK 后，将 DEK 写入标签页 `sessionStorage`（关闭标签即清除；**禁止** `localStorage`）。
+- 同一标签页刷新：自 `sessionStorage` 恢复 DEK，继续解密；**无**「确认登录密码以继续」弹窗。
+- 服务端 Session 空闲超时 **1 小时**；API 返回 401 时清除 `sessionStorage` 中的 DEK 并跳转登录页。
 - 优先路径：登录页登录成功后自动解包；用户无感知二次步骤。
 
 ## 4. 数据与 API

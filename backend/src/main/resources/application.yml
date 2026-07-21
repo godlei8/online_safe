@@ -28,7 +28,7 @@ server:
     include-stacktrace: never
   servlet:
     session:
-      timeout: 8h
+      timeout: 1h
       cookie:
         name: ONLINE_SAFE_SESSION
         http-only: true

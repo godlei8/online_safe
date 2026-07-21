@@ -140,13 +140,28 @@ router.beforeEach(async (to) => {
 
     if (to.meta.vaultGate === 'setup') {
       if (vault.initialized && vault.dekReady) return '/vault'
-      if (vault.initialized && !vault.dekReady) return '/vault'
+      if (vault.initialized && !vault.dekReady) {
+        // 无 sessionStorage DEK 时需重新登录以解包
+        try {
+          await auth.logout()
+        } catch {
+          /* 忽略登出失败，仍引导登录 */
+        }
+        return { path: '/login', query: { redirect: to.fullPath } }
+      }
       return true
     }
 
     if (to.meta.requiresVaultReady || to.matched.some((record) => record.meta.requiresVaultReady)) {
       if (!vault.initialized) return '/vault/setup'
-      // DEK 未就绪时仍进入布局，由布局内「确认登录密码」对话框处理，无解锁路由
+      if (!vault.dekReady) {
+        try {
+          await auth.logout()
+        } catch {
+          /* 忽略登出失败，仍引导登录 */
+        }
+        return { path: '/login', query: { redirect: to.fullPath } }
+      }
     }
   }
 
