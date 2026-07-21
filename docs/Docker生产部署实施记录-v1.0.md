@@ -28,3 +28,4 @@
 - 后端 `mvnw.cmd test`：20 项测试通过。
 - 前端 `npm run build` 与 `npm run test:vault-kdf`：通过。
 - 首次使用 PowerShell 的 `&&` 连接两个 npm 命令失败；已改为逐条执行并检查退出码，构建结果正常。
+- 服务器首次 Docker 构建中的 Maven 全量离线依赖预下载耗时过长；已改为直接执行打包构建并复用已下载缓存。
