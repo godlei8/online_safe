@@ -1,7 +1,11 @@
 package com.godlei.onlinesafe.auth.web;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
+
+import java.util.List;
 
 public record RegistrationRequest(
         @NotBlank(message = "手机号不能为空")
@@ -22,6 +26,10 @@ public record RegistrationRequest(
 
         @NotBlank(message = "邀请码不能为空")
         @Size(max = 64, message = "邀请码格式不正确")
-        String invitationCode
+        String invitationCode,
+
+        @NotEmpty(message = "请至少设置 1 道密保问题")
+        @Size(min = 1, max = 3, message = "密保问题数量须为 1 至 3 道")
+        List<@Valid SecurityQuestionRequest> securityQuestions
 ) {
 }

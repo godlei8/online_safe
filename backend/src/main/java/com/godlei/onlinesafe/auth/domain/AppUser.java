@@ -138,4 +138,8 @@ public class AppUser {
     public void enable() {
         this.status = AppUserStatus.ACTIVE;
     }
+
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = Objects.requireNonNull(newPasswordHash);
+    }
 }

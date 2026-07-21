@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { z } from 'zod'
 import AuthShell from '@/components/AuthShell.vue'
 import { ApiRequestError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const form = ref()
 const identifier = ref('')
@@ -14,6 +15,7 @@ const password = ref('')
 const showPassword = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
+const infoMessage = ref('')
 const fieldErrors = ref<Record<string, string>>({})
 
 const schema = z.object({
@@ -24,6 +26,10 @@ const schema = z.object({
 const required = (message: string) => (value: string) => Boolean(value?.trim()) || message
 
 onMounted(() => {
+  if (route.query.reset === '1') {
+    infoMessage.value =
+      '登录密码已重置。若此前已初始化保险箱，旧密文已清除，登录后需重新初始化空保险箱。'
+  }
   if (auth.session.authenticated) router.replace('/vault')
 })
 
@@ -70,8 +76,12 @@ async function submit() {
     <div class="auth-form-heading">
       <span class="auth-form-heading__eyebrow">欢迎回来</span>
       <h1>登录你的保险箱</h1>
-      <p>请输入账号信息，继续管理你的记录。</p>
+      <p>登录成功后即可直接查看与管理账密，无需额外步骤。</p>
     </div>
+
+    <v-alert v-if="infoMessage" type="info" variant="tonal" density="comfortable" class="auth-form-alert" role="status">
+      {{ infoMessage }}
+    </v-alert>
 
     <v-alert v-if="errorMessage" type="error" variant="tonal" density="comfortable" class="auth-form-alert" role="alert">
       {{ errorMessage }}
@@ -113,9 +123,13 @@ async function submit() {
         </template>
       </v-text-field>
 
+      <div class="d-flex justify-end mb-2">
+        <router-link to="/forgot-password" class="text-body-2">忘记密码？</router-link>
+      </div>
+
       <div class="auth-inline-note" role="note">
         <v-icon icon="mdi-information-outline" size="18" />
-        <span>登录密码用于身份认证；保险箱主密码会在后续功能中独立处理。</span>
+        <span>登录密码同时用于本机会话内打开密钥信封；退出登录后内存中的明文会清除。</span>
       </div>
 
       <v-btn type="submit" color="primary" block class="auth-submit" :loading="submitting" :disabled="submitting">

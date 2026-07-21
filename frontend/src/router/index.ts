@@ -1,7 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
+import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
+import VaultLayout from '@/layouts/VaultLayout.vue'
 import VaultHomeView from '@/views/VaultHomeView.vue'
+import VaultSetupView from '@/views/vault/VaultSetupView.vue'
+import VaultItemDetailView from '@/views/vault/VaultItemDetailView.vue'
+import VaultTemplatesView from '@/views/vault/VaultTemplatesView.vue'
 import AdminLoginView from '@/views/AdminLoginView.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import AdminDashboardView from '@/views/admin/AdminDashboardView.vue'
@@ -10,6 +15,7 @@ import AdminUsersView from '@/views/admin/AdminUsersView.vue'
 import AdminPlaceholderView from '@/views/admin/AdminPlaceholderView.vue'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 import { useAuthStore } from '@/stores/auth'
+import { useVaultStore } from '@/stores/vault'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -17,7 +23,37 @@ const router = createRouter({
     { path: '/', redirect: '/login' },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/register', name: 'register', component: RegisterView },
-    { path: '/vault', name: 'vault', component: VaultHomeView },
+    { path: '/forgot-password', name: 'forgot-password', component: ForgotPasswordView },
+    { path: '/vault/setup', name: 'vault-setup', component: VaultSetupView, meta: { requiresUser: true, vaultGate: 'setup' } },
+    { path: '/vault/unlock', redirect: '/vault' },
+    { path: '/vault/rewrap', redirect: '/vault' },
+    {
+      path: '/vault',
+      component: VaultLayout,
+      meta: { requiresUser: true, requiresVaultReady: true },
+      children: [
+        { path: '', name: 'vault', component: VaultHomeView },
+        { path: 'templates', name: 'vault-templates', component: VaultTemplatesView },
+        { path: 'items/:id', name: 'vault-item', component: VaultItemDetailView },
+      ],
+    },
+    {
+      path: '/vault/new',
+      redirect: (to) => ({
+        path: '/vault',
+        query: {
+          new: '1',
+          ...(typeof to.query.templateId === 'string' ? { templateId: to.query.templateId } : {}),
+        },
+      }),
+    },
+    {
+      path: '/vault/items/:id/edit',
+      redirect: (to) => ({
+        path: `/vault/items/${String(to.params.id)}`,
+        query: { edit: String(to.params.id) },
+      }),
+    },
     { path: '/admin/login', name: 'admin-login', component: AdminLoginView },
     {
       path: '/admin',
@@ -76,24 +112,42 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (!to.meta.requiresAdmin) return true
+  const auth = useAuthStore()
+  if (!auth.ready) {
+    await auth.bootstrap()
+  }
 
-  const adminAuth = useAdminAuthStore()
-  if (!adminAuth.ready) {
-    try {
+  if (to.meta.requiresAdmin) {
+    const adminAuth = useAdminAuthStore()
+    if (!adminAuth.ready) {
       await adminAuth.bootstrap()
-    } catch {
+    }
+    if (!adminAuth.session.authenticated) {
       return { path: '/admin/login', query: { redirect: to.fullPath } }
     }
+    return true
   }
 
-  if (!adminAuth.session.authenticated) {
-    return { path: '/admin/login', query: { redirect: to.fullPath } }
-  }
+  if (to.meta.requiresUser || to.path.startsWith('/vault')) {
+    if (!auth.session.authenticated) {
+      return { path: '/login', query: { redirect: to.fullPath } }
+    }
 
-  const userAuth = useAuthStore()
-  if (userAuth.session.authenticated && userAuth.session.role === 'USER') {
-    // 个人会话与管理员会话互斥：进入管理页时以管理员会话为准（后登录覆盖）
+    const vault = useVaultStore()
+    if (!vault.ready) {
+      await vault.refreshInitialization()
+    }
+
+    if (to.meta.vaultGate === 'setup') {
+      if (vault.initialized && vault.dekReady) return '/vault'
+      if (vault.initialized && !vault.dekReady) return '/vault'
+      return true
+    }
+
+    if (to.meta.requiresVaultReady || to.matched.some((record) => record.meta.requiresVaultReady)) {
+      if (!vault.initialized) return '/vault/setup'
+      // DEK 未就绪时仍进入布局，由布局内「确认登录密码」对话框处理，无解锁路由
+    }
   }
 
   return true

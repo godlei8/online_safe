@@ -417,6 +417,171 @@ a { color: inherit; }
 
 .connection-snackbar .v-snackbar__wrapper { min-width: min(94vw, 560px); }
 
+/* 保险箱初始化页：与认证页共用色板与控件手感 */
+.vault-gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top right, rgb(21 94 239 / 10%), transparent 42%),
+    linear-gradient(180deg, #f7f9fc 0%, #eef3fb 100%);
+}
+
+.vault-gate__card {
+  width: min(100%, 520px);
+  padding: 36px !important;
+  border: 1px solid #eaecf0 !important;
+  border-radius: 18px !important;
+  background: #fff;
+  box-shadow: 0 12px 32px rgb(16 24 40 / 8%) !important;
+}
+
+.vault-gate__card--narrow { width: min(100%, 460px); }
+
+.vault-gate__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  color: #101828;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.vault-gate__brand .v-icon { color: #155eef; }
+
+.vault-gate .auth-form-heading { margin-bottom: 20px; }
+
+.vault-gate .auth-form-heading h1 {
+  font-size: 1.5rem;
+}
+
+.vault-gate__tips {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  border: 1px solid #dbe8ff;
+  border-radius: 12px;
+  background: #f4f8ff;
+}
+
+.vault-gate__tips-title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #155eef;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.vault-gate__tips-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  color: #475467;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  list-style: none;
+}
+
+.vault-gate__tips-list li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.vault-gate__tips-list .v-icon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #155eef;
+}
+
+.vault-gate__form {
+  display: grid;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+/* 密码框与规则清单略留间距（覆盖全局 password-rules 的负 margin） */
+.vault-gate .password-rules {
+  margin-top: 10px;
+}
+
+.vault-gate__card .v-field {
+  border-radius: 10px !important;
+}
+
+.vault-gate__card .v-field--focused {
+  box-shadow: 0 0 0 3px rgb(21 94 239 / 12%);
+}
+
+.vault-gate__card .v-field__outline { --v-field-border-opacity: 1; color: #d0d5dd; }
+.vault-gate__card .v-field--focused .v-field__outline { color: #155eef; }
+.vault-gate__card .v-label { color: #475467; font-size: 0.875rem; }
+.vault-gate__card .v-field__input { color: #101828; }
+.vault-gate__card .v-messages { min-height: 20px; }
+.vault-gate__card .v-text-field {
+  --v-input-control-height: 44px;
+}
+
+.vault-gate__actions {
+  margin-top: 8px;
+}
+
+.vault-gate__recovery {
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+  word-break: break-all;
+}
+
+.vault-gate__recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.vault-gate__confirm {
+  margin: 0 0 16px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+.vault-gate__confirm--error {
+  border-color: #fecdca;
+  background: #fffbfa;
+}
+
+.vault-gate__confirm .v-label {
+  color: #475467;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  opacity: 1;
+}
+
+@media (max-width: 599px) {
+  .vault-gate { padding: 20px 16px; }
+  .vault-gate__card {
+    width: 100%;
+    padding: 28px 20px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .vault-gate .auth-form-heading h1 { font-size: 1.4rem; }
+}
+
 @media (max-width: 1279px) {
   .auth-aside { padding: 48px clamp(28px, 4vw, 48px); }
   .auth-aside h1 { font-size: 2rem; }
@@ -526,7 +691,20 @@ a { color: inherit; }
 .vault-sidebar__bottom { display: grid; gap: 4px; margin-top: auto; }
 .vault-sidebar__bottom .v-btn { justify-content: flex-start; padding-left: 12px; font-size: 0.875rem; }
 
-.vault-main { width: 100%; min-width: 0; margin-left: 0; }
+.vault-main {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  margin-left: 0;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.vault-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
 
 .vault-topbar {
   display: flex;
@@ -661,7 +839,7 @@ a { color: inherit; }
 
 .vault-record-card {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   padding: 16px;
   border: 1px solid #eaecf0;
   border-radius: 14px;
@@ -670,13 +848,38 @@ a { color: inherit; }
   font: inherit;
   text-align: left;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-  cursor: pointer;
 }
 
 .vault-record-card:hover {
   border-color: #b2ccff;
   box-shadow: 0 8px 18px rgb(16 24 40 / 7%);
   transform: translateY(-2px);
+}
+
+.vault-record-card__main {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vault-record-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  border-top: 1px solid #f2f4f7;
+  padding-top: 8px;
+}
+
+a.vault-nav__item,
+a.vault-mobile-nav__item {
+  text-decoration: none;
+  color: inherit;
 }
 
 .vault-record-card__heading {

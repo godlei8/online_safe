@@ -7,6 +7,7 @@ import com.godlei.onlinesafe.admin.domain.RegistrationInvite;
 import com.godlei.onlinesafe.admin.infrastructure.AdminUserRepository;
 import com.godlei.onlinesafe.admin.infrastructure.RegistrationInviteRepository;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
+import com.godlei.onlinesafe.auth.infrastructure.UserSecurityQuestionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -44,6 +47,9 @@ class AuthenticationFlowIntegrationTest {
     private AppUserRepository userRepository;
 
     @Autowired
+    private UserSecurityQuestionRepository securityQuestionRepository;
+
+    @Autowired
     private AdminUserRepository adminUserRepository;
 
     @Autowired
@@ -64,6 +70,7 @@ class AuthenticationFlowIntegrationTest {
     @BeforeEach
     void setUp() {
         inviteRepository.deleteAll();
+        securityQuestionRepository.deleteAll();
         userRepository.deleteAll();
         adminUserRepository.deleteAll();
         AdminUser admin = adminUserRepository.save(AdminUser.createActive("admin", passwordEncoder.encode(TEST_ADMIN_PASSWORD)));
@@ -106,13 +113,18 @@ class AuthenticationFlowIntegrationTest {
     @Test
     void rejectsMismatchedConfirmationPassword() throws Exception {
         seedInvite("TEST_INVITE_CODE", 10);
-        String json = objectMapper.writeValueAsString(Map.of(
-                "phone", "13800138000",
-                "username", "alice",
-                "password", "correct-password-123",
-                "confirmPassword", "different-password-123",
-                "invitationCode", "TEST_INVITE_CODE"
-        ));
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("phone", "13800138000");
+        body.put("username", "alice");
+        body.put("password", "correct-password-123");
+        body.put("confirmPassword", "different-password-123");
+        body.put("invitationCode", "TEST_INVITE_CODE");
+        body.put("securityQuestions", List.of(Map.of(
+                "questionType", "BUILTIN",
+                "questionCode", "PET_NAME",
+                "answer", "Fluffy"
+        )));
+        String json = objectMapper.writeValueAsString(body);
 
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
@@ -124,13 +136,18 @@ class AuthenticationFlowIntegrationTest {
 
     @Test
     void rejectsPasswordShorterThanEightCharacters() throws Exception {
-        String json = objectMapper.writeValueAsString(Map.of(
-                "phone", "13800138000",
-                "username", "alice",
-                "password", "1234567",
-                "confirmPassword", "1234567",
-                "invitationCode", "TEST_INVITE_CODE"
-        ));
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("phone", "13800138000");
+        body.put("username", "alice");
+        body.put("password", "1234567");
+        body.put("confirmPassword", "1234567");
+        body.put("invitationCode", "TEST_INVITE_CODE");
+        body.put("securityQuestions", List.of(Map.of(
+                "questionType", "BUILTIN",
+                "questionCode", "PET_NAME",
+                "answer", "Fluffy"
+        )));
+        String json = objectMapper.writeValueAsString(body);
 
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
@@ -251,12 +268,17 @@ class AuthenticationFlowIntegrationTest {
     }
 
     private String registrationJson(String phone, String username, String invitationCode) throws Exception {
-        return objectMapper.writeValueAsString(Map.of(
-                "phone", phone,
-                "username", username,
-                "password", "correct-password-123",
-                "confirmPassword", "correct-password-123",
-                "invitationCode", invitationCode
-        ));
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("phone", phone);
+        body.put("username", username);
+        body.put("password", "correct-password-123");
+        body.put("confirmPassword", "correct-password-123");
+        body.put("invitationCode", invitationCode);
+        body.put("securityQuestions", List.of(Map.of(
+                "questionType", "BUILTIN",
+                "questionCode", "PET_NAME",
+                "answer", "Fluffy"
+        )));
+        return objectMapper.writeValueAsString(body);
     }
 }

@@ -22,19 +22,22 @@ public class RegistrationService {
     private final PhoneNormalizer phoneNormalizer;
     private final UsernameNormalizer usernameNormalizer;
     private final InvitationService invitationService;
+    private final SecurityQuestionService securityQuestionService;
 
     public RegistrationService(
             AppUserRepository userRepository,
             PasswordEncoder passwordEncoder,
             PhoneNormalizer phoneNormalizer,
             UsernameNormalizer usernameNormalizer,
-            InvitationService invitationService
+            InvitationService invitationService,
+            SecurityQuestionService securityQuestionService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.phoneNormalizer = phoneNormalizer;
         this.usernameNormalizer = usernameNormalizer;
         this.invitationService = invitationService;
+        this.securityQuestionService = securityQuestionService;
     }
 
     @Transactional
@@ -58,6 +61,7 @@ public class RegistrationService {
 
         try {
             AppUser saved = userRepository.saveAndFlush(user);
+            securityQuestionService.saveForRegistration(saved.getId(), request.securityQuestions());
             invitationService.consumeForRegistration(request.invitationCode(), saved.getId());
             return RegistrationResponse.from(saved);
         } catch (DataIntegrityViolationException exception) {

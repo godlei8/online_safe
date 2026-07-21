@@ -5,7 +5,14 @@ import com.godlei.onlinesafe.admin.application.InvalidUserOperationException;
 import com.godlei.onlinesafe.admin.application.InvitationNotFoundException;
 import com.godlei.onlinesafe.admin.application.UserNotFoundException;
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
+import com.godlei.onlinesafe.auth.application.PasswordResetException;
 import com.godlei.onlinesafe.auth.application.RegistrationConflictException;
+import com.godlei.onlinesafe.vault.application.InvalidVaultEnvelopeException;
+import com.godlei.onlinesafe.vault.application.PrivateTemplateNotFoundException;
+import com.godlei.onlinesafe.vault.application.VaultAlreadyInitializedException;
+import com.godlei.onlinesafe.vault.application.VaultItemNotFoundException;
+import com.godlei.onlinesafe.vault.application.VaultNotInitializedException;
+import com.godlei.onlinesafe.vault.application.VaultRevisionConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +58,14 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.CONFLICT, "ACCOUNT_IDENTIFIER_ALREADY_EXISTS", exception.getMessage(), request, null);
     }
 
+    @ExceptionHandler(PasswordResetException.class)
+    ResponseEntity<ApiError> handlePasswordReset(PasswordResetException exception, HttpServletRequest request) {
+        HttpStatus status = "PASSWORD_RESET_RATE_LIMITED".equals(exception.getCode())
+                ? HttpStatus.TOO_MANY_REQUESTS
+                : HttpStatus.BAD_REQUEST;
+        return response(status, exception.getCode(), exception.getMessage(), request, null);
+    }
+
     @ExceptionHandler(InvitationNotFoundException.class)
     ResponseEntity<ApiError> handleInvitationNotFound(
             InvitationNotFoundException exception,
@@ -75,6 +90,54 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidUserOperationException.class)
     ResponseEntity<ApiError> handleInvalidUser(
             InvalidUserOperationException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(VaultNotInitializedException.class)
+    ResponseEntity<ApiError> handleVaultNotInitialized(
+            VaultNotInitializedException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, "VAULT_NOT_INITIALIZED", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(VaultAlreadyInitializedException.class)
+    ResponseEntity<ApiError> handleVaultAlreadyInitialized(
+            VaultAlreadyInitializedException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, "VAULT_ALREADY_INITIALIZED", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(VaultItemNotFoundException.class)
+    ResponseEntity<ApiError> handleVaultItemNotFound(
+            VaultItemNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, "VAULT_ITEM_NOT_FOUND", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(PrivateTemplateNotFoundException.class)
+    ResponseEntity<ApiError> handlePrivateTemplateNotFound(
+            PrivateTemplateNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, "PRIVATE_TEMPLATE_NOT_FOUND", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(VaultRevisionConflictException.class)
+    ResponseEntity<ApiError> handleVaultRevisionConflict(
+            VaultRevisionConflictException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.CONFLICT, "VAULT_REVISION_CONFLICT", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidVaultEnvelopeException.class)
+    ResponseEntity<ApiError> handleInvalidVaultEnvelope(
+            InvalidVaultEnvelopeException exception,
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);
