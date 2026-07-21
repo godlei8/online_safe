@@ -18,6 +18,7 @@ frontend/.env.local
 backend/.env
 backend/src/main/resources/application-local.yml
 backend/src/main/resources/application-secret.yml
+deploy/.env
 
 # Logs and operating-system files
 *.log

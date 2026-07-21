@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: 10000
+  flyway:
+    clean-disabled: true
+
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        secure: true
+
+app:
+  flyway:
+    repair-before-migrate: false
+  invitation:
+    encryption-key: ${INVITATION_ENCRYPTION_KEY}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.security: WARN
