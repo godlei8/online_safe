@@ -5,6 +5,7 @@ import { usersApi, type ManagedUserStats } from '@/api/users'
 const quickLinks = [
   { title: '用户管理', to: '/admin/users', icon: 'mdi-account-group-outline' },
   { title: '创建邀请码', to: '/admin/invitations', icon: 'mdi-key-plus' },
+  { title: '发布公告', to: '/admin/announcements', icon: 'mdi-bullhorn-outline' },
 ]
 
 const userStats = ref<ManagedUserStats | null>(null)
@@ -21,7 +22,7 @@ onMounted(async () => {
 <template>
   <div class="admin-dashboard">
     <v-alert type="info" variant="tonal" class="mb-6">
-      邀请码与用户管理已开放；系统模板与安全日志将陆续接入。
+      保险箱、邀请码、用户管理与公告已开放；系统模板与安全日志将陆续接入。
     </v-alert>
 
     <div class="admin-stat-grid mb-4">
@@ -47,13 +48,13 @@ onMounted(async () => {
       </v-card>
       <v-card class="admin-stat-card admin-stat-card--info" elevation="0">
         <div class="admin-stat-card__head">
-          <div class="admin-stat-card__label">密文存储</div>
+          <div class="admin-stat-card__label">保险箱存储</div>
           <div class="admin-stat-card__icon" aria-hidden="true">
             <v-icon icon="mdi-database-lock-outline" size="18" />
           </div>
         </div>
-        <div class="admin-stat-card__value">—</div>
-        <div class="admin-stat-card__hint">待保险箱模块接入</div>
+        <div class="admin-stat-card__value">已接入</div>
+        <div class="admin-stat-card__hint">服务端 AES-GCM 加密入库</div>
       </v-card>
       <v-card class="admin-stat-card admin-stat-card--success" elevation="0">
         <div class="admin-stat-card__head">
@@ -63,7 +64,7 @@ onMounted(async () => {
           </div>
         </div>
         <div class="admin-stat-card__value">隔离</div>
-        <div class="admin-stat-card__hint">仅管理账户元数据</div>
+        <div class="admin-stat-card__hint">管理员不可查看用户明文</div>
       </v-card>
     </div>
 

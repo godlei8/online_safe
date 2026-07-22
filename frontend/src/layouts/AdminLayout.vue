@@ -15,6 +15,7 @@ const navItems = [
   { title: '总览', icon: 'mdi-view-dashboard-outline', to: '/admin' },
   { title: '用户管理', icon: 'mdi-account-group-outline', to: '/admin/users' },
   { title: '邀请码', icon: 'mdi-ticket-confirmation-outline', to: '/admin/invitations' },
+  { title: '公告', icon: 'mdi-bullhorn-outline', to: '/admin/announcements' },
 ]
 
 const pageTitle = computed(() => String(route.meta.title || '管理后台'))
@@ -103,7 +104,7 @@ async function logout() {
 
       <main class="admin-content">
         <router-view />
-        <p class="admin-boundary">用户数据在客户端加密，管理员无法查看明文内容。</p>
+        <p class="admin-boundary">保险箱账密由服务端加密存储，管理员无法查看用户明文内容。</p>
       </main>
     </div>
 

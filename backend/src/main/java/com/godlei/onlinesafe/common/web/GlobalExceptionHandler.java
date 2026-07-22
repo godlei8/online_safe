@@ -4,6 +4,8 @@ import com.godlei.onlinesafe.admin.application.InvalidInvitationOperationExcepti
 import com.godlei.onlinesafe.admin.application.InvalidUserOperationException;
 import com.godlei.onlinesafe.admin.application.InvitationNotFoundException;
 import com.godlei.onlinesafe.admin.application.UserNotFoundException;
+import com.godlei.onlinesafe.announcement.application.AnnouncementNotFoundException;
+import com.godlei.onlinesafe.announcement.application.InvalidAnnouncementOperationException;
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
 import com.godlei.onlinesafe.auth.application.PasswordResetException;
 import com.godlei.onlinesafe.auth.application.RegistrationConflictException;
@@ -88,6 +90,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidUserOperationException.class)
     ResponseEntity<ApiError> handleInvalidUser(
             InvalidUserOperationException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(AnnouncementNotFoundException.class)
+    ResponseEntity<ApiError> handleAnnouncementNotFound(
+            AnnouncementNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, "ANNOUNCEMENT_NOT_FOUND", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidAnnouncementOperationException.class)
+    ResponseEntity<ApiError> handleInvalidAnnouncement(
+            InvalidAnnouncementOperationException exception,
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);

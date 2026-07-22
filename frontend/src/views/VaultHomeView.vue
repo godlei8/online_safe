@@ -13,6 +13,7 @@ import {
   statusLabel,
   truncatePlain,
 } from '@/domain/vaultPayload'
+import { useAnnouncementsStore } from '@/stores/announcements'
 import { useVaultStore } from '@/stores/vault'
 
 type 排序方式 = '最近更新' | '最早创建' | '名称'
@@ -21,6 +22,7 @@ type 展示方式 = '卡片' | '列表'
 const router = useRouter()
 const { xs } = useDisplay()
 const vault = useVaultStore()
+const announcements = useAnnouncementsStore()
 const editor = useVaultItemEditor()
 
 const loading = ref(false)
@@ -37,6 +39,8 @@ const snackbarText = ref('')
 const abnormalConfirmOpen = ref(false)
 const abnormalTargetId = ref<string | null>(null)
 const markingAbnormal = ref(false)
+/** 列表卡片中已临时明文显示密码的记录 id */
+const revealedPasswordIds = ref<Record<string, boolean>>({})
 
 const records = computed(() => vault.items.map(({ envelope, payload }) => {
   const { account, password } = pickListCredentials(payload.fields)
@@ -60,9 +64,12 @@ const records = computed(() => vault.items.map(({ envelope, payload }) => {
     账号展示: accountValue ? truncatePlain(accountValue) : '',
     账号标签: account?.name || '账号',
     账号可复制: Boolean(accountValue && account?.copyable),
-    密码展示: passwordValue ? maskSecret(passwordValue) : '',
+    密码明文: passwordValue,
+    密码暗文: passwordValue ? maskSecret(passwordValue) : '',
+    密码展示明文: passwordValue ? truncatePlain(passwordValue) : '',
     密码标签: password?.name || '密码',
     密码可复制: Boolean(passwordValue && password?.copyable),
+    有密码: Boolean(passwordValue),
     有凭证: Boolean(accountValue || passwordValue),
   }
 }))
@@ -177,6 +184,22 @@ async function copyRecordPassword(id: string, label: string) {
   await copyText(passwordField?.value ?? '', label, Boolean(passwordField?.copyable))
 }
 
+function isPasswordRevealed(id: string) {
+  return revealedPasswordIds.value[id] === true
+}
+
+function togglePasswordReveal(id: string) {
+  revealedPasswordIds.value = {
+    ...revealedPasswordIds.value,
+    [id]: !isPasswordRevealed(id),
+  }
+}
+
+function passwordRowDisplay(item: { id: string; 密码暗文: string; 密码展示明文: string }) {
+  if (!item.密码暗文 && !item.密码展示明文) return ''
+  return isPasswordRevealed(item.id) ? item.密码展示明文 : item.密码暗文
+}
+
 async function loadRecords() {
   loading.value = true
   errorMessage.value = ''
@@ -218,8 +241,31 @@ onMounted(loadRecords)
 
     <div class="vault-privacy-note" role="note">
       <v-icon icon="mdi-lock-check-outline" size="16" />
-      <span>列表显示账号名与密码暗文；左下图标可标记异常或编辑，点击卡片进入详情。</span>
+      <span>列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常或编辑，点击卡片进入详情。</span>
     </div>
+
+    <aside
+      v-if="announcements.pinnedBanner"
+      class="vault-pinned-announcement"
+      role="status"
+    >
+      <div class="vault-pinned-announcement__mark">
+        <v-icon icon="mdi-bullhorn-outline" size="18" />
+      </div>
+      <div class="vault-pinned-announcement__content">
+        <strong>{{ announcements.pinnedBanner.title }}</strong>
+        <p>{{ announcements.pinnedBanner.body }}</p>
+      </div>
+      <v-btn
+        size="small"
+        variant="text"
+        color="primary"
+        @click="announcements.openList()"
+      >
+        查看全部
+      </v-btn>
+    </aside>
+
     <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
 
     <div class="vault-controls">
@@ -363,7 +409,7 @@ onMounted(loadRecords)
               <button
                 v-if="item.账号可复制"
                 type="button"
-                class="vault-secret-row__copy"
+                class="vault-secret-row__action"
                 :aria-label="`复制${item.账号标签}`"
                 @click="copyText(item.账号名, item.账号标签, item.账号可复制)"
               >
@@ -372,18 +418,36 @@ onMounted(loadRecords)
             </div>
             <div class="vault-secret-row">
               <span class="vault-secret-row__label">密码</span>
-              <span class="vault-secret-row__value vault-secret-row__value--masked">
-                {{ item.密码展示 || '—' }}
-              </span>
-              <button
-                v-if="item.密码可复制"
-                type="button"
-                class="vault-secret-row__copy"
-                :aria-label="`复制${item.密码标签}`"
-                @click="copyRecordPassword(item.id, item.密码标签)"
+              <span
+                class="vault-secret-row__value"
+                :class="{ 'vault-secret-row__value--masked': item.有密码 && !isPasswordRevealed(item.id) }"
+                :title="isPasswordRevealed(item.id) ? (item.密码明文 || undefined) : undefined"
               >
-                <v-icon icon="mdi-content-copy" size="13" />
-              </button>
+                {{ passwordRowDisplay(item) || '—' }}
+              </span>
+              <div class="vault-secret-row__actions">
+                <button
+                  v-if="item.有密码"
+                  type="button"
+                  class="vault-secret-row__action"
+                  :aria-label="isPasswordRevealed(item.id) ? `隐藏${item.密码标签}` : `显示${item.密码标签}`"
+                  @click="togglePasswordReveal(item.id)"
+                >
+                  <v-icon
+                    :icon="isPasswordRevealed(item.id) ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
+                    size="15"
+                  />
+                </button>
+                <button
+                  v-if="item.密码可复制"
+                  type="button"
+                  class="vault-secret-row__action"
+                  :aria-label="`复制${item.密码标签}`"
+                  @click="copyRecordPassword(item.id, item.密码标签)"
+                >
+                  <v-icon icon="mdi-content-copy" size="13" />
+                </button>
+              </div>
             </div>
           </template>
           <div v-else class="vault-record-card__empty-secrets">无账号或密码字段</div>
@@ -412,7 +476,7 @@ onMounted(loadRecords)
             </button>
           </div>
           <time v-if="item.有效期">有效期截至 {{ item.有效期 }}</time>
-          <span v-else class="vault-record-card__expiry-empty">未设置有效期</span>
+          <span v-else class="vault-record-card__expiry-empty">永久有效</span>
         </div>
       </article>
     </div>

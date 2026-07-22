@@ -12,7 +12,7 @@ const form = defineModel<VaultItemPayload>({ required: true })
 defineProps<{
   loading?: boolean
   errorMessage?: string
-  /** 新建时有效期必填；编辑时可改有效期，不可改状态 */
+  /** 新建/编辑均可留空有效期，表示永久有效 */
   mode?: 'create' | 'edit'
 }>()
 
@@ -121,9 +121,9 @@ function onTypeChange(field: VaultField, type: FieldType) {
           type="date"
           density="compact"
           :model-value="form.expiresAt ?? ''"
-          :hint="mode === 'create' ? '到期后状态将自动变为「过期」' : '可调整有效期；到期后自动变为「过期」'"
+          hint="可不填，表示永久有效；填写后到期自动变为「过期」"
           persistent-hint
-          :clearable="mode === 'edit'"
+          clearable
           @update:model-value="form.expiresAt = $event || null"
         />
       </section>

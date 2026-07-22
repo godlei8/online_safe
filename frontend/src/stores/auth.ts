@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { authApi, type LoginPayload, type RegistrationPayload, type Session } from '@/api/auth'
 import { refreshCsrfToken } from '@/api/client'
 import { useVaultStore } from '@/stores/vault'
+import { useAnnouncementsStore } from '@/stores/announcements'
 
 const anonymousSession: Session = { authenticated: false, userId: null, username: null, role: null }
 
@@ -17,6 +18,7 @@ export const useAuthStore = defineStore('auth', {
       this.session = await authApi.login(payload)
       const vault = useVaultStore()
       vault.clearSessionData()
+      useAnnouncementsStore().clear()
       await vault.refreshInitialization()
     },
     async register(payload: RegistrationPayload) {
@@ -26,6 +28,7 @@ export const useAuthStore = defineStore('auth', {
     },
     async logout() {
       useVaultStore().clearSessionData()
+      useAnnouncementsStore().clear()
       await authApi.logout()
       this.session = anonymousSession
       await refreshCsrfToken()

@@ -149,6 +149,10 @@ const statusTone = computed(() => {
             <span class="vault-detail-panel__dot">·</span>
             <span>有效期 {{ payload.expiresAt.slice(0, 10) }}</span>
           </template>
+          <template v-else>
+            <span class="vault-detail-panel__dot">·</span>
+            <span>永久有效</span>
+          </template>
         </p>
         <p v-if="updatedAt" class="vault-meta">
           更新于 {{ new Date(updatedAt).toLocaleString('zh-CN') }}

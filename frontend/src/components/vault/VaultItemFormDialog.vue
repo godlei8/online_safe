@@ -80,10 +80,6 @@ async function save() {
     errorMessage.value = '请填写记录名称和平台'
     return
   }
-  if (!isEdit.value && !draft.expiresAt) {
-    errorMessage.value = '请填写有效期'
-    return
-  }
   const account = draft.fields.find((field) => field.systemKey === 'account')
   const password = draft.fields.find((field) => field.systemKey === 'password')
   if (!account?.value.trim() || !password?.value.trim()) {

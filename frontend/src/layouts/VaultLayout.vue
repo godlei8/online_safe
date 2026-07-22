@@ -4,6 +4,7 @@ import { useDisplay } from 'vuetify'
 import { useRoute, useRouter } from 'vue-router'
 import VaultItemFormDialog from '@/components/vault/VaultItemFormDialog.vue'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
+import { useAnnouncementsStore } from '@/stores/announcements'
 import { useAuthStore } from '@/stores/auth'
 import { useVaultStore } from '@/stores/vault'
 
@@ -11,13 +12,13 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const vault = useVaultStore()
+const announcements = useAnnouncementsStore()
 const editor = useVaultItemEditor()
 const { mdAndUp } = useDisplay()
 
 const signingOut = ref(false)
 const navigationDrawer = ref(false)
-const showNavigationHint = ref(false)
-const navigationHint = ref('')
+const selectedAnnouncementId = ref<string | null>(null)
 
 const userInitial = computed(() => (auth.session.username?.trim().slice(0, 1) || '我').toUpperCase())
 const activeNav = computed(() => {
@@ -25,10 +26,10 @@ const activeNav = computed(() => {
   return 'vault'
 })
 
-function notifyUnavailable(name: string) {
-  navigationHint.value = `${name}正在开发中。`
-  showNavigationHint.value = true
-}
+const selectedAnnouncement = computed(() => {
+  if (!selectedAnnouncementId.value) return null
+  return announcements.items.find((item) => item.id === selectedAnnouncementId.value) ?? null
+})
 
 async function logout() {
   signingOut.value = true
@@ -64,18 +65,41 @@ function consumeEditorQuery() {
 }
 
 function onSaved(id: string, _created: boolean) {
-  // 新增/编辑成功：关闭弹窗即可；若当前已在该条详情则刷新，不从列表跳进详情
   if (route.name === 'vault-item' && String(route.params.id) === id) {
     router.replace({ path: `/vault/items/${id}`, query: { refreshed: String(Date.now()) } })
   }
 }
 
-onMounted(() => {
+async function openAnnouncements() {
+  selectedAnnouncementId.value = null
+  await announcements.openList()
+}
+
+function selectAnnouncement(id: string) {
+  selectedAnnouncementId.value = id
+}
+
+async function markSelectedRead() {
+  if (!selectedAnnouncementId.value) return
+  await announcements.markRead(selectedAnnouncementId.value)
+}
+
+function formatPublishedAt(value: string | null) {
+  if (!value) return ''
+  return new Date(value).toLocaleString('zh-CN')
+}
+
+onMounted(async () => {
   if (!auth.session.authenticated) {
     router.replace('/login')
     return
   }
   consumeEditorQuery()
+  try {
+    await announcements.refreshInbox()
+  } catch {
+    // 公告失败不阻断保险箱主流程
+  }
 })
 
 watch(
@@ -150,7 +174,22 @@ watch(
             <v-icon icon="mdi-shield-check-outline" size="15" />
             已登录
           </span>
-          <v-btn icon="mdi-bell-outline" variant="text" aria-label="查看通知" @click="notifyUnavailable('通知')" />
+          <v-btn
+            class="vault-bell-btn"
+            icon
+            variant="text"
+            aria-label="查看公告"
+            @click="openAnnouncements"
+          >
+            <v-badge
+              :model-value="announcements.hasUnread"
+              color="error"
+              dot
+              location="top end"
+            >
+              <v-icon icon="mdi-bell-outline" />
+            </v-badge>
+          </v-btn>
           <v-menu location="bottom end">
             <template #activator="{ props }">
               <button
@@ -208,10 +247,6 @@ watch(
           <v-icon icon="mdi-view-grid-plus-outline" size="21" />
           <span>模板</span>
         </router-link>
-        <button class="vault-mobile-nav__item" type="button" @click="logout">
-          <v-icon icon="mdi-logout" size="21" />
-          <span>退出</span>
-        </button>
       </nav>
     </main>
 
@@ -228,9 +263,143 @@ watch(
       </v-list>
     </v-navigation-drawer>
 
+    <v-navigation-drawer
+      v-model="announcements.listOpen"
+      class="vault-announcement-drawer"
+      location="right"
+      temporary
+      width="380"
+      color="surface"
+    >
+      <header class="vault-announcement-drawer__header">
+        <div class="vault-announcement-drawer__brand">
+          <span class="vault-announcement-drawer__mark" aria-hidden="true">
+            <v-icon icon="mdi-bullhorn-outline" size="18" />
+          </span>
+          <div>
+            <strong>系统公告</strong>
+            <small>
+              <template v-if="announcements.inbox.unreadCount > 0">
+                {{ announcements.inbox.unreadCount }} 条未读
+              </template>
+              <template v-else>已全部读完</template>
+            </small>
+          </div>
+        </div>
+        <v-btn icon="mdi-close" variant="text" aria-label="关闭公告列表" @click="announcements.listOpen = false" />
+      </header>
+
+      <v-progress-linear v-if="announcements.loadingList" indeterminate color="primary" />
+
+      <div v-else class="vault-announcement-drawer__list">
+        <button
+          v-for="(item, index) in announcements.items"
+          :key="item.id"
+          type="button"
+          class="vault-announcement-item"
+          :class="{ 'vault-announcement-item--unread': !item.read }"
+          :style="{ '--announce-delay': `${Math.min(index, 8) * 40}ms` }"
+          @click="selectAnnouncement(item.id)"
+        >
+          <span class="vault-announcement-item__icon" aria-hidden="true">
+            <v-icon :icon="item.read ? 'mdi-email-open-outline' : 'mdi-email-alert-outline'" size="18" />
+          </span>
+          <span class="vault-announcement-item__body">
+            <span class="vault-announcement-item__title-row">
+              <span class="vault-announcement-item__title">{{ item.title }}</span>
+              <span v-if="!item.read" class="vault-announcement-item__badge">未读</span>
+              <span v-else-if="item.pinned" class="vault-announcement-item__badge vault-announcement-item__badge--muted">置顶</span>
+            </span>
+            <span class="vault-announcement-item__meta">
+              {{ item.read ? '已读' : '待确认' }}
+              <template v-if="item.publishedAt"> · {{ formatPublishedAt(item.publishedAt) }}</template>
+            </span>
+            <span class="vault-announcement-item__excerpt">{{ item.body }}</span>
+          </span>
+          <v-icon class="vault-announcement-item__chevron" icon="mdi-chevron-right" size="18" />
+        </button>
+
+        <div v-if="announcements.items.length === 0" class="vault-announcement-empty">
+          <span class="vault-announcement-empty__mark" aria-hidden="true">
+            <v-icon icon="mdi-bell-check-outline" size="22" />
+          </span>
+          <strong>暂无公告</strong>
+          <p>有新公告时会在这里提醒你</p>
+        </div>
+      </div>
+    </v-navigation-drawer>
+
+    <v-dialog
+      :model-value="Boolean(selectedAnnouncement)"
+      class="vault-announcement-dialog"
+      max-width="540"
+      transition="dialog-bottom-transition"
+      @update:model-value="(open) => { if (!open) selectedAnnouncementId = null }"
+    >
+      <v-card v-if="selectedAnnouncement" class="vault-announcement-sheet">
+        <div class="vault-announcement-sheet__hero">
+          <span class="vault-announcement-sheet__hero-icon" aria-hidden="true">
+            <v-icon icon="mdi-bullhorn-outline" size="20" />
+          </span>
+          <div>
+            <p class="vault-announcement-sheet__eyebrow">
+              {{ selectedAnnouncement.read ? '已读公告' : '未读公告' }}
+              <template v-if="selectedAnnouncement.pinned"> · 置顶</template>
+            </p>
+            <h2>{{ selectedAnnouncement.title }}</h2>
+            <time v-if="selectedAnnouncement.publishedAt">{{ formatPublishedAt(selectedAnnouncement.publishedAt) }}</time>
+          </div>
+        </div>
+        <div class="vault-announcement-sheet__body">{{ selectedAnnouncement.body }}</div>
+        <div class="vault-announcement-sheet__actions">
+          <v-btn
+            v-if="!selectedAnnouncement.read"
+            color="primary"
+            @click="markSelectedRead"
+          >
+            标为已读
+          </v-btn>
+          <v-btn variant="tonal" color="primary" @click="selectedAnnouncementId = null">关闭</v-btn>
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      :model-value="announcements.forceOpen"
+      class="vault-announcement-dialog"
+      persistent
+      max-width="540"
+      :scrim="true"
+      transition="dialog-transition"
+    >
+      <v-card v-if="announcements.latestUnread" class="vault-announcement-sheet vault-announcement-sheet--force">
+        <div class="vault-announcement-sheet__hero">
+          <span class="vault-announcement-sheet__hero-icon vault-announcement-sheet__hero-icon--pulse" aria-hidden="true">
+            <v-icon icon="mdi-bell-ring-outline" size="20" />
+          </span>
+          <div>
+            <p class="vault-announcement-sheet__eyebrow">需要确认的公告</p>
+            <h2>{{ announcements.latestUnread.title }}</h2>
+            <time v-if="announcements.latestUnread.publishedAt">
+              {{ formatPublishedAt(announcements.latestUnread.publishedAt) }}
+            </time>
+          </div>
+        </div>
+        <div class="vault-announcement-sheet__body">{{ announcements.latestUnread.body }}</div>
+        <div class="vault-announcement-sheet__actions">
+          <v-btn
+            color="primary"
+            block
+            size="large"
+            :loading="announcements.acknowledging"
+            @click="announcements.acknowledgeLatestUnread()"
+          >
+            我知道了
+          </v-btn>
+        </div>
+      </v-card>
+    </v-dialog>
+
     <VaultItemFormDialog @saved="onSaved" />
-    <v-snackbar v-model="showNavigationHint" class="vault-feedback-snackbar" color="primary" location="bottom" :timeout="2800">
-      {{ navigationHint }}
-    </v-snackbar>
   </div>
 </template>
