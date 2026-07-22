@@ -86,7 +86,7 @@ async function submit() {
       {{ errorMessage }}
     </v-alert>
 
-    <v-form ref="form" validate-on="blur" @submit.prevent="submit">
+    <v-form ref="form" class="auth-login-form" validate-on="blur" @submit.prevent="submit">
       <v-text-field
         v-model="username"
         label="管理员用户名"
@@ -108,12 +108,21 @@ async function submit() {
         :type="showPassword ? 'text' : 'password'"
         :rules="[required('请输入登录密码')]"
         :error-messages="fieldErrors.password"
-        :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-        @click:append-inner="showPassword = !showPassword"
         @update:model-value="clearFieldError('password')"
-      />
+      >
+        <template #append-inner>
+          <v-btn
+            class="password-toggle"
+            :icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
+            variant="text"
+            density="compact"
+            :aria-label="showPassword ? '隐藏登录密码' : '显示登录密码'"
+            @click="showPassword = !showPassword"
+          />
+        </template>
+      </v-text-field>
 
-      <v-btn class="mt-6" type="submit" color="primary" block :loading="submitting">进入管理后台</v-btn>
+      <v-btn class="auth-submit" type="submit" color="primary" block :loading="submitting">进入管理后台</v-btn>
     </v-form>
 
     <div class="mt-6 text-center">

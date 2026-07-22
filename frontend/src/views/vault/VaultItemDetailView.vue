@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { statusLabel, type VaultItemPayload } from '@/domain/vaultPayload'
+import {
+  effectiveStatus,
+  fieldTypeLabel,
+  statusLabel,
+  toExternalHref,
+  type VaultItemPayload,
+} from '@/domain/vaultPayload'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import { useVaultStore } from '@/stores/vault'
 
@@ -22,6 +28,17 @@ const sortedFields = computed(() =>
   [...(payload.value?.fields ?? [])].sort((a, b) => a.order - b.order),
 )
 
+function initHiddenFields(fields: VaultItemPayload['fields']) {
+  const next: Record<string, boolean> = {}
+  for (const field of fields) {
+    // 敏感字段默认暗文隐藏
+    if (field.sensitive || field.type === 'PASSWORD' || field.systemKey === 'password') {
+      next[field.id] = true
+    }
+  }
+  hiddenFields.value = next
+}
+
 async function loadItem() {
   loading.value = true
   errorMessage.value = ''
@@ -29,9 +46,11 @@ async function loadItem() {
     const item = await vault.getItem(String(route.params.id))
     payload.value = item.payload
     updatedAt.value = item.envelope.updatedAt ?? ''
+    initHiddenFields(item.payload.fields)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载失败'
     payload.value = null
+    hiddenFields.value = {}
   } finally {
     loading.value = false
   }
@@ -53,17 +72,41 @@ async function copyValue(value: string, label: string) {
 }
 
 function toggleHide(fieldId: string) {
-  hiddenFields.value[fieldId] = !hiddenFields.value[fieldId]
+  const currentlyMasked = hiddenFields.value[fieldId] !== false
+  hiddenFields.value[fieldId] = !currentlyMasked
 }
 
-function displayValue(fieldId: string, value: string, sensitive: boolean) {
-  if (sensitive && hiddenFields.value[fieldId]) return '••••••••'
+function isMasked(field: { id: string; sensitive: boolean; type: string; systemKey?: string }) {
+  if (!(field.sensitive || field.type === 'PASSWORD' || field.systemKey === 'password')) return false
+  return hiddenFields.value[field.id] !== false
+}
+
+function displayValue(field: { id: string; sensitive: boolean; type: string; systemKey?: string }, value: string) {
+  if (isMasked(field)) return '••••••••'
   return value || '（空）'
+}
+
+function showTypeLabel(field: { name: string; type: string }) {
+  const typeLabel = fieldTypeLabel(field.type)
+  return typeLabel && typeLabel !== field.name
 }
 
 function openEdit() {
   editor.openEdit(String(route.params.id))
 }
+
+const displayStatus = computed(() => (
+  payload.value ? statusLabel[effectiveStatus(payload.value)] : ''
+))
+
+const statusTone = computed(() => {
+  const status = displayStatus.value
+  if (status === '正常') return 'ok'
+  if (status === '异常') return 'abnormal'
+  if (status === '过期') return 'expired'
+  return 'archived'
+})
+
 </script>
 
 <template>
@@ -72,7 +115,7 @@ function openEdit() {
       <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="router.push('/vault')">
         返回列表
       </v-btn>
-      <v-btn variant="tonal" @click="openEdit">编辑</v-btn>
+      <v-btn variant="tonal" color="primary" @click="openEdit">编辑</v-btn>
     </div>
 
     <v-progress-linear v-if="loading" indeterminate color="primary" />
@@ -81,32 +124,62 @@ function openEdit() {
       <header class="vault-detail-panel__header">
         <p class="vault-eyebrow">记录详情</p>
         <h1>{{ payload.name }}</h1>
-        <p>{{ payload.platform }} · {{ payload.channel || '未填写渠道' }} · {{ statusLabel[payload.status] }}</p>
+        <p class="vault-detail-panel__meta">
+          <span>{{ payload.platform }}</span>
+          <template v-if="payload.channel">
+            <span class="vault-detail-panel__dot">·</span>
+            <a
+              v-if="toExternalHref(payload.channel)"
+              class="vault-detail-panel__channel"
+              :href="toExternalHref(payload.channel)!"
+              target="_blank"
+              rel="noopener noreferrer"
+            >{{ payload.channel }}</a>
+            <span v-else class="vault-detail-panel__channel">{{ payload.channel }}</span>
+          </template>
+          <span class="vault-detail-panel__dot">·</span>
+          <span class="vault-detail-panel__status" :data-tone="statusTone">{{ displayStatus }}</span>
+          <template v-if="payload.expiresAt">
+            <span class="vault-detail-panel__dot">·</span>
+            <span>有效期 {{ payload.expiresAt.slice(0, 10) }}</span>
+          </template>
+        </p>
         <p v-if="updatedAt" class="vault-meta">
           更新于 {{ new Date(updatedAt).toLocaleString('zh-CN') }}
         </p>
       </header>
 
       <v-alert type="info" variant="tonal" class="mb-4">
-        敏感字段默认明文显示；可按字段临时隐藏，并支持一键复制。
+        敏感字段默认以暗文显示，可点击眼睛图标临时查看；网址可点击跳转，并支持一键复制。
       </v-alert>
 
       <div class="vault-field-list">
         <div v-for="field in sortedFields" :key="field.id" class="vault-field-row">
           <div>
             <strong>{{ field.name }}</strong>
-            <span class="vault-field-row__type">{{ field.type }}</span>
+            <span v-if="showTypeLabel(field)" class="vault-field-row__type">{{ fieldTypeLabel(field.type) }}</span>
             <div class="vault-field-row__value">
-              {{ displayValue(field.id, field.value, field.sensitive) }}
+              <a
+                v-if="field.type === 'URL' && toExternalHref(field.value) && !isMasked(field)"
+                :href="toExternalHref(field.value)!"
+                class="vault-field-row__link"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ field.value }}
+              </a>
+              <template v-else>
+                {{ displayValue(field, field.value) }}
+              </template>
             </div>
           </div>
           <div class="vault-field-row__actions">
             <v-btn
-              v-if="field.sensitive"
+              v-if="field.sensitive || field.type === 'PASSWORD' || field.systemKey === 'password'"
               size="small"
               variant="text"
-              :icon="hiddenFields[field.id] ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
-              :aria-label="hiddenFields[field.id] ? '显示' : '隐藏'"
+              :icon="isMasked(field) ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
+              :aria-label="isMasked(field) ? '显示' : '隐藏'"
               @click="toggleHide(field.id)"
             />
             <v-btn
@@ -128,7 +201,7 @@ function openEdit() {
       </section>
     </template>
 
-    <v-snackbar v-model="snackbar" :timeout="2000">{{ snackbarText }}</v-snackbar>
+    <v-snackbar v-model="snackbar" class="vault-feedback-snackbar" location="bottom" :timeout="2000">{{ snackbarText }}</v-snackbar>
   </section>
 </template>
 
@@ -145,13 +218,58 @@ function openEdit() {
 }
 
 .vault-eyebrow {
-  color: #64748b;
+  color: var(--os-text-muted);
   font-size: 0.85rem;
 }
 
 .vault-meta {
-  color: #64748b;
+  color: var(--os-text-muted);
   font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vault-detail-panel__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2em;
+  color: var(--os-text-body);
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.vault-detail-panel__dot {
+  color: var(--os-text-muted);
+}
+
+.vault-detail-panel__channel {
+  color: #e67e22;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.vault-detail-panel__channel:hover {
+  text-decoration: underline;
+}
+
+.vault-detail-panel__status {
+  font-weight: 600;
+}
+
+.vault-detail-panel__status[data-tone='ok'] {
+  color: var(--os-success);
+}
+
+.vault-detail-panel__status[data-tone='abnormal'] {
+  color: var(--os-abnormal);
+}
+
+.vault-detail-panel__status[data-tone='expired'] {
+  color: var(--os-warning);
+}
+
+.vault-detail-panel__status[data-tone='archived'] {
+  color: var(--os-text-muted);
 }
 
 .vault-field-list {
@@ -159,19 +277,21 @@ function openEdit() {
   gap: 12px;
 }
 
+/* 字段卡：与记录卡同语言（1px 边框 + Level 1 环境阴影） */
 .vault-field-row {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   padding: 14px 16px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  border-radius: var(--os-radius-card);
+  background: var(--os-surface);
+  border: 1px solid var(--os-border);
+  box-shadow: var(--os-shadow-1);
 }
 
 .vault-field-row__type {
   margin-left: 8px;
-  color: #94a3b8;
+  color: var(--os-text-muted);
   font-size: 0.8rem;
 }
 
@@ -179,6 +299,17 @@ function openEdit() {
   margin-top: 6px;
   word-break: break-all;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.vault-field-row__link {
+  color: var(--os-primary);
+  font-weight: 600;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.vault-field-row__link:hover {
+  text-decoration: underline;
 }
 
 .vault-field-row__actions {
@@ -189,6 +320,25 @@ function openEdit() {
 
 .vault-notes {
   white-space: pre-wrap;
-  color: #334155;
+  color: var(--os-text-body);
+}
+
+@media (max-width: 599px) {
+  .vault-detail-panel__toolbar,
+  .vault-field-row {
+    align-items: stretch;
+  }
+
+  .vault-field-row {
+    flex-direction: column;
+  }
+
+  .vault-field-row__actions {
+    justify-content: flex-end;
+  }
+
+  .vault-field-row__actions .v-btn {
+    min-height: 44px;
+  }
 }
 </style>

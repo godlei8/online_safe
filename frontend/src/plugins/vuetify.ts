@@ -3,6 +3,8 @@ import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
+// 主题令牌与 docs/Design.md v3.0「金融级信任感」保持一致：
+// 深海军蓝标题、单一信任蓝、蓝味浅灰背景；圆角与阴影在 main.scss 中统一覆盖。
 export default createVuetify({
   icons: {
     defaultSet: 'mdi',
@@ -15,25 +17,27 @@ export default createVuetify({
       onlineSafe: {
         dark: false,
         colors: {
-          background: '#F8FAFC',
+          background: '#F6F9FC', // 页面底色：带轻微蓝味的浅灰
           surface: '#FFFFFF',
-          primary: '#155EEF',
-          secondary: '#131B2E',
+          primary: '#155EEF', // 信任蓝：唯一交互强调色
+          'primary-darken-1': '#0E4FD1', // 主按钮 hover
+          secondary: '#0A2540', // 深海军蓝：标题与深色品牌区
           error: '#B42318',
           warning: '#B54708',
-          success: '#027A48',
-          'on-surface': '#101828',
+          success: '#108C3D',
+          info: '#155EEF',
+          'on-background': '#425466',
+          'on-surface': '#0A2540',
         },
       },
     },
   },
   defaults: {
     // 工具栏/筛选区默认紧凑；认证页主按钮通过 .auth-submit 等局部样式保持 48px
-    VBtn: { rounded: 'lg', height: 40, elevation: 0 },
+    VBtn: { height: 40, elevation: 0 },
     VTextField: {
       variant: 'outlined',
       density: 'compact',
-      rounded: 'lg',
       color: 'primary',
       persistentHint: true,
       hideDetails: 'auto',
@@ -41,25 +45,22 @@ export default createVuetify({
     VSelect: {
       variant: 'outlined',
       density: 'compact',
-      rounded: 'lg',
       color: 'primary',
       hideDetails: 'auto',
     },
     VAutocomplete: {
       variant: 'outlined',
       density: 'compact',
-      rounded: 'lg',
       color: 'primary',
       hideDetails: 'auto',
     },
     VCombobox: {
       variant: 'outlined',
       density: 'compact',
-      rounded: 'lg',
       color: 'primary',
       hideDetails: 'auto',
     },
-    VAlert: { density: 'compact', rounded: 'lg' },
+    VAlert: { density: 'compact' },
     VPagination: { density: 'compact' },
   },
 })

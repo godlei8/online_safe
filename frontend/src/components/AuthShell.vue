@@ -40,18 +40,10 @@ withDefaults(defineProps<{ register?: boolean }>(), { register: false })
               <div><strong>访问边界更清晰</strong><span>个人用户与管理员使用独立入口。</span></div>
             </div>
           </div>
-
-          <div class="auth-aside__visual" aria-hidden="true">
-            <span /><span /><span /><span /><span /><span />
-          </div>
         </div>
       </aside>
 
       <section class="auth-content">
-        <div class="auth-mobile-context d-md-none">
-          <v-icon icon="mdi-shield-check-outline" size="18" />
-          <span>为你的账号信息建立清晰的管理入口</span>
-        </div>
         <v-card class="auth-card" :class="{ 'auth-card--register': register }" elevation="0">
           <slot />
         </v-card>

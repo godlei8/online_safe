@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { fieldTypeSchema, type FieldType, type PrivateTemplatePayload } from '@/domain/vaultPayload'
+import { fieldTypeItems, type PrivateTemplatePayload } from '@/domain/vaultPayload'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import { useVaultStore } from '@/stores/vault'
 
@@ -102,10 +102,23 @@ function createFromTemplate(id: string) {
         <p class="vault-eyebrow">私人模板</p>
         <div class="vault-title-row__heading">
           <h1 id="templates-title">字段结构复用</h1>
+          <span>{{ vault.templates.length }} 个模板</span>
         </div>
-        <p class="vault-templates-panel__desc">模板只保存字段名称与配置，不保存真实账密值。</p>
       </div>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">新建私人模板</v-btn>
+      <v-btn
+        color="primary"
+        class="vault-new-record"
+        size="small"
+        prepend-icon="mdi-plus"
+        @click="openCreate"
+      >
+        新建模板
+      </v-btn>
+    </div>
+
+    <div class="vault-privacy-note" role="note">
+      <v-icon icon="mdi-information-outline" size="16" />
+      <span>模板只保存字段名称与配置，不保存真实账密值。</span>
     </div>
 
     <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
@@ -135,23 +148,23 @@ function createFromTemplate(id: string) {
     </v-alert>
 
     <v-dialog v-model="dialog" max-width="640">
-      <v-card class="pa-6">
+      <v-card class="vault-template-dialog pa-6">
         <h2 class="mb-4">新建私人模板</h2>
         <v-text-field v-model="form.name" label="模板名称" />
-        <div class="d-flex ga-3">
+        <div class="vault-template-dialog__columns">
           <v-text-field v-model="form.platform" label="默认平台" />
           <v-text-field v-model="form.channel" label="默认渠道" />
         </div>
         <div class="d-flex justify-space-between align-center mb-2">
           <h3>字段</h3>
-          <v-btn size="small" variant="tonal" @click="addField">添加字段</v-btn>
+          <v-btn size="small" variant="tonal" color="primary" @click="addField">添加字段</v-btn>
         </div>
         <div v-for="field in form.fields" :key="field.id" class="mb-3">
-          <div class="d-flex ga-2">
+          <div class="vault-template-dialog__columns">
             <v-text-field v-model="field.name" label="名称" hide-details />
             <v-select
               v-model="field.type"
-              :items="fieldTypeSchema.options as FieldType[]"
+              :items="fieldTypeItems"
               label="类型"
               hide-details
             />
@@ -173,29 +186,57 @@ function createFromTemplate(id: string) {
 </template>
 
 <style scoped>
-.vault-templates-panel__desc {
-  margin: 6px 0 0;
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
 .vault-template-list {
   display: grid;
   gap: 12px;
 }
 
+/* 模板卡：与记录卡同语言（1px 边框 + Level 1 环境阴影） */
 .vault-template-card {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   padding: 16px;
-  border-radius: 14px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
+  border-radius: var(--os-radius-card);
+  border: 1px solid var(--os-border);
+  background: var(--os-surface);
+  box-shadow: var(--os-shadow-1);
 }
+
+.vault-template-card strong { color: var(--os-text-title); }
 
 .vault-template-card p {
   margin-top: 4px;
-  color: #64748b;
+  color: var(--os-text-muted);
+}
+
+.vault-template-dialog__columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 599px) {
+  .vault-template-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .vault-template-card > .d-flex {
+    justify-content: flex-end;
+  }
+
+  .vault-template-card .v-btn {
+    min-height: 44px;
+  }
+
+  .vault-template-dialog {
+    padding: 20px !important;
+  }
+
+  .vault-template-dialog__columns {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 }
 </style>

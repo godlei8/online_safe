@@ -172,7 +172,7 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
     </v-alert>
 
     <v-card class="admin-panel mb-4" elevation="0">
-      <div class="d-flex flex-wrap ga-2 align-center">
+      <div class="admin-filter-row">
         <v-text-field
           v-model="query"
           class="admin-filter-field"
@@ -227,21 +227,21 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
             :key="item.id"
             :class="{ 'admin-table__row--disabled': item.status === 'DISABLED' }"
           >
-            <td>
+            <td data-label="用户标识">
               <div class="font-weight-medium">{{ item.username }}</div>
               <div class="text-caption text-medium-emphasis">{{ item.maskedPhone }}</div>
             </td>
-            <td>
-              <v-chip size="small" :color="statusColor(item.status)" variant="tonal">
+            <td data-label="账户状态">
+              <span class="admin-status-text" :data-tone="statusColor(item.status)">
                 {{ statusLabel(item.status) }}
-              </v-chip>
+              </span>
             </td>
-            <td>{{ formatTime(item.createdAt) }}</td>
-            <td>{{ formatRelative(item.lastLoginAt) }}</td>
-            <td>—</td>
-            <td>—</td>
-            <td>{{ item.activeSessionCount }}</td>
-            <td>
+            <td data-label="注册时间">{{ formatTime(item.createdAt) }}</td>
+            <td data-label="最近登录">{{ formatRelative(item.lastLoginAt) }}</td>
+            <td data-label="密文存储">—</td>
+            <td data-label="记录数">—</td>
+            <td data-label="活跃会话">{{ item.activeSessionCount }}</td>
+            <td data-label="操作">
               <div class="d-flex flex-wrap ga-1">
                 <v-btn
                   v-if="item.status === 'ACTIVE'"
@@ -266,7 +266,7 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
                 <v-btn
                   size="small"
                   variant="text"
-                  color="secondary"
+                  color="primary"
                   :disabled="acting"
                   @click="revokeSessions(item)"
                 >
@@ -278,7 +278,7 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
         </tbody>
       </v-table>
 
-      <div class="d-flex justify-space-between align-center mt-4">
+      <div class="admin-pagination-row mt-4">
         <div class="text-caption text-medium-emphasis">
           共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
         </div>

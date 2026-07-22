@@ -231,7 +231,7 @@ async function submit() {
         <strong>{{ stepTitle }}</strong>
       </div>
       <div class="auth-stepper__track">
-        <span :class="{ 'auth-stepper__progress--complete': currentStep > 1 }" />
+        <span :style="{ width: `${(currentStep / 3) * 100}%` }" />
       </div>
     </div>
 
@@ -340,7 +340,7 @@ async function submit() {
         <p v-if="fieldMessages('agreedToTerms').length" class="auth-field-error">{{ fieldMessages('agreedToTerms')[0] }}</p>
       </div>
       <div class="auth-form-actions">
-        <v-btn variant="text" color="secondary" @click="currentStep = 1">上一步</v-btn>
+        <v-btn variant="text" color="primary" @click="currentStep = 1">上一步</v-btn>
         <v-btn type="submit" color="primary">继续</v-btn>
       </div>
     </form>
@@ -354,7 +354,7 @@ async function submit() {
           <v-btn
             v-if="questions.length > 1"
             variant="text"
-            color="secondary"
+            color="primary"
             size="small"
             @click="removeQuestion(index)"
           >
@@ -401,7 +401,7 @@ async function submit() {
       </v-btn>
 
       <div class="auth-form-actions">
-        <v-btn variant="text" color="secondary" :disabled="submitting" @click="currentStep = 2">上一步</v-btn>
+        <v-btn variant="text" color="primary" :disabled="submitting" @click="currentStep = 2">上一步</v-btn>
         <v-btn type="submit" color="primary" :loading="submitting" :disabled="submitting">
           {{ submitting ? '正在创建…' : '创建账号' }}
         </v-btn>

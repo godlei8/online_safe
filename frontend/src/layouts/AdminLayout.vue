@@ -15,9 +15,6 @@ const navItems = [
   { title: '总览', icon: 'mdi-view-dashboard-outline', to: '/admin' },
   { title: '用户管理', icon: 'mdi-account-group-outline', to: '/admin/users' },
   { title: '邀请码', icon: 'mdi-ticket-confirmation-outline', to: '/admin/invitations' },
-  { title: '系统模板', icon: 'mdi-file-document-outline', to: '/admin/templates' },
-  { title: '安全日志', icon: 'mdi-shield-search', to: '/admin/security-logs' },
-  { title: '系统设置', icon: 'mdi-cog-outline', to: '/admin/settings' },
 ]
 
 const pageTitle = computed(() => String(route.meta.title || '管理后台'))
@@ -110,7 +107,7 @@ async function logout() {
       </main>
     </div>
 
-    <v-navigation-drawer v-if="!mdAndUp" v-model="drawer" temporary color="#172B4D">
+    <v-navigation-drawer v-if="!mdAndUp" v-model="drawer" temporary color="surface">
       <div class="admin-sidebar__brand pa-4">
         <span class="admin-sidebar__mark"><v-icon icon="mdi-shield-lock" size="20" /></span>
         <div>
@@ -126,7 +123,7 @@ async function logout() {
           :prepend-icon="item.icon"
           :title="item.title"
           :active="route.path === item.to"
-          color="white"
+          color="primary"
           @click="drawer = false"
         />
       </v-list>

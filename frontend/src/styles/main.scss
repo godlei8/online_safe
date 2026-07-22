@@ -1,20 +1,159 @@
+/* ============================================================
+   Online Safe 全局样式 —— docs/Design.md v3.1「金融级信任感」
+   深海军蓝标题 / 单一信任蓝 / 蓝调层叠阴影 / 克制圆角
+   ============================================================ */
+
+/* ---------- 1. 设计令牌 ---------- */
 :root {
-  color: #101828;
-  background: #f7f9fc;
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  /* 颜色 */
+  --os-bg: #f6f9fc;            /* 页面底色：带蓝味的浅灰 */
+  --os-surface: #fff;          /* 卡片、表单、弹层 */
+  --os-navy: #0a2540;          /* 深海军蓝：标题与深色品牌区 */
+  --os-primary: #155eef;       /* 信任蓝：唯一交互强调色 */
+  --os-primary-hover: #0e4fd1; /* 主按钮 hover */
+  --os-primary-tint: #eff4ff;  /* 主色浅底：选中项、图标底、信息提示底 */
+  --os-primary-border: #d6e0ff;
+  --os-text-title: #0a2540;    /* 标题文字 */
+  --os-text-body: #425466;     /* 正文文字 */
+  --os-text-muted: #697386;    /* 次级文字 */
+  --os-border: #e6ebf1;        /* 边框：蓝味浅灰 */
+  --os-focus-ring: rgb(21 94 239 / 12%);
+  --os-field-focus: #6b93f0; /* 输入框聚焦描边：比主色更柔和 */
+  --os-success: #108c3d;
+  --os-success-tint: rgb(16 140 61 / 10%);
+  --os-warning: #b54708;
+  --os-warning-tint: #fffaeb;
+  --os-error: #b42318;
+  --os-error-tint: #fef3f2;
+  --os-error-border: #f4b6ae;
+  --os-abnormal: #c4320a;
+
+  /* 蓝调层叠阴影（核心签名：远层蓝调 + 近层中性，负 spread） */
+  --os-shadow-1: 0 2px 5px -1px rgb(50 50 93 / 12%), 0 1px 3px -1px rgb(0 0 0 / 8%);
+  --os-shadow-2: 0 6px 12px -2px rgb(50 50 93 / 16%), 0 3px 7px -3px rgb(0 0 0 / 10%);
+  --os-shadow-3: 0 13px 27px -5px rgb(50 50 93 / 22%), 0 8px 16px -8px rgb(0 0 0 / 18%);
+
+  /* 圆角 */
+  --os-radius-control: 6px;  /* 按钮、输入框、下拉、标签 */
+  --os-radius-icon: 8px;
+  --os-radius-card: 10px;    /* 卡片、提示条 */
+  --os-radius-dialog: 12px;  /* 弹窗 */
+
+  /* 4px 网格与控件节奏 */
+  --os-space-1: 4px;
+  --os-space-2: 8px;
+  --os-space-3: 12px;
+  --os-space-4: 16px;
+  --os-space-5: 20px;
+  --os-space-6: 24px;
+  --os-control-sm: 36px;
+  --os-control-md: 40px;
+  --os-control-touch: 44px;
+  --os-duration-fast: 160ms;
+  --os-duration-base: 180ms;
+
+  color: var(--os-text-body);
+  background: var(--os-bg);
+  font-family: -apple-system, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-synthesis: none;
 }
+
 * { box-sizing: border-box; }
 
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 
 a { color: inherit; }
 
+h1, h2, h3, h4, h5, h6 {
+  color: var(--os-text-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+::selection { color: #fff; background: var(--os-primary); }
+
+:focus-visible {
+  outline: 2px solid var(--os-focus-ring);
+  outline-offset: 2px;
+}
+
+/* 数字排版：记录数、日期、页码等使用等宽数字 */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ---------- 2. Vuetify 全局覆盖 ---------- */
+
+/* 控件圆角 6px（圆形图标按钮除外） */
+.v-btn:not(.v-btn--icon) { border-radius: var(--os-radius-control); letter-spacing: 0; }
+.v-field { border-radius: var(--os-radius-control); }
+.v-alert { border-radius: var(--os-radius-card); }
+
+/* 主按钮 hover 加深为 --os-primary-hover */
+.v-btn.bg-primary:hover { background-color: var(--os-primary-hover) !important; }
+
+/* 次操作：浅蓝边框 + 信任蓝文字 */
+.v-btn--variant-outlined.text-primary { border-color: var(--os-primary-border); }
+
+/* 输入框：静态浅灰边；聚焦保持 1px 柔和描边，避免高饱和粗边 + 强外光 */
+.v-field {
+  --v-field-border-width: 1px;
+  --v-field-border-opacity: 1;
+}
+
+.v-field__outline {
+  --v-field-border-opacity: 1;
+  color: var(--os-border);
+}
+
+.v-field:hover:not(.v-field--focused):not(.v-field--disabled) .v-field__outline {
+  color: #c9d5e5;
+}
+
+.v-field--focused {
+  --v-field-border-width: 1px;
+  box-shadow: 0 0 0 3px var(--os-focus-ring);
+}
+
+.v-field--focused .v-field__outline {
+  color: var(--os-field-focus);
+}
+
+.v-field--focused .v-label,
+.v-field--focused .v-field-label {
+  color: var(--os-field-focus) !important;
+  opacity: 1;
+}
+
+.v-field--error .v-field__outline { color: var(--os-error); }
+.v-field--error { box-shadow: 0 0 0 3px rgb(180 35 24 / 10%); }
+.v-field--disabled { background: var(--os-bg); opacity: 0.72; }
+.v-label { color: var(--os-text-body); }
+.v-field__input { color: var(--os-text-title); }
+
+/* 弹窗：12px 圆角 + Level 3 浮层阴影 */
+.v-dialog > .v-overlay__content > .v-card {
+  border-radius: var(--os-radius-dialog);
+  box-shadow: var(--os-shadow-3) !important;
+}
+
+.v-dialog--fullscreen > .v-overlay__content > .v-card { border-radius: 0; }
+
+/* 下拉菜单 / 用户菜单：Level 2 悬浮阴影 */
+.v-menu > .v-overlay__content > .v-list,
+.v-menu > .v-overlay__content > .v-card {
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-card);
+  box-shadow: var(--os-shadow-2) !important;
+}
+
+/* ============================================================
+   认证页（登录 / 注册 / 忘记密码 / 管理员登录）
+   桌面双栏：左侧深海军蓝品牌区 + 右侧白色表单区
+   ============================================================ */
 .auth-page {
   display: grid;
   min-height: 100dvh;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  background: #f7f9fc;
+  background: var(--os-bg);
 }
 
 .auth-header {
@@ -23,18 +162,18 @@ a { color: inherit; }
   justify-content: space-between;
   min-height: 72px;
   padding: 0 48px;
-  border-bottom: 1px solid #eaecf0;
-  background: rgb(255 255 255 / 90%);
+  border-bottom: 1px solid var(--os-border);
+  background: rgb(255 255 255 / 92%);
 }
 
 .auth-brand {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #101828;
+  color: var(--os-text-title);
   font-size: 1.05rem;
-  font-weight: 760;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .auth-brand__mark {
@@ -42,10 +181,10 @@ a { color: inherit; }
   width: 32px;
   height: 32px;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 8px;
   color: #fff;
-  background: linear-gradient(135deg, #155eef, #004eeb);
-  box-shadow: 0 5px 12px rgb(21 94 239 / 24%);
+  background: var(--os-primary);
+  box-shadow: var(--os-shadow-1);
 }
 
 .auth-header__actions,
@@ -58,16 +197,19 @@ a { color: inherit; }
 
 .auth-header__status {
   gap: 6px;
-  color: #475467;
+  color: var(--os-text-muted);
   font-size: 0.8125rem;
 }
 
-.auth-header__status .v-icon { color: #027a48; }
+.auth-header__status .v-icon { color: var(--os-success); }
 
 .auth-header__link {
-  color: #155eef;
+  display: inline-flex;
+  min-height: var(--os-control-touch);
+  align-items: center;
+  color: var(--os-primary);
   font-size: 0.875rem;
-  font-weight: 650;
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -78,33 +220,21 @@ a { color: inherit; }
 .auth-main {
   display: grid;
   min-height: 0;
-  grid-template-columns: minmax(360px, 42fr) minmax(0, 58fr);
-  /* 与顶栏水平内边距一致，使蓝色侧栏左边缘与 logo 对齐 */
-  padding-left: 48px;
+  grid-template-columns: minmax(380px, 44fr) minmax(0, 56fr);
 }
 
+/* 左栏：深海军蓝品牌区 + 极低饱和的蓝色径向光斑 */
 .auth-aside {
   position: relative;
   display: grid;
   overflow: hidden;
   place-items: center;
-  padding: 56px clamp(32px, 4vw, 64px);
-  color: #f9fbff;
+  padding: 56px clamp(32px, 4vw, 72px);
+  color: #fff;
   background:
-    radial-gradient(circle at 17% 16%, rgb(50 118 255 / 22%), transparent 33%),
-    radial-gradient(circle at 84% 88%, rgb(93 156 255 / 16%), transparent 38%),
-    #172b4d;
-}
-
-.auth-aside::after {
-  position: absolute;
-  right: -130px;
-  bottom: -180px;
-  width: 410px;
-  height: 410px;
-  border: 1px solid rgb(183 215 255 / 16%);
-  border-radius: 50%;
-  content: "";
+    radial-gradient(640px 460px at 14% 10%, rgb(37 99 235 / 16%), transparent 62%),
+    radial-gradient(560px 440px at 88% 92%, rgb(56 132 255 / 12%), transparent 64%),
+    var(--os-navy);
 }
 
 .auth-aside__inner {
@@ -119,30 +249,25 @@ a { color: inherit; }
   align-items: center;
   gap: 6px;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
-.auth-eyebrow {
-  padding: 6px 10px;
-  border: 1px solid rgb(196 219 255 / 20%);
-  border-radius: 999px;
-  color: #d0e2ff;
-  background: rgb(255 255 255 / 7%);
-}
+.auth-eyebrow { color: rgb(255 255 255 / 72%); }
 
 .auth-aside h1 {
-  margin: 20px 0 16px;
+  margin: 18px 0 14px;
   color: #fff;
-  font-size: clamp(2rem, 3vw, 2.75rem);
-  line-height: 1.22;
-  letter-spacing: -0.045em;
+  font-size: clamp(1.9rem, 2.8vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 .auth-aside > .auth-aside__inner > p {
   max-width: 390px;
   margin: 0;
-  color: #c7d7ec;
+  color: rgb(255 255 255 / 72%);
   font-size: 0.9375rem;
   line-height: 1.7;
 }
@@ -150,7 +275,7 @@ a { color: inherit; }
 .auth-security-list {
   display: grid;
   gap: 18px;
-  margin: 38px 0 34px;
+  margin: 38px 0 8px;
 }
 
 .auth-security-item {
@@ -160,9 +285,10 @@ a { color: inherit; }
   align-items: center;
 }
 
+/* 图标底：白色 8% 圆角方块 */
 .auth-security-item .v-avatar {
-  border: 1px solid rgb(197 220 255 / 17%);
-  color: #d8e7ff;
+  border-radius: 8px !important;
+  color: #fff;
   background: rgb(255 255 255 / 8%);
 }
 
@@ -170,126 +296,88 @@ a { color: inherit; }
 .auth-security-item span { display: block; }
 
 .auth-security-item strong {
-  color: #f7faff;
+  color: #fff;
   font-size: 0.875rem;
+  font-weight: 600;
   line-height: 1.35;
 }
 
 .auth-security-item span {
   margin-top: 2px;
-  color: #afc1d8;
+  color: rgb(255 255 255 / 64%);
   font-size: 0.75rem;
   line-height: 1.5;
 }
 
-.auth-aside__visual {
-  display: grid;
-  height: 126px;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  padding: 22px;
-  overflow: hidden;
-  border: 1px solid rgb(196 219 255 / 17%);
-  border-radius: 16px;
-  background:
-    linear-gradient(135deg, rgb(72 137 255 / 22%), transparent 60%),
-    rgb(255 255 255 / 4%);
-}
-
-.auth-aside__visual span {
-  align-self: end;
-  min-height: 20px;
-  border: 1px solid rgb(198 224 255 / 24%);
-  border-radius: 6px;
-  background: linear-gradient(180deg, rgb(154 201 255 / 22%), rgb(92 154 255 / 4%));
-}
-
-.auth-aside__visual span:nth-child(2),
-.auth-aside__visual span:nth-child(5) { min-height: 54px; }
-
-.auth-aside__visual span:nth-child(3) { min-height: 76px; }
-.auth-aside__visual span:nth-child(4) { min-height: 42px; }
-.auth-aside__visual span:nth-child(6) { min-height: 88px; }
-
+/* 右栏：白色表面即表单区，表单最大 420px，不再套卡片框 */
 .auth-content {
   display: grid;
   min-width: 0;
   place-items: center;
   padding: clamp(40px, 6vw, 88px) 32px;
+  background: var(--os-surface);
 }
 
 .auth-card {
-  width: min(100%, 448px);
-  padding: 38px !important;
-  border: 1px solid #eaecf0 !important;
-  border-radius: 18px !important;
-  background: #fff;
-  box-shadow: 0 12px 32px rgb(16 24 40 / 8%) !important;
+  width: min(100%, 420px);
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
-.auth-card--register { width: min(100%, 478px); }
+.auth-card--register { width: min(100%, 448px); }
 
+/* 入口切换：语义化分段控件，选中项蓝字 + 2px 下划线 */
 .auth-segmented {
-  display: inline-flex;
-  gap: 3px;
-  padding: 4px;
-  border: 1px solid #eaecf0;
-  border-radius: 10px;
-  background: #f9fafb;
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid var(--os-border);
 }
 
 .auth-segmented__item {
-  padding: 7px 10px;
-  border-radius: 7px;
-  color: #667085;
-  font-size: 0.75rem;
-  font-weight: 650;
+  display: inline-flex;
+  min-height: var(--os-control-touch);
+  align-items: center;
+  padding: 6px 2px 9px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--os-text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
   text-decoration: none;
 }
 
 .auth-segmented__item--active {
-  color: #101828;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(16 24 40 / 10%);
+  color: var(--os-primary);
+  border-bottom-color: var(--os-primary);
 }
 
 .auth-form-heading { margin-bottom: 28px; }
 .auth-form-heading--register { margin-bottom: 22px; }
-
-.auth-form-heading__eyebrow { color: #155eef; }
+.auth-form-heading__eyebrow { color: var(--os-primary); }
 
 .auth-form-heading h1 {
-  margin: 8px 0 8px;
-  color: #101828;
-  font-size: 1.7rem;
-  font-weight: 760;
+  margin: 8px 0;
+  color: var(--os-text-title);
+  font-size: 1.75rem;
+  font-weight: 600;
   line-height: 1.25;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
 }
 
 .auth-form-heading p {
   margin: 0;
-  color: #667085;
+  color: var(--os-text-body);
   font-size: 0.875rem;
-  line-height: 1.65;
+  line-height: 1.6;
 }
 
-.auth-card .v-field {
-  border-radius: 10px !important;
-}
-
-.auth-card .v-field--focused {
-  box-shadow: 0 0 0 3px rgb(21 94 239 / 12%);
-}
-
-.auth-card .v-field__outline { --v-field-border-opacity: 1; color: #d0d5dd; }
-.auth-card .v-field--focused .v-field__outline { color: #155eef; }
-.auth-card .v-label { color: #475467; font-size: 0.875rem; }
-.auth-card .v-field__input { color: #101828; }
 .auth-card .v-messages { min-height: 20px; }
-.password-toggle { min-width: 32px !important; min-height: 32px !important; color: #667085; }
+.password-toggle { min-width: 32px !important; min-height: 32px !important; color: var(--os-text-muted); }
 
-.auth-form-alert { margin: 0 0 20px; border-radius: 12px !important; }
+.auth-form-alert { margin: 0 0 20px; }
 
 .auth-inline-note {
   display: flex;
@@ -297,20 +385,20 @@ a { color: inherit; }
   align-items: flex-start;
   margin: 8px 0 24px;
   padding: 12px;
-  border: 1px solid #dbe8ff;
-  border-radius: 10px;
-  color: #475467;
-  background: #f4f8ff;
+  border-radius: var(--os-radius-card);
+  color: var(--os-text-body);
+  background: var(--os-primary-tint);
   font-size: 0.75rem;
   line-height: 1.55;
 }
 
-.auth-inline-note .v-icon { flex: 0 0 auto; margin-top: 1px; color: #155eef; }
+.auth-inline-note .v-icon { flex: 0 0 auto; margin-top: 1px; color: var(--os-primary); }
 
+/* 认证页主按钮：48px 高、信任蓝、全宽 */
 .auth-submit {
   min-height: 48px !important;
   height: 48px !important;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
 }
 
@@ -321,37 +409,38 @@ a { color: inherit; }
 
 .auth-alternate-action {
   margin: 24px 0 0;
-  color: #667085;
+  color: var(--os-text-body);
   font-size: 0.875rem;
   text-align: center;
 }
 
 .auth-alternate-action a,
-.auth-terms a { color: #155eef; font-weight: 700; text-decoration: none; }
+.auth-terms a { color: var(--os-primary); font-weight: 600; text-decoration: none; }
 
 .auth-step-form {
   /* 给 outlined 浮动标签留出顶部空间，避免贴边被裁切 */
   padding-top: 4px;
 }
 
-.auth-stepper { margin: 0 0 24px; }
+.auth-stepper { margin: 0 0 28px; }
 
 .auth-stepper__label {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
-  color: #667085;
+  color: var(--os-text-muted);
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.auth-stepper__label strong { color: #344054; font-weight: 700; }
+.auth-stepper__label strong { color: var(--os-text-title); font-weight: 600; }
 
 .auth-stepper__track {
   height: 6px;
   overflow: hidden;
-  border-radius: 999px;
-  background: #eaecf0;
+  border-radius: 3px;
+  background: var(--os-border);
 }
 
 .auth-stepper__track span {
@@ -359,18 +448,16 @@ a { color: inherit; }
   width: 50%;
   height: 100%;
   border-radius: inherit;
-  background: #155eef;
+  background: var(--os-primary);
   transition: width 180ms ease;
 }
-
-.auth-stepper__track .auth-stepper__progress--complete { width: 100%; }
 
 .password-rules {
   display: grid;
   gap: 5px;
   margin: -4px 0 0;
   padding: 0;
-  color: #667085;
+  color: var(--os-text-muted);
   font-size: 0.75rem;
   list-style: none;
 }
@@ -381,21 +468,21 @@ a { color: inherit; }
   align-items: center;
 }
 
-.password-rules .v-icon { color: #98a2b3; }
-.password-rules__item--passed { color: #027a48; }
-.password-rules__item--passed .v-icon { color: #027a48; }
+.password-rules .v-icon { color: var(--os-text-muted); }
+.password-rules__item--passed { color: var(--os-success); }
+.password-rules__item--passed .v-icon { color: var(--os-success); }
 
 .auth-terms {
   margin: 18px 0 20px;
   padding: 4px 8px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--os-radius-card);
 }
 
-.auth-terms--error { border-color: #fecdca; background: #fffbfa; }
+.auth-terms--error { border-color: var(--os-error-border); background: var(--os-error-tint); }
 .auth-terms .v-selection-control { min-height: 38px; }
-.auth-terms .v-label { color: #475467; font-size: 0.8125rem; line-height: 1.5; opacity: 1; }
-.auth-field-error { margin: 0 0 4px 40px; color: #b42318; font-size: 0.75rem; }
+.auth-terms .v-label { color: var(--os-text-body); font-size: 0.8125rem; line-height: 1.5; opacity: 1; }
+.auth-field-error { margin: 0 0 4px 40px; color: var(--os-error); font-size: 0.75rem; }
 
 .auth-form-actions {
   display: grid;
@@ -403,38 +490,68 @@ a { color: inherit; }
   gap: 12px;
 }
 
-.auth-form-actions .v-btn:last-child { min-height: 48px; font-weight: 700; letter-spacing: 0; }
+.auth-form-actions .v-btn:last-child { min-height: 48px; font-weight: 600; letter-spacing: 0; }
+
+.auth-login-form {
+  display: grid;
+  gap: var(--os-space-4);
+}
+
+.auth-login-form > .mt-2,
+.auth-login-form > .mb-2 { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+.auth-login-form .auth-inline-note { margin: 0; }
+
+/* 分步表单：字段、主操作和返回路径使用统一的纵向节奏 */
+.auth-step-form,
+.auth-reset-form {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-step-form > .mt-2,
+.auth-step-form > .mt-3,
+.auth-reset-form > .mt-2,
+.auth-reset-form > .mt-3,
+.auth-reset-form > .mb-4 { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+.auth-step-form > .auth-form-actions,
+.auth-reset-form > .auth-form-actions { margin-top: 8px; }
+
+.auth-reset-form > .auth-submit { margin-top: 0; }
+.auth-alternate-action { margin-top: 28px; }
 
 .auth-footer {
   display: flex;
   justify-content: space-between;
   padding: 16px 48px;
-  border-top: 1px solid #eaecf0;
-  color: #98a2b3;
-  background: #fff;
+  border-top: 1px solid var(--os-border);
+  color: var(--os-text-muted);
+  background: var(--os-surface);
   font-size: 0.75rem;
 }
 
 .connection-snackbar .v-snackbar__wrapper { min-width: min(94vw, 560px); }
+.vault-feedback-snackbar .v-snackbar__wrapper { margin-bottom: 0; }
 
-/* 保险箱初始化页：与认证页共用色板与控件手感 */
+/* ============================================================
+   保险箱初始化页（vault-gate）：与认证页同一套令牌
+   ============================================================ */
 .vault-gate {
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px;
-  background:
-    radial-gradient(circle at top right, rgb(21 94 239 / 10%), transparent 42%),
-    linear-gradient(180deg, #f7f9fc 0%, #eef3fb 100%);
+  background: var(--os-bg);
 }
 
 .vault-gate__card {
   width: min(100%, 520px);
   padding: 36px !important;
-  border: 1px solid #eaecf0 !important;
-  border-radius: 18px !important;
-  background: #fff;
-  box-shadow: 0 12px 32px rgb(16 24 40 / 8%) !important;
+  border: 1px solid var(--os-border) !important;
+  border-radius: var(--os-radius-card) !important;
+  background: var(--os-surface);
+  box-shadow: var(--os-shadow-1) !important;
 }
 
 .vault-gate__card--narrow { width: min(100%, 460px); }
@@ -444,36 +561,32 @@ a { color: inherit; }
   align-items: center;
   gap: 10px;
   margin-bottom: 22px;
-  color: #101828;
+  color: var(--os-text-title);
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
-.vault-gate__brand .v-icon { color: #155eef; }
+.vault-gate__brand .v-icon { color: var(--os-primary); }
 
 .vault-gate .auth-form-heading { margin-bottom: 20px; }
-
-.vault-gate .auth-form-heading h1 {
-  font-size: 1.5rem;
-}
+.vault-gate .auth-form-heading h1 { font-size: 1.5rem; }
 
 .vault-gate__tips {
   display: grid;
   gap: 10px;
   margin: 0 0 24px;
   padding: 14px 16px;
-  border: 1px solid #dbe8ff;
-  border-radius: 12px;
-  background: #f4f8ff;
+  border-radius: var(--os-radius-card);
+  background: var(--os-primary-tint);
 }
 
 .vault-gate__tips-title {
   display: flex;
   gap: 8px;
   align-items: center;
-  color: #155eef;
+  color: var(--os-primary);
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .vault-gate__tips-list {
@@ -481,7 +594,7 @@ a { color: inherit; }
   gap: 8px;
   margin: 0;
   padding: 0;
-  color: #475467;
+  color: var(--os-text-body);
   font-size: 0.8125rem;
   line-height: 1.55;
   list-style: none;
@@ -496,47 +609,35 @@ a { color: inherit; }
 .vault-gate__tips-list .v-icon {
   flex: 0 0 auto;
   margin-top: 2px;
-  color: #155eef;
+  color: var(--os-primary);
 }
 
 .vault-gate__form {
   display: grid;
-  gap: 4px;
+  gap: var(--os-space-4);
   padding-top: 4px;
 }
 
+.vault-gate__form > .mt-4,
+.vault-gate__form > .mt-6 { margin-top: 0 !important; }
+
 /* 密码框与规则清单略留间距（覆盖全局 password-rules 的负 margin） */
-.vault-gate .password-rules {
-  margin-top: 10px;
-}
+.vault-gate .password-rules { margin-top: 10px; }
 
-.vault-gate__card .v-field {
-  border-radius: 10px !important;
-}
-
-.vault-gate__card .v-field--focused {
-  box-shadow: 0 0 0 3px rgb(21 94 239 / 12%);
-}
-
-.vault-gate__card .v-field__outline { --v-field-border-opacity: 1; color: #d0d5dd; }
-.vault-gate__card .v-field--focused .v-field__outline { color: #155eef; }
-.vault-gate__card .v-label { color: #475467; font-size: 0.875rem; }
-.vault-gate__card .v-field__input { color: #101828; }
 .vault-gate__card .v-messages { min-height: 20px; }
 .vault-gate__card .v-text-field {
   --v-input-control-height: 44px;
 }
 
-.vault-gate__actions {
-  margin-top: 8px;
-}
+.vault-gate__actions { margin-top: 0; }
 
+/* 恢复码展示块：深海军蓝底 + 等宽字体（仅此处允许等宽） */
 .vault-gate__recovery {
   margin: 0 0 16px;
   padding: 16px 18px;
-  border-radius: 12px;
-  background: #0f172a;
-  color: #f8fafc;
+  border-radius: var(--os-radius-card);
+  background: var(--os-navy);
+  color: #f6f9fc;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.875rem;
   letter-spacing: 0.04em;
@@ -555,79 +656,29 @@ a { color: inherit; }
   margin: 0 0 16px;
   padding: 4px 8px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--os-radius-card);
 }
 
 .vault-gate__confirm--error {
-  border-color: #fecdca;
-  background: #fffbfa;
+  border-color: var(--os-error-border);
+  background: var(--os-error-tint);
 }
 
 .vault-gate__confirm .v-label {
-  color: #475467;
+  color: var(--os-text-body);
   font-size: 0.8125rem;
   line-height: 1.5;
   opacity: 1;
 }
 
-@media (max-width: 599px) {
-  .vault-gate { padding: 20px 16px; }
-  .vault-gate__card {
-    width: 100%;
-    padding: 28px 20px !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-  .vault-gate .auth-form-heading h1 { font-size: 1.4rem; }
-}
-
-@media (max-width: 1279px) {
-  .auth-aside { padding: 48px clamp(28px, 4vw, 48px); }
-  .auth-aside h1 { font-size: 2rem; }
-  .auth-security-list { gap: 14px; margin: 30px 0; }
-}
-
-@media (max-width: 959px) {
-  .auth-main { display: block; padding-left: 0; }
-  .auth-aside { display: none; }
-  .auth-content { min-height: 0; padding: 44px 24px; }
-
-  .auth-mobile-context {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: min(100%, 448px);
-    margin-bottom: 14px;
-    color: #475467;
-    font-size: 0.8125rem;
-  }
-
-  .auth-mobile-context .v-icon { color: #155eef; }
-}
-
-@media (max-width: 599px) {
-  .auth-header { min-height: 64px; padding: 0 20px; }
-  .auth-header__actions { gap: 0; }
-  .auth-header__status { display: none !important; }
-  .auth-header__link { font-size: 0.8125rem; }
-  .auth-content { padding: 28px 20px 36px; }
-  .auth-card { width: 100%; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent; box-shadow: none !important; }
-  .auth-form-heading h1 { font-size: 1.55rem; }
-  .auth-footer { justify-content: center; padding: 14px 20px; }
-  .connection-snackbar .v-snackbar__wrapper { min-width: calc(100vw - 24px); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .auth-stepper__track span { transition: none; }
-}
-
-/* 保险箱首页 */
+/* ============================================================
+   保险箱工作区
+   ============================================================ */
 .vault-shell {
   display: flex;
   min-height: 100dvh;
-  color: #101828;
-  background: #f7f9fc;
+  color: var(--os-text-body);
+  background: var(--os-bg);
 }
 
 .vault-sidebar {
@@ -642,8 +693,8 @@ a { color: inherit; }
   min-height: 100dvh;
   flex-direction: column;
   padding: 20px 12px 16px;
-  border-right: 1px solid #eaecf0;
-  background: #fff;
+  border-right: 1px solid var(--os-border);
+  background: var(--os-surface);
   overflow-y: auto;
 }
 
@@ -652,9 +703,9 @@ a { color: inherit; }
   align-items: center;
   gap: 8px;
   padding: 0 8px 24px;
-  color: #101828;
+  color: var(--os-text-title);
   font-size: 0.95rem;
-  font-weight: 760;
+  font-weight: 600;
 }
 
 .vault-brand__mark {
@@ -662,9 +713,9 @@ a { color: inherit; }
   width: 28px;
   height: 28px;
   place-items: center;
-  border-radius: 9px;
+  border-radius: 8px;
   color: #fff;
-  background: #155eef;
+  background: var(--os-primary);
 }
 
 .vault-nav { display: grid; gap: 4px; }
@@ -677,8 +728,8 @@ a { color: inherit; }
   min-height: 42px;
   padding: 0 12px;
   border: 0;
-  border-radius: 9px;
-  color: #475467;
+  border-radius: var(--os-radius-control);
+  color: var(--os-text-body);
   background: transparent;
   font: inherit;
   font-size: 0.875rem;
@@ -686,10 +737,40 @@ a { color: inherit; }
   cursor: pointer;
 }
 
-.vault-nav__item:hover { color: #155eef; background: #f4f7ff; }
-.vault-nav__item--active { color: #155eef; background: #edf4ff; font-weight: 700; }
+.vault-nav__item:hover { color: var(--os-text-title); background: var(--os-bg); }
+
+/* 侧栏选中态：主色浅底 + 信任蓝文字 */
+.vault-nav__item--active,
+.vault-nav__item--active:hover {
+  color: var(--os-primary);
+  background: var(--os-primary-tint);
+  font-weight: 600;
+}
+
+.vault-nav__item:disabled {
+  color: var(--os-text-muted);
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.vault-nav__item small {
+  display: block;
+  margin-top: 2px;
+  color: inherit;
+  font-size: 0.625rem;
+  font-weight: 400;
+}
+
 .vault-sidebar__bottom { display: grid; gap: 4px; margin-top: auto; }
 .vault-sidebar__bottom .v-btn { justify-content: flex-start; padding-left: 12px; font-size: 0.875rem; }
+
+a.vault-nav__item,
+a.vault-mobile-nav__item {
+  text-decoration: none;
+  color: inherit;
+}
+
+a.vault-nav__item.vault-nav__item--active { color: var(--os-primary); }
 
 .vault-main {
   display: flex;
@@ -712,19 +793,27 @@ a { color: inherit; }
   align-items: center;
   gap: 16px;
   padding: 0 24px;
-  border-bottom: 1px solid #eaecf0;
-  background: rgb(255 255 255 / 92%);
+  border-bottom: 1px solid var(--os-border);
+  background: rgb(255 255 255 / 88%);
+  backdrop-filter: blur(8px);
 }
 
 .vault-topbar__spacer { display: none; flex: 1; }
 .vault-topbar__actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
 
+.vault-topbar__page {
+  color: var(--os-text-title);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
 .vault-topbar__mobile-brand {
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--os-text-title);
   font-size: 0.9375rem;
-  font-weight: 760;
+  font-weight: 600;
 }
 
 .vault-lock-status {
@@ -732,13 +821,14 @@ a { color: inherit; }
   gap: 6px;
   align-items: center;
   padding: 7px 10px;
-  border-radius: 999px;
-  color: #475467;
-  background: #f9fafb;
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-control);
+  color: var(--os-text-muted);
+  background: var(--os-bg);
   font-size: 0.75rem;
 }
 
-.vault-lock-status .v-icon { color: #027a48; }
+.vault-lock-status .v-icon { color: var(--os-success); }
 
 .vault-content {
   width: 100%;
@@ -758,9 +848,9 @@ a { color: inherit; }
 
 .vault-eyebrow {
   margin: 0 0 6px;
-  color: #155eef;
+  color: var(--os-primary);
   font-size: 0.75rem;
-  font-weight: 750;
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
@@ -768,14 +858,19 @@ a { color: inherit; }
 
 .vault-title-row h1 {
   margin: 0;
-  color: #101828;
+  color: var(--os-text-title);
   font-size: 1.75rem;
-  font-weight: 760;
-  letter-spacing: -0.04em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-.vault-title-row__heading span { color: #667085; font-size: 0.8125rem; }
-.vault-new-record { min-height: 44px; font-weight: 700; letter-spacing: 0; }
+.vault-title-row__heading span {
+  color: var(--os-text-muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vault-new-record { min-height: 32px; font-weight: 600; letter-spacing: 0; }
 
 .vault-privacy-note {
   display: inline-flex;
@@ -783,27 +878,24 @@ a { color: inherit; }
   align-items: center;
   margin: 22px 0;
   padding: 9px 12px;
-  border-radius: 9px;
-  color: #475467;
-  background: #edf4ff;
+  border-radius: var(--os-radius-card);
+  color: var(--os-text-body);
+  background: var(--os-primary-tint);
   font-size: 0.75rem;
 }
 
-.vault-privacy-note .v-icon { color: #155eef; }
+.vault-privacy-note .v-icon { color: var(--os-primary); }
 
+/* 工具区：同一行紧凑控件，无卡片套壳，底部 1px 边框与记录区分隔 */
 .vault-controls {
   display: grid;
   grid-template-columns: minmax(280px, 1.5fr) minmax(280px, 1fr) auto;
   gap: 10px;
   align-items: center;
-  padding: 12px;
-  border: 1px solid #eaecf0;
-  border-radius: 14px;
-  background: #fff;
+  padding: 4px 0 16px;
+  border-bottom: 1px solid var(--os-border);
 }
 
-.vault-controls .v-field { border-radius: 9px !important; }
-.vault-controls .v-field__outline { --v-field-border-opacity: 1; color: #d0d5dd; }
 .vault-search { min-width: 0; }
 
 .vault-filters,
@@ -821,139 +913,382 @@ a { color: inherit; }
   display: flex;
   gap: 2px;
   padding: 3px;
-  border: 1px solid #eaecf0;
-  border-radius: 9px;
-  background: #f9fafb;
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-control);
+  background: var(--os-bg);
 }
 
 .vault-view-switch .v-btn { min-width: 32px !important; min-height: 32px !important; }
 
 .vault-records {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-  gap: 14px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
 }
 
 .vault-records--list { grid-template-columns: 1fr; }
 
+/* 记录卡：标题行 / 凭证行 / 操作行，避免状态与编辑叠成一列 */
 .vault-record-card {
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid #eaecf0;
-  border-radius: 14px;
-  color: #101828;
-  background: #fff;
-  font: inherit;
-  text-align: left;
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.vault-record-card:hover {
-  border-color: #b2ccff;
-  box-shadow: 0 8px 18px rgb(16 24 40 / 7%);
-  transform: translateY(-2px);
-}
-
-.vault-record-card__main {
-  display: grid;
-  gap: 16px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-card);
+  color: var(--os-text-body);
+  background: var(--os-surface);
+  box-shadow: var(--os-shadow-1);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
 }
 
-.vault-record-card__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-  border-top: 1px solid #f2f4f7;
-  padding-top: 8px;
+.vault-record-card:hover {
+  border-color: #d6e0ff;
+  box-shadow: var(--os-shadow-2);
+  transform: translateY(-1px);
 }
 
-a.vault-nav__item,
-a.vault-mobile-nav__item {
-  text-decoration: none;
-  color: inherit;
+.vault-record-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--os-focus-ring), var(--os-shadow-1);
 }
 
 .vault-record-card__heading {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 10px;
-  align-items: center;
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
 }
 
-.vault-record-card__heading strong,
-.vault-record-card__heading span { display: block; }
-.vault-record-card__heading strong { font-size: 0.875rem; }
-.vault-record-card__heading span { margin-top: 2px; color: #667085; font-size: 0.75rem; }
+.vault-record-card__icon { background: var(--os-primary-tint) !important; }
 
-.vault-record-card__hidden {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 10px;
-  border-radius: 8px;
-  color: #667085;
-  background: #f9fafb;
+.vault-record-card__title { min-width: 0; }
+
+.vault-record-card__title strong {
+  display: block;
+  color: var(--os-text-title);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-record-card__platform {
+  display: block;
+  margin-top: 2px;
+  color: var(--os-text-muted);
   font-size: 0.75rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 渠道：紧贴平台下方；橙色小字，网址可跳转 */
+.vault-record-card__channel {
+  display: block;
+  margin-top: 1px;
+  color: #e67e22;
+  font-size: 0.6875rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-align: left;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.vault-record-card__channel:hover {
+  text-decoration: underline;
+}
+
+/* 右上仅保留状态文字 */
+.vault-record-card__status {
+  align-self: start;
+  padding-top: 2px;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vault-record-card__status[data-tone='ok'] { color: var(--os-success); }
+.vault-record-card__status[data-tone='abnormal'] { color: var(--os-abnormal); }
+.vault-record-card__status[data-tone='expired'] { color: var(--os-warning); }
+.vault-record-card__status[data-tone='archived'] { color: var(--os-text-muted); }
+
+.vault-record-card__icon-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.vault-record-card__icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--os-radius-control);
+  background: transparent;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.vault-record-card__icon-btn--warn {
+  color: var(--os-error);
+}
+
+.vault-record-card__icon-btn--warn:hover {
+  color: var(--os-error);
+  background: var(--os-error-tint);
+}
+
+.vault-record-card__icon-btn--edit {
+  color: var(--os-primary);
+}
+
+.vault-record-card__icon-btn--edit:hover {
+  color: var(--os-primary-hover);
+  background: var(--os-primary-tint);
+}
+
+.vault-record-card__icon-btn:focus-visible {
+  outline: 2px solid var(--os-primary);
+  outline-offset: 1px;
+}
+
+/* 凭证区：细边框分区，不用厚灰底套娃 */
+.vault-record-card__secrets {
+  display: grid;
+  gap: 0;
+  padding: 2px 0;
+  border-top: 1px solid var(--os-border);
+  border-bottom: 1px solid var(--os-border);
+}
+
+.vault-secret-row {
+  display: grid;
+  grid-template-columns: 2.5em minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  min-height: 36px;
+  padding: 4px 0;
+}
+
+.vault-secret-row + .vault-secret-row {
+  border-top: 1px solid #eef2f7;
+}
+
+.vault-secret-row__label {
+  color: var(--os-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.vault-secret-row__value {
+  min-width: 0;
+  color: var(--os-text-title);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-secret-row__value--masked {
+  color: var(--os-text-body);
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+.vault-secret-row__copy {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--os-radius-control);
+  color: var(--os-text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.vault-secret-row__copy:hover {
+  color: var(--os-primary);
+  background: var(--os-primary-tint);
+}
+
+.vault-secret-row__copy:focus-visible {
+  outline: 2px solid var(--os-primary);
+  outline-offset: 1px;
+}
+
+.vault-record-card__empty-secrets {
+  padding: 10px 0;
+  color: var(--os-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
 }
 
 .vault-record-card__footer {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  color: #98a2b3;
-  font-size: 0.6875rem;
+  gap: 12px;
+  min-width: 0;
 }
 
+.vault-record-card__footer time,
+.vault-record-card__expiry-empty {
+  margin-left: auto;
+  color: var(--os-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.vault-record-card__footer time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 列表二次确认弹窗：紧凑字号 */
+.vault-confirm-dialog {
+  border-radius: var(--os-radius-dialog) !important;
+  box-shadow: var(--os-shadow-3) !important;
+}
+
+.vault-confirm-dialog__title {
+  padding: 14px 16px 4px !important;
+  color: var(--os-text-title);
+  font-size: 0.9375rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.01em;
+}
+
+.vault-confirm-dialog__body {
+  padding: 4px 16px 8px !important;
+  color: var(--os-text-body) !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.5 !important;
+}
+
+.vault-confirm-dialog__actions {
+  padding: 4px 8px 10px !important;
+}
+
+.vault-confirm-dialog__actions .v-btn {
+  font-size: 0.8125rem !important;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* 空状态：真实说明 + 单一行动入口；标题与说明左对齐 */
 .vault-empty-state {
   display: grid;
-  max-width: 680px;
-  justify-items: center;
-  margin: 58px auto 0;
-  padding: 44px 28px;
-  border: 1px dashed #b2ccff;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #fff, #f8fbff);
-  text-align: center;
+  max-width: 640px;
+  justify-items: start;
+  margin: 48px auto 0;
+  padding: 36px 32px;
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-card);
+  background: var(--os-surface);
+  box-shadow: var(--os-shadow-1);
+  text-align: left;
 }
 
 .vault-empty-state__illustration {
   display: grid;
-  width: 76px;
-  height: 76px;
+  width: 64px;
+  height: 64px;
   place-items: center;
   margin-bottom: 20px;
-  border-radius: 24px;
-  color: #155eef;
-  background: #eaf2ff;
-  box-shadow: inset 0 0 0 8px #f5f9ff;
+  border-radius: 12px;
+  color: var(--os-primary);
+  background: var(--os-primary-tint);
+}
+
+.vault-empty-state__illustration--error {
+  color: var(--os-error);
+  background: var(--os-error-tint);
+}
+
+.vault-mobile-filter-trigger { min-height: var(--os-control-touch) !important; }
+
+.vault-mobile-filters {
+  display: flex;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.vault-mobile-filters__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--os-space-4);
+  padding: var(--os-space-5) var(--os-space-5) var(--os-space-3);
+  border-bottom: 1px solid var(--os-border);
+}
+
+.vault-mobile-filters__header h2 { margin: 0; font-size: 1.25rem; }
+
+.vault-mobile-filters__body {
+  display: grid;
+  min-height: 0;
+  gap: var(--os-space-4);
+  padding: var(--os-space-5);
+  overflow-y: auto;
+}
+
+.vault-mobile-filters__mode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--os-space-3);
+  color: var(--os-text-body);
+  font-size: 0.8125rem;
+}
+
+.vault-mobile-filters__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+  gap: var(--os-space-2);
+  padding: var(--os-space-3) var(--os-space-5) var(--os-space-5);
+  border-top: 1px solid var(--os-border);
 }
 
 .vault-empty-state h2 {
   margin: 0;
   font-size: 1.25rem;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
 }
 
 .vault-empty-state > p:not(.vault-eyebrow) {
   max-width: 440px;
   margin: 10px 0 24px;
-  color: #667085;
+  color: var(--os-text-body);
   font-size: 0.875rem;
   line-height: 1.7;
 }
 
-.vault-empty-state .v-btn { min-height: 44px; font-weight: 700; letter-spacing: 0; }
+.vault-empty-state .v-btn { min-height: 44px; font-weight: 600; letter-spacing: 0; }
 
 .vault-dialog h2 { margin: 0; font-size: 1.25rem; }
-.vault-dialog p { margin: 10px 0 0; color: #667085; font-size: 0.875rem; line-height: 1.7; }
+.vault-dialog p { margin: 10px 0 0; color: var(--os-text-body); font-size: 0.875rem; line-height: 1.7; }
 
 .vault-mobile-nav {
   position: fixed;
@@ -963,9 +1298,9 @@ a.vault-mobile-nav__item {
   left: 0;
   /* 仅手机端显示；电脑端必须隐藏（见下方 ≥960px） */
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   padding: 7px 8px max(7px, env(safe-area-inset-bottom));
-  border-top: 1px solid #eaecf0;
+  border-top: 1px solid var(--os-border);
   background: rgb(255 255 255 / 96%);
   backdrop-filter: blur(12px);
 }
@@ -977,85 +1312,101 @@ a.vault-mobile-nav__item {
   align-content: center;
   gap: 3px;
   border: 0;
-  border-radius: 10px;
-  color: #667085;
+  border-radius: var(--os-radius-control);
+  color: var(--os-text-muted);
   background: transparent;
   font: inherit;
   font-size: 0.625rem;
 }
 
-.vault-mobile-nav__item--active { color: #155eef; font-weight: 700; }
+.vault-mobile-nav__item--active { color: var(--os-primary); font-weight: 600; }
+a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primary); }
+.vault-mobile-nav__item--active { background: var(--os-primary-tint); }
 
-/* 电脑端：隐藏底部四格，改用左侧栏；主区收窄边距（不依赖 Vuetify d-md-*） */
-@media (min-width: 960px) {
-  .vault-sidebar { display: flex !important; }
-  .vault-mobile-nav { display: none !important; }
-  .vault-main { margin-left: 224px; }
-  .vault-topbar__mobile-brand { display: none; }
-  .vault-topbar__spacer { display: block; }
-  .vault-lock-status { display: inline-flex; }
-  .vault-topbar { padding: 0 20px 0 24px; }
-  .vault-content { padding: 24px 20px 40px; }
+.vault-drawer__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--os-space-3);
+  padding: var(--os-space-5);
+  border-bottom: 1px solid var(--os-border);
 }
 
-@media (min-width: 1280px) {
-  .vault-topbar { padding: 0 24px; }
-  .vault-content { padding: 28px 24px 48px; }
+.vault-drawer__brand strong,
+.vault-drawer__brand small { display: block; }
+.vault-drawer__brand strong { color: var(--os-text-title); }
+.vault-drawer__brand small { margin-top: 2px; color: var(--os-text-muted); }
+
+/* 用户菜单触发块 */
+.admin-user-chip,
+.vault-user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  padding: 4px 8px 4px 4px;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  color: var(--os-text-body);
+  background: var(--os-surface);
+  font: inherit;
+  cursor: pointer;
 }
 
-@media (max-width: 1279px) {
-  .vault-controls { grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr); }
-  .vault-view-controls { grid-column: 1 / -1; justify-content: flex-end; }
+.admin-user-chip:hover,
+.vault-user-chip:hover {
+  border-color: var(--os-primary-border);
+  background: var(--os-primary-tint);
 }
 
-@media (max-width: 959px) {
-  .vault-topbar { min-height: 58px; padding: 0 16px; }
-  .vault-content { min-height: calc(100dvh - 58px); padding: 24px 16px 96px; }
-  .vault-controls { display: flex; flex-direction: column; align-items: stretch; }
-  .vault-filters { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .vault-view-controls { justify-content: space-between; }
+.admin-user-chip:focus-visible,
+.vault-user-chip:focus-visible,
+.admin-quick-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--os-focus-ring);
 }
 
-@media (max-width: 599px) {
-  .vault-title-row { gap: 16px; align-items: flex-start; flex-direction: column; }
-  .vault-title-row h1 { font-size: 1.5rem; }
-  .vault-new-record { width: 100%; }
-  .vault-privacy-note { align-items: flex-start; margin: 16px 0; font-size: 0.75rem; line-height: 1.5; }
-  .vault-controls { gap: 10px; padding: 0; border: 0; background: transparent; }
-  .vault-filters { grid-template-columns: 1fr 1fr; }
-  .vault-filters .v-input:last-of-type { grid-column: 1 / -1; }
-  .vault-view-controls .v-input { width: 136px; }
-  .vault-empty-state { margin-top: 30px; padding: 32px 20px; }
-  .vault-empty-state__illustration { width: 64px; height: 64px; border-radius: 20px; }
-  .vault-records { grid-template-columns: 1fr; margin-top: 16px; }
-  .vault-lock-status { display: none; }
+.admin-user-chip__avatar,
+.vault-user-avatar {
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .vault-record-card { transition: none; }
+.vault-user-chip__name {
+  overflow: hidden;
+  max-width: 120px;
+  color: var(--os-text-body);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* —— 管理后台 —— */
+/* ============================================================
+   管理后台：与保险箱同构（白色侧栏 + 顶栏 + 内容区）
+   ============================================================ */
 .admin-shell {
   display: grid;
   min-height: 100dvh;
-  grid-template-columns: 260px minmax(0, 1fr);
-  background: #f7f9fc;
+  grid-template-columns: 1fr;
+  background: var(--os-bg);
 }
 
 .admin-sidebar {
   display: flex;
   flex-direction: column;
-  color: #fff;
-  background: #172b4d;
-  padding: 24px 16px;
+  padding: 24px 12px 16px;
+  border-right: 1px solid var(--os-border);
+  color: var(--os-text-body);
+  background: var(--os-surface);
 }
 
 .admin-sidebar__brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding: 0 8px;
 }
 
 .admin-sidebar__mark {
@@ -1063,25 +1414,27 @@ a.vault-mobile-nav__item {
   width: 36px;
   height: 36px;
   place-items: center;
-  border-radius: 10px;
-  background: #155eef;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--os-primary);
 }
 
 .admin-sidebar__name {
+  color: var(--os-text-title);
   font-size: 1.05rem;
-  font-weight: 760;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .admin-sidebar__tag {
   margin-top: 2px;
-  color: rgb(255 255 255 / 68%);
+  color: var(--os-text-muted);
   font-size: 0.75rem;
 }
 
 .admin-sidebar__nav {
   display: grid;
-  gap: 1px;
+  gap: 4px;
   flex: 1;
   align-content: start;
 }
@@ -1089,16 +1442,16 @@ a.vault-mobile-nav__item {
 .admin-nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   box-sizing: border-box;
   width: 100%;
-  height: 38px;
-  min-height: 38px;
-  max-height: 38px;
-  padding: 0 8px;
+  height: var(--os-control-md);
+  min-height: var(--os-control-md);
+  max-height: var(--os-control-md);
+  padding: 0 10px;
   border: 0;
-  border-radius: 6px;
-  color: rgb(255 255 255 / 86%);
+  border-radius: var(--os-radius-control);
+  color: var(--os-text-body);
   background: transparent;
   font: inherit;
   font-size: 0.8125rem;
@@ -1119,20 +1472,33 @@ a.vault-mobile-nav__item {
   line-height: 1;
 }
 
-.admin-nav-item:hover { background: rgb(255 255 255 / 8%); }
-.admin-nav-item--active { color: #fff; background: #155eef; font-weight: 650; }
-.admin-nav-item--muted { color: rgb(255 255 255 / 72%); }
+.admin-nav-item:hover { color: var(--os-text-title); background: var(--os-bg); }
+
+/* 侧栏选中态：主色浅底 + 信任蓝文字 */
+.admin-nav-item--active,
+.admin-nav-item--active:hover {
+  color: var(--os-primary);
+  background: var(--os-primary-tint);
+  font-weight: 600;
+}
+
+.admin-nav-item--muted { color: var(--os-text-muted); }
 
 .admin-sidebar__footer { margin-top: auto; padding-top: 10px; }
 
 .admin-main { min-width: 0; }
 
 .admin-topbar {
+  position: sticky;
+  z-index: 1;
+  top: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   padding: 28px 32px 8px;
+  background: rgb(246 249 252 / 92%);
+  backdrop-filter: blur(12px);
 }
 
 .admin-topbar__left {
@@ -1143,15 +1509,15 @@ a.vault-mobile-nav__item {
 
 .admin-topbar__title {
   margin: 0;
-  color: #101828;
+  color: var(--os-text-title);
   font-size: 1.75rem;
-  font-weight: 760;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .admin-topbar__subtitle {
   margin: 6px 0 0;
-  color: #475467;
+  color: var(--os-text-body);
   font-size: 0.9375rem;
 }
 
@@ -1162,78 +1528,32 @@ a.vault-mobile-nav__item {
 }
 
 .admin-topbar__user {
-  color: #475467;
+  color: var(--os-text-body);
   font-size: 0.875rem;
   font-weight: 600;
 }
 
-.admin-user-chip,
-.vault-user-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 220px;
-  padding: 4px 8px 4px 4px;
-  border: 1px solid #eaecf0;
-  border-radius: 999px;
-  color: #344054;
-  background: #fff;
-  font: inherit;
-  cursor: pointer;
-}
-
-.admin-user-chip:hover,
-.vault-user-chip:hover {
-  border-color: #b2ccff;
-  background: #f5f8ff;
-}
-
-.admin-user-chip__avatar,
-.vault-user-avatar {
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.vault-user-chip__name {
-  overflow: hidden;
-  max-width: 120px;
-  color: #475467;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (max-width: 599px) {
-  .vault-user-chip__name,
-  .admin-topbar__user {
-    display: none;
-  }
-}
-
-.admin-content {
-  padding: 16px 32px 40px;
-}
+.admin-content { padding: 16px 32px 40px; }
 
 .admin-boundary {
   margin: 24px 0 0;
-  color: #667085;
+  color: var(--os-text-muted);
   font-size: 0.8125rem;
 }
 
 .admin-stat-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
+/* 统计卡 / 面板：白色 + 1px 边框 + Level 1 环境阴影 */
 .admin-stat-card,
 .admin-panel {
-  border: 1px solid #eaecf0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 8px 20px rgb(16 24 40 / 5%);
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-card);
+  background: var(--os-surface);
+  box-shadow: var(--os-shadow-1);
 }
 
 .admin-stat-card {
@@ -1242,16 +1562,14 @@ a.vault-mobile-nav__item {
   column-gap: 10px;
   row-gap: 2px;
   align-items: center;
-  padding: 12px 14px;
+  padding: 14px 16px;
   min-height: 0;
 }
 
 .admin-panel { padding: 20px; }
 
 /* 标题与图标同一行，数值紧贴标题，减少纵向留白 */
-.admin-stat-card__head {
-  display: contents;
-}
+.admin-stat-card__head { display: contents; }
 
 .admin-stat-card__label {
   grid-column: 1;
@@ -1259,6 +1577,7 @@ a.vault-mobile-nav__item {
   align-self: end;
 }
 
+/* 图标右置于主色浅底圆角方块 */
 .admin-stat-card__icon {
   display: grid;
   grid-column: 2;
@@ -1267,7 +1586,9 @@ a.vault-mobile-nav__item {
   height: 34px;
   place-items: center;
   align-self: center;
-  border-radius: 10px;
+  border-radius: 8px;
+  color: var(--os-primary);
+  background: var(--os-primary-tint);
 }
 
 .admin-stat-card__value {
@@ -1283,46 +1604,32 @@ a.vault-mobile-nav__item {
 
 .admin-stat-card__label,
 .admin-panel__title {
-  color: #475467;
-  font-size: 0.75rem;
+  color: var(--os-text-muted);
+  font-size: 0.78125rem;
   font-weight: 600;
 }
 
+/* 数值：深海军蓝 + 等宽数字 */
 .admin-stat-card__value {
   margin-top: 0;
-  color: #101828;
-  font-size: 1.375rem;
-  font-weight: 760;
-  letter-spacing: -0.03em;
+  color: var(--os-text-title);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .admin-stat-card__hint {
   margin-top: 2px;
-  color: #667085;
+  color: var(--os-text-muted);
   font-size: 0.6875rem;
   line-height: 1.35;
 }
 
-.admin-stat-card--primary .admin-stat-card__icon { color: #155eef; background: #edf4ff; }
-.admin-stat-card--primary .admin-stat-card__value { color: #155eef; }
-
-.admin-stat-card--success .admin-stat-card__icon { color: #027a48; background: #ecfdf3; }
-.admin-stat-card--success .admin-stat-card__value { color: #027a48; }
-
-.admin-stat-card--warning .admin-stat-card__icon { color: #b54708; background: #fffaeb; }
-.admin-stat-card--warning .admin-stat-card__value { color: #b54708; }
-
-.admin-stat-card--error .admin-stat-card__icon { color: #b42318; background: #fef3f2; }
-.admin-stat-card--error .admin-stat-card__value { color: #b42318; }
-
-.admin-stat-card--info .admin-stat-card__icon { color: #175cd3; background: #eff8ff; }
-.admin-stat-card--info .admin-stat-card__value { color: #175cd3; }
-
-
 .admin-quick-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
 
@@ -1331,20 +1638,36 @@ a.vault-mobile-nav__item {
   justify-items: center;
   gap: 4px;
   padding: 20px 12px;
-  border: 1px solid #eaecf0;
-  border-radius: 14px;
-  color: #101828;
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-card);
+  color: var(--os-text-title);
+  background: var(--os-surface);
   text-decoration: none;
-  font-weight: 650;
+  font-weight: 600;
+  transition: box-shadow var(--os-duration-base) ease, transform var(--os-duration-base) ease;
 }
 
 .admin-quick-item:hover {
-  border-color: #b2ccff;
-  background: #f5f8ff;
+  box-shadow: var(--os-shadow-2);
+  transform: translateY(-1px);
 }
 
 .admin-filter-field { flex: 1 1 220px; max-width: 320px; }
 .admin-filter-select { flex: 0 1 150px; max-width: 180px; }
+
+.admin-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--os-space-2);
+  align-items: center;
+}
+
+.admin-pagination-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--os-space-4);
+}
 
 /* 筛选工具栏：搜索/下拉/查询按钮统一更矮更紧凑 */
 .admin-panel .admin-filter-field,
@@ -1370,25 +1693,312 @@ a.vault-mobile-nav__item {
   letter-spacing: 0;
 }
 
+/* 表格：表头次级色，行 hover 使用页面底色 */
 .admin-table th {
-  color: #475467 !important;
-  font-size: 0.8125rem !important;
-  font-weight: 650 !important;
+  color: var(--os-text-muted) !important;
+  font-size: 0.78125rem !important;
+  font-weight: 600 !important;
   white-space: nowrap;
 }
 
-.admin-table__row--disabled { background: #fff5f5; }
+.admin-table tbody tr:hover { background: var(--os-bg); }
+.admin-table__row--disabled { background: var(--os-error-tint); }
+.admin-table td { font-variant-numeric: tabular-nums; }
+
+.admin-status-text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--os-space-2);
+  color: var(--os-text-muted);
+  font-size: 0.78125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-status-text::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.admin-status-text[data-tone='success'] { color: var(--os-success); }
+.admin-status-text[data-tone='warning'] { color: var(--os-warning); }
+.admin-status-text[data-tone='error'] { color: var(--os-error); }
+.admin-status-text[data-tone='info'] { color: var(--os-primary); }
+
+.admin-table .v-table__wrapper { overflow-x: auto; }
+.admin-table table { min-width: 860px; }
+
+.admin-dialog-card .v-card-text {
+  display: grid;
+  gap: var(--os-space-4);
+}
+
+.admin-dialog-card .v-card-text > .mt-2 { margin-top: 0 !important; }
+
+/* ============================================================
+   响应式
+   ============================================================ */
+
+/* 认证页 */
+@media (max-width: 1279px) {
+  .auth-aside { padding: 48px clamp(28px, 4vw, 48px); }
+  .auth-aside h1 { font-size: 1.9rem; }
+  .auth-security-list { gap: 14px; margin: 30px 0 0; }
+}
+
+@media (max-width: 959px) {
+  .auth-main { display: block; }
+  .auth-aside { display: none; }
+  .auth-content { min-height: 0; padding: 32px 24px 44px; }
+}
+
+@media (max-width: 599px) {
+  .auth-header { min-height: 64px; padding: 0 20px; }
+  .auth-header__actions { gap: 0; }
+  .auth-header__status { display: none !important; }
+  .auth-header__link { font-size: 0.8125rem; }
+  .auth-content { padding: 24px 20px 36px; }
+  .auth-card { width: 100%; }
+  .auth-form-heading h1 { font-size: 1.5rem; }
+  .auth-footer { justify-content: center; padding: 14px 20px; }
+  .connection-snackbar .v-snackbar__wrapper { min-width: calc(100vw - 24px); }
+
+  .password-toggle {
+    width: var(--os-control-touch) !important;
+    height: var(--os-control-touch) !important;
+    min-width: var(--os-control-touch) !important;
+    min-height: var(--os-control-touch) !important;
+  }
+
+  .vault-feedback-snackbar .v-snackbar__wrapper {
+    margin-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+}
+
+/* 保险箱初始化页 */
+@media (max-width: 599px) {
+  .vault-gate { padding: 20px 16px; }
+
+  .vault-gate__card {
+    width: 100%;
+    padding: 28px 20px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .vault-gate .auth-form-heading h1 { font-size: 1.4rem; }
+}
+
+/* 保险箱工作区：电脑端隐藏底部四格，改用左侧栏 */
+@media (min-width: 960px) {
+  .vault-sidebar { display: flex !important; }
+  .vault-mobile-nav { display: none !important; }
+  .vault-main { margin-left: 224px; }
+  .vault-topbar__mobile-brand { display: none; }
+  .vault-topbar__spacer { display: block; }
+  .vault-lock-status { display: inline-flex; }
+  .vault-topbar { padding: 0 20px 0 24px; }
+  .vault-content { padding: 24px 20px 40px; }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  .vault-mobile-nav { display: none !important; }
+
+  .admin-table th:first-child,
+  .admin-table td:first-child,
+  .admin-table th:last-child,
+  .admin-table td:last-child {
+    position: sticky;
+    z-index: 1;
+    background: var(--os-surface);
+  }
+
+  .admin-table th:first-child,
+  .admin-table td:first-child { left: 0; }
+  .admin-table th:last-child,
+  .admin-table td:last-child { right: 0; }
+  .admin-table__row--disabled td:first-child,
+  .admin-table__row--disabled td:last-child { background: var(--os-error-tint); }
+}
+
+@media (min-width: 1280px) {
+  .vault-topbar { padding: 0 24px; }
+  .vault-content { padding: 28px 24px 48px; }
+}
 
 @media (max-width: 1279px) {
-  .admin-shell { grid-template-columns: 1fr; }
+  .vault-controls { grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr); }
+  .vault-view-controls { grid-column: 1 / -1; justify-content: flex-end; }
+}
+
+@media (max-width: 959px) {
+  .vault-topbar { min-height: 58px; padding: 0 16px; }
+  .vault-topbar__page { display: none; }
+  .vault-content { min-height: calc(100dvh - 58px); padding: 24px 16px 40px; }
+  .vault-controls { display: flex; flex-direction: column; align-items: stretch; }
+  .vault-filters { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .vault-view-controls { justify-content: space-between; }
+}
+
+@media (max-width: 599px) {
+  .vault-content { padding-bottom: 96px; }
+  .vault-title-row { gap: 16px; align-items: flex-start; flex-direction: column; }
+  .vault-title-row h1 { font-size: 1.5rem; }
+  .vault-new-record { width: 100%; }
+  .vault-privacy-note { align-items: flex-start; margin: 16px 0; font-size: 0.75rem; line-height: 1.5; }
+  .vault-controls { gap: 10px; padding: 0 0 14px; }
+  .vault-filters { grid-template-columns: 1fr 1fr; }
+  .vault-filters .v-input:last-of-type { grid-column: 1 / -1; }
+  .vault-view-controls .v-input { width: 136px; }
+  .vault-empty-state { margin-top: 30px; padding: 28px 20px; }
+  .vault-records { grid-template-columns: 1fr; margin-top: 16px; }
+  .vault-lock-status { display: none; }
+
+  .vault-mobile-filters {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0 !important;
+  }
+
+  .vault-mobile-filters__body { overflow-y: auto; }
+  .vault-mobile-filters__actions { padding-bottom: max(var(--os-space-5), env(safe-area-inset-bottom)); }
+
+  .vault-view-switch .v-btn,
+  .vault-secret-row__copy,
+  .vault-record-card__icon-btn {
+    min-width: var(--os-control-touch) !important;
+    width: var(--os-control-touch) !important;
+    min-height: var(--os-control-touch) !important;
+    height: var(--os-control-touch) !important;
+  }
+
+  .vault-user-chip__name,
+  .admin-topbar__user { display: none; }
+}
+
+/* 管理后台：≥960px 显示左侧栏（与模板中的 mdAndUp 一致） */
+@media (min-width: 960px) {
+  .admin-shell { grid-template-columns: 248px minmax(0, 1fr); }
+}
+
+@media (max-width: 1279px) {
   .admin-stat-grid,
   .admin-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 959px) {
   .admin-topbar,
   .admin-content { padding-left: 20px; padding-right: 20px; }
 }
 
 @media (max-width: 599px) {
   .admin-stat-grid,
-  .admin-quick-grid { grid-template-columns: 1fr; }
+  .admin-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-topbar__title { font-size: 1.4rem; }
+
+  .admin-topbar {
+    align-items: flex-start;
+    padding-top: 20px;
+  }
+
+  .admin-topbar__subtitle {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.8125rem;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .admin-panel { padding: 16px; }
+  .admin-stat-card { padding: 12px; }
+
+  .admin-filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-filter-field,
+  .admin-filter-select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .admin-filter-field,
+  .admin-filter-row .admin-toolbar-btn { grid-column: 1 / -1; }
+
+  .admin-panel .v-btn.v-btn--density-default,
+  .admin-toolbar-btn { min-height: var(--os-control-touch) !important; height: var(--os-control-touch) !important; }
+
+  .admin-table table { min-width: 0; }
+  .admin-table thead { display: none; }
+  .admin-table tbody { display: grid; gap: var(--os-space-3); }
+  .admin-table tbody tr,
+  .admin-table tbody tr:hover {
+    display: grid;
+    padding: var(--os-space-3);
+    border: 1px solid var(--os-border);
+    border-radius: var(--os-radius-card);
+    background: var(--os-surface);
+    box-shadow: var(--os-shadow-1);
+  }
+
+  .admin-table tbody td {
+    display: grid;
+    grid-template-columns: minmax(76px, 0.34fr) minmax(0, 0.66fr);
+    gap: var(--os-space-3);
+    align-items: start;
+    height: auto !important;
+    padding: 10px 0 !important;
+    border-bottom: 1px solid var(--os-border) !important;
+    white-space: normal;
+  }
+
+  .admin-table tbody td:last-child { border-bottom: 0 !important; }
+  .admin-table tbody td::before {
+    color: var(--os-text-muted);
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .admin-table tbody td[colspan] { display: block; }
+  .admin-table tbody td[colspan]::before { content: none; }
+  .admin-table tbody td .v-btn { min-height: var(--os-control-touch); }
+
+  .admin-pagination-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-pagination-row .v-pagination { align-self: center; max-width: 100%; }
+}
+
+/* 减少动效：禁用位移与过渡 */
+@media (prefers-reduced-motion: reduce) {
+  .auth-stepper__track span { transition: none; }
+
+  .vault-record-card,
+  .admin-quick-item {
+    transition: none;
+  }
+
+  .vault-record-card:hover,
+  .admin-quick-item:hover {
+    transform: none;
+  }
+
+  .dialog-bottom-transition-enter-active,
+  .dialog-bottom-transition-leave-active {
+    transition: none !important;
+  }
+
+  .dialog-bottom-transition-enter-from,
+  .dialog-bottom-transition-leave-to {
+    transform: none !important;
+  }
 }

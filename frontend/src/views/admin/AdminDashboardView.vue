@@ -5,8 +5,6 @@ import { usersApi, type ManagedUserStats } from '@/api/users'
 const quickLinks = [
   { title: '用户管理', to: '/admin/users', icon: 'mdi-account-group-outline' },
   { title: '创建邀请码', to: '/admin/invitations', icon: 'mdi-key-plus' },
-  { title: '系统模板', to: '/admin/templates', icon: 'mdi-file-document-outline' },
-  { title: '安全日志', to: '/admin/security-logs', icon: 'mdi-shield-search' },
 ]
 
 const userStats = ref<ManagedUserStats | null>(null)
@@ -59,13 +57,13 @@ onMounted(async () => {
       </v-card>
       <v-card class="admin-stat-card admin-stat-card--success" elevation="0">
         <div class="admin-stat-card__head">
-          <div class="admin-stat-card__label">服务状态</div>
+          <div class="admin-stat-card__label">数据边界</div>
           <div class="admin-stat-card__icon" aria-hidden="true">
             <v-icon icon="mdi-check-decagram-outline" size="18" />
           </div>
         </div>
-        <div class="admin-stat-card__value">正常</div>
-        <div class="admin-stat-card__hint">API 可访问</div>
+        <div class="admin-stat-card__value">隔离</div>
+        <div class="admin-stat-card__hint">仅管理账户元数据</div>
       </v-card>
     </div>
 

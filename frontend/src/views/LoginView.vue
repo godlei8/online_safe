@@ -87,7 +87,7 @@ async function submit() {
       {{ errorMessage }}
     </v-alert>
 
-    <v-form ref="form" validate-on="blur" @submit.prevent="submit">
+    <v-form ref="form" class="auth-login-form" validate-on="blur" @submit.prevent="submit">
       <v-text-field
         v-model="identifier"
         label="手机号或用户名"
@@ -127,14 +127,14 @@ async function submit() {
         <router-link to="/forgot-password" class="text-body-2">忘记密码？</router-link>
       </div>
 
-      <div class="auth-inline-note" role="note">
-        <v-icon icon="mdi-information-outline" size="18" />
-        <span>登录密码同时用于本机会话内打开密钥信封；退出登录后内存中的明文会清除。</span>
-      </div>
-
       <v-btn type="submit" color="primary" block class="auth-submit" :loading="submitting" :disabled="submitting">
         {{ submitting ? '正在登录…' : '登录' }}
       </v-btn>
+
+      <div class="auth-inline-note" role="note">
+        <v-icon icon="mdi-information-outline" size="18" />
+        <span>登录密码仅在本机会话内打开密钥信封；退出后内存中的明文会清除。</span>
+      </div>
     </v-form>
 
     <p class="auth-alternate-action">还没有账号？<router-link to="/register">创建账号</router-link></p>

@@ -108,7 +108,7 @@ async function confirm() {
         <strong>{{ stepLabel }}</strong>
       </div>
       <div class="auth-stepper__track">
-        <span :class="{ 'auth-stepper__progress--complete': step > 1 }" />
+        <span :style="{ width: `${(step / 3) * 100}%` }" />
       </div>
     </div>
 
@@ -127,7 +127,7 @@ async function confirm() {
       重置登录密码后需重新初始化保险箱，旧密文将无法保留。
     </v-alert>
 
-    <form v-if="step === 1" @submit.prevent="lookup">
+    <form v-if="step === 1" class="auth-reset-form" @submit.prevent="lookup">
       <v-text-field
         v-model="identifier"
         label="手机号或用户名"
@@ -141,7 +141,7 @@ async function confirm() {
       </v-btn>
     </form>
 
-    <form v-else-if="step === 2" @submit.prevent="continueToPassword">
+    <form v-else-if="step === 2" class="auth-reset-form" @submit.prevent="continueToPassword">
       <div v-for="(question, index) in questions" :key="question.questionId" class="mb-4">
         <p class="text-body-2 mb-2">{{ index + 1 }}. {{ question.questionText }}</p>
         <v-text-field
@@ -152,12 +152,12 @@ async function confirm() {
         />
       </div>
       <div class="auth-form-actions">
-        <v-btn variant="text" color="secondary" @click="step = 1">上一步</v-btn>
+        <v-btn variant="text" color="primary" @click="step = 1">上一步</v-btn>
         <v-btn type="submit" color="primary">继续</v-btn>
       </div>
     </form>
 
-    <form v-else @submit.prevent="confirm">
+    <form v-else class="auth-reset-form" @submit.prevent="confirm">
       <v-text-field
         v-model="newPassword"
         label="新登录密码"
@@ -173,6 +173,7 @@ async function confirm() {
             :icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
             variant="text"
             density="compact"
+            :aria-label="showPassword ? '隐藏新登录密码' : '显示新登录密码'"
             @click="showPassword = !showPassword"
           />
         </template>
@@ -188,7 +189,7 @@ async function confirm() {
         :error-messages="fieldErrors.confirmPassword"
       />
       <div class="auth-form-actions">
-        <v-btn variant="text" color="secondary" :disabled="submitting" @click="step = 2">上一步</v-btn>
+        <v-btn variant="text" color="primary" :disabled="submitting" @click="step = 2">上一步</v-btn>
         <v-btn type="submit" color="primary" :loading="submitting" :disabled="submitting">重置密码</v-btn>
       </div>
     </form>

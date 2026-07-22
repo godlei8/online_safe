@@ -264,7 +264,7 @@ function copyCreatedPlainCode() {
     </v-alert>
 
     <v-card class="admin-panel mb-4" elevation="0">
-      <div class="d-flex flex-wrap ga-2 align-center">
+      <div class="admin-filter-row">
         <v-text-field
           v-model="query"
           class="admin-filter-field"
@@ -319,10 +319,11 @@ function copyCreatedPlainCode() {
             :key="item.id"
             :class="{ 'admin-table__row--disabled': item.status === 'DISABLED' }"
           >
-            <td>
+            <td data-label="邀请码">
               <div class="d-flex align-center ga-1">
                 <span class="font-weight-medium">{{ item.codeHint }}</span>
                 <v-btn
+                  class="admin-icon-action"
                   icon="mdi-content-copy"
                   size="x-small"
                   variant="text"
@@ -333,8 +334,8 @@ function copyCreatedPlainCode() {
               </div>
               <div v-if="item.note" class="text-caption text-medium-emphasis">{{ item.note }}</div>
             </td>
-            <td>{{ typeLabel(item.type) }}</td>
-            <td style="min-width: 140px">
+            <td data-label="类型">{{ typeLabel(item.type) }}</td>
+            <td data-label="使用进度" style="min-width: 140px">
               <div class="mb-1">{{ item.usedCount }} / {{ item.maxUses }}</div>
               <v-progress-linear
                 :model-value="item.maxUses ? (item.usedCount / item.maxUses) * 100 : 0"
@@ -343,15 +344,15 @@ function copyCreatedPlainCode() {
                 rounded
               />
             </td>
-            <td>{{ item.expiresAt ? formatTime(item.expiresAt) : '无限制' }}</td>
-            <td>
-              <v-chip size="small" :color="statusColor(item.status)" variant="tonal">
+            <td data-label="有效期">{{ item.expiresAt ? formatTime(item.expiresAt) : '无限制' }}</td>
+            <td data-label="状态">
+              <span class="admin-status-text" :data-tone="statusColor(item.status)">
                 {{ statusLabel(item.status) }}
-              </v-chip>
+              </span>
             </td>
-            <td>{{ item.creatorUsername }}</td>
-            <td>{{ item.lastUsedAt ? formatTime(item.lastUsedAt) : '—' }}</td>
-            <td>
+            <td data-label="创建者">{{ item.creatorUsername }}</td>
+            <td data-label="最近使用">{{ item.lastUsedAt ? formatTime(item.lastUsedAt) : '—' }}</td>
+            <td data-label="操作">
               <v-btn size="small" variant="text" color="error" @click="deleteInvite(item)">
                 删除
               </v-btn>
@@ -360,7 +361,7 @@ function copyCreatedPlainCode() {
         </tbody>
       </v-table>
 
-      <div class="d-flex justify-space-between align-center mt-4">
+      <div class="admin-pagination-row mt-4">
         <div class="text-caption text-medium-emphasis">
           共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
         </div>
@@ -369,7 +370,7 @@ function copyCreatedPlainCode() {
     </v-card>
 
     <v-dialog v-model="createDialog" max-width="480">
-      <v-card class="pa-2">
+      <v-card class="admin-dialog-card pa-2">
         <v-card-title>创建邀请码</v-card-title>
         <v-card-text>
           <v-alert v-if="createError" type="error" variant="tonal" class="mb-4">{{ createError }}</v-alert>
@@ -392,7 +393,7 @@ function copyCreatedPlainCode() {
     </v-dialog>
 
     <v-dialog v-model="plainCodeDialog" max-width="520">
-      <v-card class="pa-2">
+      <v-card class="admin-dialog-card pa-2">
         <v-card-title>邀请码已创建</v-card-title>
         <v-card-text>
           <p class="mb-3">页面仅显示掩码。完整邀请码已写入剪贴板，也可再次点击「复制」。</p>

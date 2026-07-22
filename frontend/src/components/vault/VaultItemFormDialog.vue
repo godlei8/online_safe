@@ -3,7 +3,9 @@ import { computed, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import {
   cloneVaultItemPayload,
+  effectiveStatus,
   emptyItemPayload,
+  ensureCredentialFields,
   type VaultItemPayload,
 } from '@/domain/vaultPayload'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
@@ -11,7 +13,7 @@ import { useVaultStore } from '@/stores/vault'
 import VaultItemForm from '@/components/vault/VaultItemForm.vue'
 
 const emit = defineEmits<{
-  saved: [id: string]
+  saved: [id: string, created: boolean]
 }>()
 
 const { smAndDown } = useDisplay()
@@ -73,21 +75,43 @@ watch(
 
 async function save() {
   errorMessage.value = ''
-  if (!form.value.name.trim() || !form.value.platform.trim()) {
+  const draft = ensureCredentialFields(form.value)
+  if (!draft.name.trim() || !draft.platform.trim()) {
     errorMessage.value = '请填写记录名称和平台'
     return
   }
-  for (const field of form.value.fields) {
+  if (!isEdit.value && !draft.expiresAt) {
+    errorMessage.value = '请填写有效期'
+    return
+  }
+  const account = draft.fields.find((field) => field.systemKey === 'account')
+  const password = draft.fields.find((field) => field.systemKey === 'password')
+  if (!account?.value.trim() || !password?.value.trim()) {
+    errorMessage.value = '请填写账号和密码'
+    return
+  }
+  for (const field of draft.fields) {
     if (field.required && !field.value.trim()) {
       errorMessage.value = `请填写必填字段：${field.name}`
       return
     }
   }
+
+  // 新建固定正常；编辑保留异常，其余按有效期计算
+  if (!isEdit.value) {
+    draft.status = 'NORMAL'
+  } else if (draft.status !== 'ABNORMAL') {
+    draft.status = effectiveStatus({ ...draft, status: 'NORMAL' })
+  }
+  draft.tags = []
+  form.value = draft
+
   saving.value = true
+  const created = !isEdit.value
   try {
-    const id = await vault.saveItem(editor.editingId.value, form.value)
+    const id = await vault.saveItem(editor.editingId.value, draft)
     editor.close()
-    emit('saved', id)
+    emit('saved', id, created)
   } catch (error) {
     errorMessage.value = friendlyError(error, '保存失败，请重试')
   } finally {
@@ -127,6 +151,7 @@ function cancel() {
           v-model="form"
           :loading="loading"
           :error-message="errorMessage"
+          :mode="isEdit ? 'edit' : 'create'"
         />
       </v-card-text>
 
@@ -154,21 +179,21 @@ function cancel() {
   justify-content: space-between;
   gap: 12px;
   padding: 16px 20px 12px !important;
-  border-bottom: 1px solid #eef2f7;
+  border-bottom: 1px solid var(--os-border);
 }
 
 .vault-item-form-dialog__eyebrow {
   margin: 0;
-  color: #64748b;
+  color: var(--os-text-muted);
   font-size: 0.75rem;
   font-weight: 600;
 }
 
 .vault-item-form-dialog__title h2 {
   margin: 2px 0 0;
-  color: #0f172a;
+  color: var(--os-text-title);
   font-size: 1.15rem;
-  font-weight: 720;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
@@ -181,7 +206,7 @@ function cancel() {
 .vault-item-form-dialog__actions {
   flex: 0 0 auto;
   padding: 12px 20px !important;
-  border-top: 1px solid #eef2f7;
-  background: #fff;
+  border-top: 1px solid var(--os-border);
+  background: var(--os-surface);
 }
 </style>

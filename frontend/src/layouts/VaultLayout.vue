@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useDisplay } from 'vuetify'
 import { useRoute, useRouter } from 'vue-router'
 import VaultItemFormDialog from '@/components/vault/VaultItemFormDialog.vue'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
@@ -11,8 +12,10 @@ const router = useRouter()
 const auth = useAuthStore()
 const vault = useVaultStore()
 const editor = useVaultItemEditor()
+const { mdAndUp } = useDisplay()
 
 const signingOut = ref(false)
+const navigationDrawer = ref(false)
 const showNavigationHint = ref(false)
 const navigationHint = ref('')
 
@@ -60,7 +63,9 @@ function consumeEditorQuery() {
   router.replace({ path: route.path, query: nextQuery })
 }
 
-function onSaved(id: string) {
+function onSaved(id: string, created: boolean) {
+  // 新增成功：关闭弹窗即可，不跳转详情
+  if (created) return
   if (route.name === 'vault-item' && String(route.params.id) === id) {
     router.replace({ path: `/vault/items/${id}`, query: { refreshed: String(Date.now()) } })
     return
@@ -115,20 +120,20 @@ watch(
           <v-icon icon="mdi-view-grid-plus-outline" size="19" />
           <span>模板</span>
         </router-link>
-        <button class="vault-nav__item" type="button" @click="notifyUnavailable('标签')">
+        <button class="vault-nav__item" type="button" disabled aria-label="标签，即将开放">
           <v-icon icon="mdi-tag-outline" size="19" />
-          <span>标签</span>
+          <span>标签<small>即将开放</small></span>
         </button>
-        <button class="vault-nav__item" type="button" @click="notifyUnavailable('安全设置')">
+        <button class="vault-nav__item" type="button" disabled aria-label="安全设置，即将开放">
           <v-icon icon="mdi-shield-cog-outline" size="19" />
-          <span>安全设置</span>
+          <span>安全设置<small>即将开放</small></span>
         </button>
       </nav>
 
       <div class="vault-sidebar__bottom">
-        <button class="vault-nav__item" type="button" @click="notifyUnavailable('帮助中心')">
+        <button class="vault-nav__item" type="button" disabled aria-label="帮助中心，即将开放">
           <v-icon icon="mdi-help-circle-outline" size="19" />
-          <span>帮助中心</span>
+          <span>帮助中心<small>即将开放</small></span>
         </button>
       </div>
     </aside>
@@ -136,9 +141,12 @@ watch(
     <main class="vault-main">
       <header class="vault-topbar">
         <div class="vault-topbar__mobile-brand">
-          <v-btn icon="mdi-menu" variant="text" aria-label="打开导航" @click="notifyUnavailable('导航菜单')" />
+          <v-btn icon="mdi-menu" variant="text" aria-label="打开导航" @click="navigationDrawer = true" />
           <span>Online Safe</span>
         </div>
+        <span class="vault-topbar__page" aria-label="当前页面">
+          {{ activeNav === 'templates' ? '模板' : '保险箱' }}
+        </span>
         <div class="vault-topbar__spacer" />
         <div class="vault-topbar__actions">
           <span class="vault-lock-status">
@@ -203,10 +211,6 @@ watch(
           <v-icon icon="mdi-view-grid-plus-outline" size="21" />
           <span>模板</span>
         </router-link>
-        <button class="vault-mobile-nav__item" type="button" @click="notifyUnavailable('标签')">
-          <v-icon icon="mdi-tag-outline" size="21" />
-          <span>标签</span>
-        </button>
         <button class="vault-mobile-nav__item" type="button" @click="logout">
           <v-icon icon="mdi-logout" size="21" />
           <span>退出</span>
@@ -214,8 +218,21 @@ watch(
       </nav>
     </main>
 
+    <v-navigation-drawer v-if="!mdAndUp" v-model="navigationDrawer" temporary color="surface">
+      <div class="vault-drawer__brand">
+        <span class="vault-brand__mark"><v-icon icon="mdi-shield-lock-outline" size="18" /></span>
+        <div><strong>Online Safe</strong><small>个人保险箱</small></div>
+      </div>
+      <v-list nav bg-color="transparent">
+        <v-list-item to="/vault" prepend-icon="mdi-safe-square-outline" title="保险箱" color="primary" @click="navigationDrawer = false" />
+        <v-list-item to="/vault/templates" prepend-icon="mdi-view-grid-plus-outline" title="模板" color="primary" @click="navigationDrawer = false" />
+        <v-list-item prepend-icon="mdi-tag-outline" title="标签" subtitle="即将开放" disabled />
+        <v-list-item prepend-icon="mdi-shield-cog-outline" title="安全设置" subtitle="即将开放" disabled />
+      </v-list>
+    </v-navigation-drawer>
+
     <VaultItemFormDialog @saved="onSaved" />
-    <v-snackbar v-model="showNavigationHint" color="secondary" location="bottom" :timeout="2800">
+    <v-snackbar v-model="showNavigationHint" class="vault-feedback-snackbar" color="primary" location="bottom" :timeout="2800">
       {{ navigationHint }}
     </v-snackbar>
   </div>
