@@ -1,0 +1,13 @@
+# 覆盖 compose.yml 的构建方式：使用本机产物镜像，跳过服务器端 Maven/npm。
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.runtime
+    image: online-safe-backend:local
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.runtime
+    image: online-safe-frontend:local

@@ -1,0 +1,7 @@
+# 仅打包本机已构建的 dist，避免在服务器跑 npm。
+FROM nginx:1.29-alpine
+
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY dist /usr/share/nginx/html
+
+EXPOSE 80
