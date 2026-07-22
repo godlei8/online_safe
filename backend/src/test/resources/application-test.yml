@@ -25,3 +25,9 @@ app:
   vault:
     encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
     current-key-id: 1
+  sms:
+    provider: recording
+    code-ttl-seconds: 300
+    code-length: 6
+    send-interval-seconds: 1
+    send-daily-limit: 100

@@ -9,6 +9,7 @@ import com.godlei.onlinesafe.announcement.application.InvalidAnnouncementOperati
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
 import com.godlei.onlinesafe.auth.application.PasswordResetException;
 import com.godlei.onlinesafe.auth.application.RegistrationConflictException;
+import com.godlei.onlinesafe.auth.application.SmsException;
 import com.godlei.onlinesafe.vault.application.InvalidVaultEnvelopeException;
 import com.godlei.onlinesafe.vault.application.PrivateTemplateNotFoundException;
 import com.godlei.onlinesafe.vault.application.VaultItemNotFoundException;
@@ -63,6 +64,15 @@ public class GlobalExceptionHandler {
         HttpStatus status = "PASSWORD_RESET_RATE_LIMITED".equals(exception.getCode())
                 ? HttpStatus.TOO_MANY_REQUESTS
                 : HttpStatus.BAD_REQUEST;
+        return response(status, exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(SmsException.class)
+    ResponseEntity<ApiError> handleSms(SmsException exception, HttpServletRequest request) {
+        HttpStatus status = switch (exception.getCode()) {
+            case "SMS_SEND_TOO_FREQUENT", "SMS_SEND_DAILY_LIMIT" -> HttpStatus.TOO_MANY_REQUESTS;
+            default -> HttpStatus.BAD_REQUEST;
+        };
         return response(status, exception.getCode(), exception.getMessage(), request, null);
     }
 

@@ -2,13 +2,12 @@ package com.godlei.onlinesafe.auth.web;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-import com.godlei.onlinesafe.admin.application.InvitationCodeHasher;
 import com.godlei.onlinesafe.admin.domain.AdminUser;
-import com.godlei.onlinesafe.admin.domain.RegistrationInvite;
 import com.godlei.onlinesafe.admin.infrastructure.AdminUserRepository;
-import com.godlei.onlinesafe.admin.infrastructure.RegistrationInviteRepository;
+import com.godlei.onlinesafe.auth.domain.SmsPurpose;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
-import com.godlei.onlinesafe.auth.infrastructure.UserSecurityQuestionRepository;
+import com.godlei.onlinesafe.auth.infrastructure.SmsVerificationRepository;
+import com.godlei.onlinesafe.sms.RecordingSmsSender;
 import com.godlei.onlinesafe.vault.application.VaultPayloadCipher;
 import com.godlei.onlinesafe.vault.domain.VaultItem;
 import com.godlei.onlinesafe.vault.infrastructure.PrivateTemplateRepository;
@@ -40,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @ActiveProfiles("test")
-class SecurityQuestionPasswordResetIntegrationTest {
+class SmsPasswordResetIntegrationTest {
 
     private static final String TEST_ADMIN_PASSWORD = "test-admin-password-123";
 
@@ -54,19 +53,10 @@ class SecurityQuestionPasswordResetIntegrationTest {
     private AppUserRepository userRepository;
 
     @Autowired
-    private UserSecurityQuestionRepository securityQuestionRepository;
+    private SmsVerificationRepository smsVerificationRepository;
 
     @Autowired
     private AdminUserRepository adminUserRepository;
-
-    @Autowired
-    private RegistrationInviteRepository inviteRepository;
-
-    @Autowired
-    private InvitationCodeHasher invitationCodeHasher;
-
-    @Autowired
-    private com.godlei.onlinesafe.admin.application.InvitationCodeCipher invitationCodeCipher;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -80,66 +70,72 @@ class SecurityQuestionPasswordResetIntegrationTest {
     @Autowired
     private VaultPayloadCipher vaultPayloadCipher;
 
+    @Autowired
+    private RecordingSmsSender recordingSmsSender;
+
     private MockMvc mockMvc;
-    private String adminId;
 
     @BeforeEach
     void setUp() {
         privateTemplateRepository.deleteAll();
         vaultItemRepository.deleteAll();
-        securityQuestionRepository.deleteAll();
-        inviteRepository.deleteAll();
+        smsVerificationRepository.deleteAll();
         userRepository.deleteAll();
         adminUserRepository.deleteAll();
-        AdminUser admin = adminUserRepository.save(AdminUser.createActive("admin", passwordEncoder.encode(TEST_ADMIN_PASSWORD)));
-        adminId = admin.getId();
+        recordingSmsSender.clear();
+        adminUserRepository.save(AdminUser.createActive("admin", passwordEncoder.encode(TEST_ADMIN_PASSWORD)));
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext)
                 .apply(springSecurity())
                 .build();
     }
 
     @Test
-    void registersWithSecurityQuestionsAndResetsPasswordWithoutClearingVault() throws Exception {
-        seedInvite("TEST_INVITE_CODE", 10);
+    void registersWithSmsAndResetsPasswordWithoutClearingVault() throws Exception {
+        String phone = "13800138010";
+        String phoneE164 = "+8613800138010";
+
+        mockMvc.perform(post("/api/auth/sms/send")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "phone", phone,
+                                "purpose", "REGISTER"
+                        ))))
+                .andExpect(status().isNoContent());
+
+        String registerCode = recordingSmsSender.requireLatestCode(phoneE164, SmsPurpose.REGISTER);
 
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(registrationJson("13800138010", "alice")))
-                .andExpect(status().isCreated());
+                        .content(registrationJson(phone, "alice", registerCode)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.phoneVerified").value(true));
 
-        assertThat(securityQuestionRepository.count()).isEqualTo(2);
+        assertThat(smsVerificationRepository.count()).isEqualTo(1);
+        assertThat(userRepository.findByNormalizedUsername("alice").orElseThrow().isPhoneVerified()).isTrue();
 
         var alice = userRepository.findByNormalizedUsername("alice").orElseThrow();
         String itemId = seedVaultItem(alice.getId());
         assertThat(vaultItemRepository.count()).isEqualTo(1);
 
-        mockMvc.perform(get("/api/auth/security-questions/builtins"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].code").exists())
-                .andExpect(jsonPath("$[0].text").exists());
-
-        mockMvc.perform(post("/api/auth/password-reset/lookup")
+        mockMvc.perform(post("/api/auth/sms/send")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("identifier", "alice"))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.questions.length()").value(2))
-                .andExpect(jsonPath("$.questions[0].questionText").isNotEmpty());
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "phone", phone,
+                                "purpose", "RESET_PASSWORD"
+                        ))))
+                .andExpect(status().isNoContent());
 
-        mockMvc.perform(post("/api/auth/password-reset/lookup")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("identifier", "nobody-here"))))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("PASSWORD_RESET_UNAVAILABLE"));
+        String resetCode = recordingSmsSender.requireLatestCode(phoneE164, SmsPurpose.RESET_PASSWORD);
 
         mockMvc.perform(post("/api/auth/password-reset/confirm")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "identifier", "alice",
-                                "answers", List.of("wrong", "wrong"),
+                                "phone", phone,
+                                "smsCode", "000000",
                                 "newPassword", "new-password-456",
                                 "confirmPassword", "new-password-456"
                         ))))
@@ -150,8 +146,8 @@ class SecurityQuestionPasswordResetIntegrationTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "identifier", "alice",
-                                "answers", List.of("Fluffy", "Shanghai"),
+                                "phone", phone,
+                                "smsCode", resetCode,
                                 "newPassword", "new-password-456",
                                 "confirmPassword", "new-password-456"
                         ))))
@@ -188,14 +184,12 @@ class SecurityQuestionPasswordResetIntegrationTest {
     }
 
     @Test
-    void rejectsRegistrationWithoutSecurityQuestions() throws Exception {
-        seedInvite("TEST_INVITE_CODE", 10);
+    void rejectsRegistrationWithoutSmsCode() throws Exception {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("phone", "13800138011");
         body.put("username", "bob");
         body.put("password", "correct-password-123");
         body.put("confirmPassword", "correct-password-123");
-        body.put("invitationCode", "TEST_INVITE_CODE");
 
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
@@ -205,16 +199,17 @@ class SecurityQuestionPasswordResetIntegrationTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
 
-    private void seedInvite(String plainCode, int maxUses) {
-        inviteRepository.save(RegistrationInvite.create(
-                invitationCodeHasher.hash(plainCode),
-                invitationCodeHasher.hint(plainCode),
-                invitationCodeCipher.encrypt(plainCode),
-                maxUses,
-                null,
-                adminId,
-                "测试邀请码"
-        ));
+    @Test
+    void rejectsSmsSendForUnknownPhoneOnReset() throws Exception {
+        mockMvc.perform(post("/api/auth/sms/send")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "phone", "13800138999",
+                                "purpose", "RESET_PASSWORD"
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PHONE_NOT_REGISTERED"));
     }
 
     private String seedVaultItem(String ownerId) {
@@ -245,25 +240,13 @@ class SecurityQuestionPasswordResetIntegrationTest {
         return itemId;
     }
 
-    private String registrationJson(String phone, String username) throws Exception {
+    private String registrationJson(String phone, String username, String smsCode) throws Exception {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("phone", phone);
+        body.put("smsCode", smsCode);
         body.put("username", username);
         body.put("password", "correct-password-123");
         body.put("confirmPassword", "correct-password-123");
-        body.put("invitationCode", "TEST_INVITE_CODE");
-        body.put("securityQuestions", List.of(
-                Map.of(
-                        "questionType", "BUILTIN",
-                        "questionCode", "PET_NAME",
-                        "answer", "Fluffy"
-                ),
-                Map.of(
-                        "questionType", "CUSTOM",
-                        "questionText", "你最喜欢的城市是哪里？",
-                        "answer", "Shanghai"
-                )
-        ));
         return objectMapper.writeValueAsString(body);
     }
 }

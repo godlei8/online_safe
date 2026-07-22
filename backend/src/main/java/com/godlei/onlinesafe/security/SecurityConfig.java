@@ -87,7 +87,6 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/api/csrf",
                                 "/api/auth/session",
-                                "/api/auth/security-questions/builtins",
                                 "/api/admin/auth/session",
                                 "/actuator/health"
                         ).permitAll()
@@ -95,7 +94,7 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/auth/register",
                                 "/api/auth/login",
-                                "/api/auth/password-reset/lookup",
+                                "/api/auth/sms/send",
                                 "/api/auth/password-reset/confirm",
                                 "/api/admin/auth/login",
                                 "/api/admin/auth/logout"

@@ -32,3 +32,13 @@ app:
     # 本地可沿用默认开发密钥；生产必须覆盖 VAULT_ENCRYPTION_KEY
     encryption-key: ${VAULT_ENCRYPTION_KEY:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
     current-key-id: ${VAULT_CURRENT_KEY_ID:1}
+  sms:
+    # 本地联调阿里云时设 provider: aliyun；不配密钥时用 logging（验证码打日志）
+    provider: ${SMS_PROVIDER:logging}
+    access-key-id: ${ALIYUN_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_ACCESS_KEY_SECRET:}
+    sign-name: ${ALIYUN_SMS_SIGN_NAME:}
+    # 与控制台模板 CODE 一致；模板变量需同时传 code、min
+    template-register: ${ALIYUN_SMS_TEMPLATE_REGISTER:}
+    template-reset: ${ALIYUN_SMS_TEMPLATE_RESET:}
+    code-ttl-seconds: ${SMS_CODE_TTL_SECONDS:300}

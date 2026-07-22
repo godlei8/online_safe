@@ -4,8 +4,6 @@ import tools.jackson.databind.ObjectMapper;
 import com.godlei.onlinesafe.admin.domain.AdminUser;
 import com.godlei.onlinesafe.admin.infrastructure.AdminUserRepository;
 import com.godlei.onlinesafe.admin.infrastructure.RegistrationInviteRepository;
-import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
-import com.godlei.onlinesafe.auth.infrastructure.UserSecurityQuestionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +17,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,12 +47,6 @@ class InvitationFlowIntegrationTest {
     private RegistrationInviteRepository inviteRepository;
 
     @Autowired
-    private AppUserRepository userRepository;
-
-    @Autowired
-    private UserSecurityQuestionRepository securityQuestionRepository;
-
-    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private MockMvc mockMvc;
@@ -64,8 +54,6 @@ class InvitationFlowIntegrationTest {
     @BeforeEach
     void setUp() {
         inviteRepository.deleteAll();
-        securityQuestionRepository.deleteAll();
-        userRepository.deleteAll();
         adminUserRepository.deleteAll();
         adminUserRepository.save(AdminUser.createActive("admin", passwordEncoder.encode(TEST_ADMIN_PASSWORD)));
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext)
@@ -74,7 +62,7 @@ class InvitationFlowIntegrationTest {
     }
 
     @Test
-    void adminCanCreateListDisableAndRegisterConsumesInvite() throws Exception {
+    void adminCanCreateListAndDeleteInvitations() throws Exception {
         MockHttpSession adminSession = adminLogin();
 
         MvcResult created = mockMvc.perform(post("/api/admin/v1/invitations")
@@ -111,19 +99,6 @@ class InvitationFlowIntegrationTest {
                 .andExpect(jsonPath("$.plainCode").value(plainCode))
                 .andExpect(jsonPath("$.codeHint").isNotEmpty());
 
-        mockMvc.perform(post("/api/auth/register")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(registrationJson("13800138001", "bob", plainCode)))
-                .andExpect(status().isCreated());
-
-        mockMvc.perform(post("/api/auth/register")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(registrationJson("13800138002", "carol", plainCode)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVITATION_CODE_INVALID"));
-
         mockMvc.perform(post("/api/admin/v1/invitations")
                         .session(adminSession)
                         .with(csrf())
@@ -144,6 +119,7 @@ class InvitationFlowIntegrationTest {
                 .andExpect(status().isNoContent());
 
         assertThat(inviteRepository.findById(secondId)).isEmpty();
+        assertThat(inviteRepository.findById(inviteId)).isPresent();
     }
 
     private MockHttpSession adminLogin() throws Exception {
@@ -158,20 +134,5 @@ class InvitationFlowIntegrationTest {
                         ))))
                 .andExpect(status().isOk());
         return session;
-    }
-
-    private String registrationJson(String phone, String username, String invitationCode) throws Exception {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("phone", phone);
-        body.put("username", username);
-        body.put("password", "correct-password-123");
-        body.put("confirmPassword", "correct-password-123");
-        body.put("invitationCode", invitationCode);
-        body.put("securityQuestions", List.of(Map.of(
-                "questionType", "BUILTIN",
-                "questionCode", "PET_NAME",
-                "answer", "Fluffy"
-        )));
-        return objectMapper.writeValueAsString(body);
     }
 }

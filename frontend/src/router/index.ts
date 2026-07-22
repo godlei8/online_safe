@@ -75,7 +75,7 @@ const router = createRouter({
           component: AdminInvitationsView,
           meta: {
             title: '邀请码管理',
-            subtitle: '创建、删除和查看邀请码；邀请码仅用于注册准入，不授予管理权限。',
+            subtitle: '创建、删除和查看邀请码；当前注册不强制邀请码，后台功能保留。',
           },
         },
         {

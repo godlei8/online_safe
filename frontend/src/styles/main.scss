@@ -492,6 +492,37 @@ h1, h2, h3, h4, h5, h6 {
 
 .auth-form-actions .v-btn:last-child { min-height: 48px; font-weight: 600; letter-spacing: 0; }
 
+.auth-sms-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.auth-sms-row__btn {
+  /* 与认证页输入框 --v-input-control-height: 44px 对齐 */
+  height: 44px;
+  min-height: 44px !important;
+  padding-inline: 16px;
+  white-space: nowrap;
+  margin-top: 0;
+  align-self: start;
+}
+
+.auth-sms-row .v-input {
+  align-self: start;
+}
+
+@media (max-width: 480px) {
+  .auth-sms-row {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-sms-row__btn {
+    width: 100%;
+  }
+}
+
 .auth-login-form {
   display: grid;
   gap: var(--os-space-4);

@@ -1,13 +1,12 @@
 package com.godlei.onlinesafe.auth.web;
 
 import tools.jackson.databind.ObjectMapper;
-import com.godlei.onlinesafe.admin.application.InvitationCodeHasher;
 import com.godlei.onlinesafe.admin.domain.AdminUser;
-import com.godlei.onlinesafe.admin.domain.RegistrationInvite;
 import com.godlei.onlinesafe.admin.infrastructure.AdminUserRepository;
-import com.godlei.onlinesafe.admin.infrastructure.RegistrationInviteRepository;
+import com.godlei.onlinesafe.auth.domain.SmsPurpose;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
-import com.godlei.onlinesafe.auth.infrastructure.UserSecurityQuestionRepository;
+import com.godlei.onlinesafe.auth.infrastructure.SmsVerificationRepository;
+import com.godlei.onlinesafe.sms.RecordingSmsSender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +20,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -47,34 +45,26 @@ class AuthenticationFlowIntegrationTest {
     private AppUserRepository userRepository;
 
     @Autowired
-    private UserSecurityQuestionRepository securityQuestionRepository;
+    private SmsVerificationRepository smsVerificationRepository;
 
     @Autowired
     private AdminUserRepository adminUserRepository;
 
     @Autowired
-    private RegistrationInviteRepository inviteRepository;
-
-    @Autowired
-    private InvitationCodeHasher invitationCodeHasher;
-
-    @Autowired
-    private com.godlei.onlinesafe.admin.application.InvitationCodeCipher invitationCodeCipher;
-
-    @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private RecordingSmsSender recordingSmsSender;
+
     private MockMvc mockMvc;
-    private String adminId;
 
     @BeforeEach
     void setUp() {
-        inviteRepository.deleteAll();
-        securityQuestionRepository.deleteAll();
+        smsVerificationRepository.deleteAll();
         userRepository.deleteAll();
         adminUserRepository.deleteAll();
-        AdminUser admin = adminUserRepository.save(AdminUser.createActive("admin", passwordEncoder.encode(TEST_ADMIN_PASSWORD)));
-        adminId = admin.getId();
+        recordingSmsSender.clear();
+        adminUserRepository.save(AdminUser.createActive("admin", passwordEncoder.encode(TEST_ADMIN_PASSWORD)));
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext)
                 .apply(springSecurity())
                 .build();
@@ -84,46 +74,39 @@ class AuthenticationFlowIntegrationTest {
     void registrationRequiresCsrf() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(registrationJson("13800138000", "alice")))
+                        .content(registrationJson("13800138000", "alice", "123456")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
     @Test
     void registersAndRejectsDuplicateIdentifier() throws Exception {
-        seedInvite("TEST_INVITE_CODE", 10);
-
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(registrationJson("13800138000", "alice")))
+                        .content(awaitRegistrationJson("13800138000", "alice")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("alice"))
                 .andExpect(jsonPath("$.maskedPhone").value("****8000"))
-                .andExpect(jsonPath("$.phoneVerified").value(false));
+                .andExpect(jsonPath("$.phoneVerified").value(true));
 
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(registrationJson("+8613800138000", "alice-2")))
+                        .content(registrationJson("+8613800138000", "alice-2", "000000")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ACCOUNT_IDENTIFIER_ALREADY_EXISTS"));
     }
 
     @Test
     void rejectsMismatchedConfirmationPassword() throws Exception {
-        seedInvite("TEST_INVITE_CODE", 10);
+        String code = sendRegisterCode("13800138000");
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("phone", "13800138000");
+        body.put("smsCode", code);
         body.put("username", "alice");
         body.put("password", "correct-password-123");
         body.put("confirmPassword", "different-password-123");
-        body.put("invitationCode", "TEST_INVITE_CODE");
-        body.put("securityQuestions", List.of(Map.of(
-                "questionType", "BUILTIN",
-                "questionCode", "PET_NAME",
-                "answer", "Fluffy"
-        )));
         String json = objectMapper.writeValueAsString(body);
 
         mockMvc.perform(post("/api/auth/register")
@@ -138,15 +121,10 @@ class AuthenticationFlowIntegrationTest {
     void rejectsPasswordShorterThanEightCharacters() throws Exception {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("phone", "13800138000");
+        body.put("smsCode", "123456");
         body.put("username", "alice");
         body.put("password", "1234567");
         body.put("confirmPassword", "1234567");
-        body.put("invitationCode", "TEST_INVITE_CODE");
-        body.put("securityQuestions", List.of(Map.of(
-                "questionType", "BUILTIN",
-                "questionCode", "PET_NAME",
-                "answer", "Fluffy"
-        )));
         String json = objectMapper.writeValueAsString(body);
 
         mockMvc.perform(post("/api/auth/register")
@@ -158,23 +136,11 @@ class AuthenticationFlowIntegrationTest {
     }
 
     @Test
-    void rejectsInvalidInvitationCode() throws Exception {
-        mockMvc.perform(post("/api/auth/register")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(registrationJson("13800138000", "alice", "WRONG_CODE")))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVITATION_CODE_INVALID"));
-    }
-
-    @Test
     void logsInByUsernameAndProtectsRoleBoundaries() throws Exception {
-        seedInvite("TEST_INVITE_CODE", 10);
-
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(registrationJson("13800138000", "alice")))
+                        .content(awaitRegistrationJson("13800138000", "alice")))
                 .andExpect(status().isCreated());
 
         MockHttpSession session = new MockHttpSession();
@@ -204,12 +170,10 @@ class AuthenticationFlowIntegrationTest {
 
     @Test
     void logsInByNormalizedPhone() throws Exception {
-        seedInvite("TEST_INVITE_CODE", 10);
-
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(registrationJson("13800138000", "alice")))
+                        .content(awaitRegistrationJson("13800138000", "alice")))
                 .andExpect(status().isCreated());
 
         MockHttpSession session = new MockHttpSession();
@@ -251,34 +215,33 @@ class AuthenticationFlowIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    private void seedInvite(String plainCode, int maxUses) {
-        inviteRepository.save(RegistrationInvite.create(
-                invitationCodeHasher.hash(plainCode),
-                invitationCodeHasher.hint(plainCode),
-                invitationCodeCipher.encrypt(plainCode),
-                maxUses,
-                null,
-                adminId,
-                "测试邀请码"
-        ));
+    private String awaitRegistrationJson(String phone, String username) throws Exception {
+        return registrationJson(phone, username, sendRegisterCode(phone));
     }
 
-    private String registrationJson(String phone, String username) throws Exception {
-        return registrationJson(phone, username, "TEST_INVITE_CODE");
+    private String sendRegisterCode(String phone) throws Exception {
+        mockMvc.perform(post("/api/auth/sms/send")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "phone", phone,
+                                "purpose", "REGISTER"
+                        ))))
+                .andExpect(status().isNoContent());
+        String digits = phone.replaceAll("\\D", "");
+        if (digits.startsWith("86") && digits.length() > 11) {
+            digits = digits.substring(2);
+        }
+        return recordingSmsSender.requireLatestCode("+86" + digits, SmsPurpose.REGISTER);
     }
 
-    private String registrationJson(String phone, String username, String invitationCode) throws Exception {
+    private String registrationJson(String phone, String username, String smsCode) throws Exception {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("phone", phone);
+        body.put("smsCode", smsCode);
         body.put("username", username);
         body.put("password", "correct-password-123");
         body.put("confirmPassword", "correct-password-123");
-        body.put("invitationCode", invitationCode);
-        body.put("securityQuestions", List.of(Map.of(
-                "questionType", "BUILTIN",
-                "questionCode", "PET_NAME",
-                "answer", "Fluffy"
-        )));
         return objectMapper.writeValueAsString(body);
     }
 }

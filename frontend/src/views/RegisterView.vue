@@ -1,45 +1,37 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { z } from 'zod'
 import AuthShell from '@/components/AuthShell.vue'
 import { ApiRequestError } from '@/api/client'
-import { authApi, type BuiltinSecurityQuestion, type SecurityQuestionPayload } from '@/api/auth'
+import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
-
-type QuestionDraft = {
-  mode: 'BUILTIN' | 'CUSTOM'
-  questionCode: string
-  questionText: string
-  answer: string
-}
 
 const router = useRouter()
 const auth = useAuthStore()
 const currentStep = ref(1)
 const phone = ref('')
 const username = ref('')
+const smsCode = ref('')
 const password = ref('')
 const confirmPassword = ref('')
-const invitationCode = ref('')
 const agreedToTerms = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const submitting = ref(false)
+const sendingSms = ref(false)
+const countdown = ref(0)
 const errorMessage = ref('')
 const accountErrors = ref<Record<string, string>>({})
 const passwordErrors = ref<Record<string, string>>({})
-const securityErrors = ref<Record<string, string>>({})
 const serverErrors = ref<Record<string, string>>({})
-const builtins = ref<BuiltinSecurityQuestion[]>([])
-const questions = ref<QuestionDraft[]>([
-  { mode: 'BUILTIN', questionCode: '', questionText: '', answer: '' },
-])
+
+let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 const accountSchema = z.object({
   phone: z.string().trim().regex(/^(?:\+86|86)?1[3-9]\d{9}$/, '请输入有效的中国大陆手机号'),
   username: z.string().trim().regex(/^[\p{L}\p{N}_-]{3,32}$/u, '用户名为 3–32 位字母、数字、下划线或连字符'),
-  invitationCode: z.string().trim().min(1, '请输入邀请码').max(64, '邀请码格式不正确'),
+  smsCode: z.string().trim().regex(/^\d{4,8}$/, '请输入短信验证码'),
 })
 
 const passwordSchema = z.object({
@@ -56,25 +48,16 @@ const passwordRules = computed(() => [
   { label: '两次输入一致', passed: confirmPassword.value.length > 0 && password.value === confirmPassword.value },
 ])
 
-const stepTitle = computed(() => {
-  if (currentStep.value === 1) return '创建账号'
-  if (currentStep.value === 2) return '设置密码'
-  return '设置密保'
+const stepTitle = computed(() => (currentStep.value === 1 ? '验证手机号' : '设置密码'))
+
+const sendButtonLabel = computed(() => {
+  if (sendingSms.value) return '发送中…'
+  if (countdown.value > 0) return `${countdown.value}s 后可重发`
+  return '获取验证码'
 })
 
-const builtinItems = computed(() =>
-  builtins.value.map((item) => ({ title: item.text, value: item.code })),
-)
-
-onMounted(async () => {
-  try {
-    builtins.value = await authApi.listBuiltinSecurityQuestions()
-    if (builtins.value[0] && !questions.value[0].questionCode) {
-      questions.value[0].questionCode = builtins.value[0].code
-    }
-  } catch {
-    errorMessage.value = '无法加载内置密保题库，仍可使用自定义问题。'
-  }
+onBeforeUnmount(() => {
+  if (countdownTimer) clearInterval(countdownTimer)
 })
 
 function collectErrors(result: ReturnType<typeof accountSchema.safeParse> | ReturnType<typeof passwordSchema.safeParse>, target: Record<string, string>, fields: string[]) {
@@ -88,53 +71,28 @@ function collectErrors(result: ReturnType<typeof accountSchema.safeParse> | Retu
   return result.success
 }
 
-function validateAccount(fields = ['phone', 'username', 'invitationCode']) {
-  return collectErrors(accountSchema.safeParse({ phone: phone.value, username: username.value, invitationCode: invitationCode.value }), accountErrors.value, fields)
+function validateAccount(fields = ['phone', 'username', 'smsCode']) {
+  return collectErrors(
+    accountSchema.safeParse({
+      phone: phone.value,
+      username: username.value,
+      smsCode: smsCode.value,
+    }),
+    accountErrors.value,
+    fields,
+  )
 }
 
 function validatePassword(fields = ['password', 'confirmPassword', 'agreedToTerms']) {
-  return collectErrors(passwordSchema.safeParse({ password: password.value, confirmPassword: confirmPassword.value, agreedToTerms: agreedToTerms.value }), passwordErrors.value, fields)
-}
-
-function validateSecurity() {
-  securityErrors.value = {}
-  if (questions.value.length < 1 || questions.value.length > 3) {
-    securityErrors.value.form = '密保问题数量须为 1 至 3 道'
-    return false
-  }
-  const fingerprints = new Set<string>()
-  for (let i = 0; i < questions.value.length; i++) {
-    const q = questions.value[i]
-    if (q.mode === 'BUILTIN') {
-      if (!q.questionCode) {
-        securityErrors.value[`q${i}`] = '请选择内置密保问题'
-        return false
-      }
-      const fp = `BUILTIN:${q.questionCode}`
-      if (fingerprints.has(fp)) {
-        securityErrors.value.form = '密保问题不能重复'
-        return false
-      }
-      fingerprints.add(fp)
-    } else {
-      const text = q.questionText.trim()
-      if (text.length < 4 || text.length > 200) {
-        securityErrors.value[`q${i}`] = '自定义问题长度为 4 至 200 字'
-        return false
-      }
-      const fp = `CUSTOM:${text.toLowerCase()}`
-      if (fingerprints.has(fp)) {
-        securityErrors.value.form = '密保问题不能重复'
-        return false
-      }
-      fingerprints.add(fp)
-    }
-    if (!q.answer.trim()) {
-      securityErrors.value[`a${i}`] = '请填写密保答案'
-      return false
-    }
-  }
-  return true
+  return collectErrors(
+    passwordSchema.safeParse({
+      password: password.value,
+      confirmPassword: confirmPassword.value,
+      agreedToTerms: agreedToTerms.value,
+    }),
+    passwordErrors.value,
+    fields,
+  )
 }
 
 function clearServerError(field: string) {
@@ -145,58 +103,57 @@ function fieldMessages(field: string) {
   return [accountErrors.value[field], passwordErrors.value[field], serverErrors.value[field]].filter(Boolean)
 }
 
+function startCountdown(seconds = 60) {
+  countdown.value = seconds
+  if (countdownTimer) clearInterval(countdownTimer)
+  countdownTimer = setInterval(() => {
+    countdown.value -= 1
+    if (countdown.value <= 0 && countdownTimer) {
+      clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+  }, 1000)
+}
+
+async function sendSms() {
+  errorMessage.value = ''
+  if (!validateAccount(['phone'])) return
+  if (countdown.value > 0 || sendingSms.value) return
+
+  sendingSms.value = true
+  try {
+    await authApi.sendSms(phone.value.trim(), 'REGISTER')
+    startCountdown(60)
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      errorMessage.value = error.message
+    } else {
+      errorMessage.value = '验证码发送失败，请稍后再试'
+    }
+  } finally {
+    sendingSms.value = false
+  }
+}
+
 function continueToPassword() {
   errorMessage.value = ''
   if (!validateAccount()) return
   currentStep.value = 2
 }
 
-function continueToSecurity() {
-  errorMessage.value = ''
-  if (!validatePassword()) return
-  currentStep.value = 3
-}
-
-function addQuestion() {
-  if (questions.value.length >= 3) return
-  questions.value.push({
-    mode: 'BUILTIN',
-    questionCode: builtins.value[0]?.code ?? '',
-    questionText: '',
-    answer: '',
-  })
-}
-
-function removeQuestion(index: number) {
-  if (questions.value.length <= 1) return
-  questions.value.splice(index, 1)
-}
-
-function toPayload(): SecurityQuestionPayload[] {
-  return questions.value.map((q) =>
-    q.mode === 'BUILTIN'
-      ? { questionType: 'BUILTIN', questionCode: q.questionCode, answer: q.answer }
-      : { questionType: 'CUSTOM', questionText: q.questionText.trim(), answer: q.answer },
-  )
-}
-
 async function submit() {
   errorMessage.value = ''
   serverErrors.value = {}
-  if (!validateSecurity()) {
-    errorMessage.value = securityErrors.value.form || Object.values(securityErrors.value)[0] || '请完善密保设置'
-    return
-  }
+  if (!validatePassword()) return
 
   submitting.value = true
   try {
     await auth.register({
       phone: phone.value.trim(),
+      smsCode: smsCode.value.trim(),
       username: username.value.trim(),
       password: password.value,
       confirmPassword: confirmPassword.value,
-      invitationCode: invitationCode.value.trim(),
-      securityQuestions: toPayload(),
     })
     await auth.login({ identifier: username.value.trim(), password: password.value })
     await router.replace('/vault')
@@ -204,8 +161,11 @@ async function submit() {
     if (error instanceof ApiRequestError) {
       errorMessage.value = error.message
       serverErrors.value = error.fieldErrors
-      const passwordFields = ['password', 'confirmPassword', 'securityQuestions']
-      if (Object.keys(error.fieldErrors).some((field) => !passwordFields.includes(field) && !field.startsWith('securityQuestions'))) {
+      const passwordFields = ['password', 'confirmPassword']
+      if (Object.keys(error.fieldErrors).some((field) => !passwordFields.includes(field))) {
+        currentStep.value = 1
+      }
+      if (error.code === 'SMS_CODE_INVALID') {
         currentStep.value = 1
       }
     } else {
@@ -222,16 +182,16 @@ async function submit() {
     <div class="auth-form-heading auth-form-heading--register">
       <span class="auth-form-heading__eyebrow">创建你的空间</span>
       <h1>注册 Online Safe</h1>
-      <p>三步完成：账号、登录密码与密保问题。</p>
+      <p>两步完成：手机短信验证，再设置登录密码。</p>
     </div>
 
     <div class="auth-stepper" aria-label="注册进度">
       <div class="auth-stepper__label">
-        <span>步骤 {{ currentStep }}/3</span>
+        <span>步骤 {{ currentStep }}/2</span>
         <strong>{{ stepTitle }}</strong>
       </div>
       <div class="auth-stepper__track">
-        <span :style="{ width: `${(currentStep / 3) * 100}%` }" />
+        <span :style="{ width: `${(currentStep / 2) * 100}%` }" />
       </div>
     </div>
 
@@ -247,7 +207,7 @@ async function submit() {
         prepend-inner-icon="mdi-cellphone"
         autocomplete="tel"
         inputmode="numeric"
-        hint="仅支持中国大陆手机号，当前版本不进行短信验证。"
+        hint="将向该手机号发送短信验证码。"
         :error-messages="fieldMessages('phone')"
         @blur="validateAccount(['phone'])"
         @update:model-value="clearServerError('phone')"
@@ -264,22 +224,34 @@ async function submit() {
         @blur="validateAccount(['username'])"
         @update:model-value="clearServerError('username')"
       />
-      <v-text-field
-        v-model="invitationCode"
-        class="mt-2"
-        label="邀请码"
-        placeholder="请输入邀请码"
-        prepend-inner-icon="mdi-ticket-confirmation-outline"
-        autocomplete="off"
-        hint="邀请码由管理员或你的邀请渠道提供。"
-        :error-messages="fieldMessages('invitationCode')"
-        @blur="validateAccount(['invitationCode'])"
-        @update:model-value="clearServerError('invitationCode')"
-      />
+      <div class="auth-sms-row mt-2">
+        <v-text-field
+          v-model="smsCode"
+          label="短信验证码"
+          placeholder="请输入 6 位验证码"
+          prepend-inner-icon="mdi-message-text-outline"
+          autocomplete="one-time-code"
+          inputmode="numeric"
+          :error-messages="fieldMessages('smsCode')"
+          @blur="validateAccount(['smsCode'])"
+          @update:model-value="clearServerError('smsCode')"
+        />
+        <v-btn
+          type="button"
+          color="primary"
+          variant="tonal"
+          class="auth-sms-row__btn"
+          :loading="sendingSms"
+          :disabled="sendingSms || countdown > 0"
+          @click="sendSms"
+        >
+          {{ sendButtonLabel }}
+        </v-btn>
+      </div>
       <v-btn type="submit" color="primary" block class="auth-submit">继续</v-btn>
     </form>
 
-    <form v-else-if="currentStep === 2" class="auth-step-form" @submit.prevent="continueToSecurity">
+    <form v-else class="auth-step-form" @submit.prevent="submit">
       <v-text-field
         v-model="password"
         label="登录密码"
@@ -340,68 +312,7 @@ async function submit() {
         <p v-if="fieldMessages('agreedToTerms').length" class="auth-field-error">{{ fieldMessages('agreedToTerms')[0] }}</p>
       </div>
       <div class="auth-form-actions">
-        <v-btn variant="text" color="primary" @click="currentStep = 1">上一步</v-btn>
-        <v-btn type="submit" color="primary">继续</v-btn>
-      </div>
-    </form>
-
-    <form v-else class="auth-step-form" @submit.prevent="submit">
-      <p class="text-body-2 mb-4">请设置 1–3 道密保问题，用于忘记登录密码时重置。答案仅存哈希，不能用于解密保险箱。</p>
-
-      <div v-for="(question, index) in questions" :key="index" class="mb-6">
-        <div class="d-flex align-center justify-space-between mb-2">
-          <strong>问题 {{ index + 1 }}</strong>
-          <v-btn
-            v-if="questions.length > 1"
-            variant="text"
-            color="primary"
-            size="small"
-            @click="removeQuestion(index)"
-          >
-            移除
-          </v-btn>
-        </div>
-        <v-btn-toggle v-model="question.mode" mandatory density="comfortable" class="mb-3" color="primary">
-          <v-btn value="BUILTIN" size="small">内置题</v-btn>
-          <v-btn value="CUSTOM" size="small">自定义</v-btn>
-        </v-btn-toggle>
-        <v-select
-          v-if="question.mode === 'BUILTIN'"
-          v-model="question.questionCode"
-          :items="builtinItems"
-          label="选择密保问题"
-          :error-messages="securityErrors[`q${index}`]"
-        />
-        <v-text-field
-          v-else
-          v-model="question.questionText"
-          label="自定义问题"
-          placeholder="请输入你的密保问题"
-          :error-messages="securityErrors[`q${index}`]"
-        />
-        <v-text-field
-          v-model="question.answer"
-          class="mt-2"
-          label="答案"
-          placeholder="请输入答案"
-          autocomplete="off"
-          :error-messages="securityErrors[`a${index}`]"
-        />
-      </div>
-
-      <v-btn
-        v-if="questions.length < 3"
-        variant="tonal"
-        color="primary"
-        class="mb-4"
-        prepend-icon="mdi-plus"
-        @click="addQuestion"
-      >
-        再加一道（最多 3 道）
-      </v-btn>
-
-      <div class="auth-form-actions">
-        <v-btn variant="text" color="primary" :disabled="submitting" @click="currentStep = 2">上一步</v-btn>
+        <v-btn variant="text" color="primary" :disabled="submitting" @click="currentStep = 1">上一步</v-btn>
         <v-btn type="submit" color="primary" :loading="submitting" :disabled="submitting">
           {{ submitting ? '正在创建…' : '创建账号' }}
         </v-btn>

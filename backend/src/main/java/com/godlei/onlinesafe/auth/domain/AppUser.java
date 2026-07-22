@@ -142,4 +142,8 @@ public class AppUser {
     public void changePassword(String newPasswordHash) {
         this.passwordHash = Objects.requireNonNull(newPasswordHash);
     }
+
+    public void markPhoneVerified() {
+        this.phoneVerified = true;
+    }
 }

@@ -1,43 +1,35 @@
 package com.godlei.onlinesafe.auth.web;
 
 import com.godlei.onlinesafe.auth.application.PasswordResetService;
-import com.godlei.onlinesafe.auth.domain.BuiltinSecurityQuestions;
+import com.godlei.onlinesafe.auth.application.SmsVerificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/auth")
 public class PasswordResetController {
 
     private final PasswordResetService passwordResetService;
+    private final SmsVerificationService smsVerificationService;
 
-    public PasswordResetController(PasswordResetService passwordResetService) {
-        this.passwordResetService = passwordResetService;
-    }
-
-    @GetMapping("/security-questions/builtins")
-    public List<Map<String, String>> builtinQuestions() {
-        return BuiltinSecurityQuestions.all().stream()
-                .map(q -> Map.of("code", q.code(), "text", q.text()))
-                .toList();
-    }
-
-    @PostMapping("/password-reset/lookup")
-    public PasswordResetLookupResponse lookup(
-            @Valid @RequestBody PasswordResetLookupRequest request,
-            HttpServletRequest servletRequest
+    public PasswordResetController(
+            PasswordResetService passwordResetService,
+            SmsVerificationService smsVerificationService
     ) {
-        return passwordResetService.lookup(request.identifier(), clientKey(servletRequest));
+        this.passwordResetService = passwordResetService;
+        this.smsVerificationService = smsVerificationService;
+    }
+
+    @PostMapping("/sms/send")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void sendSms(@Valid @RequestBody SmsSendRequest request, HttpServletRequest servletRequest) {
+        smsVerificationService.send(request.phone(), request.purpose(), clientKey(servletRequest));
     }
 
     @PostMapping("/password-reset/confirm")
