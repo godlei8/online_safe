@@ -6,12 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview",
-    "test:vault-kdf": "node scripts/verify-vault-kdf.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
-    "libsodium-wrappers-sumo": "^0.8.4",
     "pinia": "^4.0.2",
     "vue": "^3.5.40",
     "vue-router": "^5.2.0",

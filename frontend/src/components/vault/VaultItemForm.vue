@@ -98,14 +98,23 @@ function onTypeChange(field: VaultField, type: FieldType) {
           <v-text-field v-model="form.name" label="记录名称" density="compact" required />
           <v-text-field v-model="form.platform" label="所属平台" density="compact" required />
         </div>
-        <v-text-field
-          v-model="form.channel"
-          class="mt-2"
-          label="获取渠道"
-          density="compact"
-          hint="例如：自行注册、朋友分享、工作发放"
-          persistent-hint
-        />
+        <div class="vault-item-form__grid mt-2">
+          <v-text-field
+            v-model="form.channel"
+            label="渠道名"
+            density="compact"
+            hint="例如：自行注册、朋友分享、工作发放"
+            persistent-hint
+          />
+          <v-text-field
+            v-model="form.channelUrl"
+            label="渠道网址"
+            density="compact"
+            hint="可选，填写后可点击跳转"
+            persistent-hint
+            placeholder="https://"
+          />
+        </div>
         <v-text-field
           class="mt-2"
           label="有效期"

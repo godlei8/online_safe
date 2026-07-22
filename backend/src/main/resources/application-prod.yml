@@ -22,6 +22,9 @@ app:
     repair-before-migrate: false
   invitation:
     encryption-key: ${INVITATION_ENCRYPTION_KEY}
+  vault:
+    encryption-key: ${VAULT_ENCRYPTION_KEY}
+    current-key-id: ${VAULT_CURRENT_KEY_ID:1}
 
 logging:
   level:

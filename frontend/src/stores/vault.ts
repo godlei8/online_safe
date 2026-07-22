@@ -1,18 +1,6 @@
 import { defineStore } from 'pinia'
-import { ApiRequestError } from '@/api/client'
-import { vaultApi, type CipherEnvelopeDto, type KeyBundleDto } from '@/api/vault'
-import {
-  clearDekFromSession,
-  loadDekFromSession,
-  saveDekToSession,
-} from '@/crypto/dekSession'
-import {
-  createEntityId,
-  decryptJson,
-  encryptJson,
-  openWithLoginPassword,
-  setupVault,
-} from '@/crypto/vaultCrypto'
+import { vaultApi, type VaultItemRecord, type VaultTemplateRecord } from '@/api/vault'
+import { createEntityId } from '@/domain/entityId'
 import {
   emptyItemPayload,
   fieldsFromTemplate,
@@ -25,28 +13,50 @@ import {
 import { useAuthStore } from '@/stores/auth'
 
 export type DecryptedItem = {
-  envelope: CipherEnvelopeDto
+  envelope: Pick<VaultItemRecord, 'id' | 'revision' | 'createdAt' | 'updatedAt'>
   payload: VaultItemPayload
 }
 
 export type DecryptedTemplate = {
-  envelope: CipherEnvelopeDto
+  envelope: Pick<VaultTemplateRecord, 'id' | 'revision' | 'createdAt' | 'updatedAt'>
   payload: PrivateTemplatePayload
+}
+
+function toItem(record: VaultItemRecord): DecryptedItem {
+  return {
+    envelope: {
+      id: record.id,
+      revision: record.revision,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    },
+    payload: vaultItemPayloadSchema.parse(record.payload),
+  }
+}
+
+function toTemplate(record: VaultTemplateRecord): DecryptedTemplate {
+  return {
+    envelope: {
+      id: record.id,
+      revision: record.revision,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    },
+    payload: privateTemplatePayloadSchema.parse(record.payload),
+  }
 }
 
 export const useVaultStore = defineStore('vault', {
   state: () => ({
     ready: false,
-    initialized: false as boolean | null,
-    /** 内存中是否已有 DEK（非「解锁」产品概念） */
-    dekReady: false,
-    dek: null as Uint8Array | null,
-    keyBundle: null as KeyBundleDto | null,
     items: [] as DecryptedItem[],
     templates: [] as DecryptedTemplate[],
     lastError: '',
   }),
   getters: {
+    /** 兼容旧布局：登录即可用，无需客户端开箱 */
+    dekReady: (state) => state.ready,
+    initialized: (state) => state.ready,
     listRows(state) {
       return state.items.map(({ envelope, payload }) => ({
         id: envelope.id,
@@ -68,157 +78,74 @@ export const useVaultStore = defineStore('vault', {
       if (!ownerId) throw new Error('未登录')
       return ownerId
     },
-    requireDek() {
-      if (!this.dek) throw new Error('解密密钥尚未就绪，请重新登录')
-      return this.dek
-    },
-    setDek(dek: Uint8Array) {
-      const ownerId = this.requireOwnerId()
-      this.dek = dek
-      this.dekReady = true
-      saveDekToSession(ownerId, dek)
-    },
-    clearDek() {
-      const auth = useAuthStore()
-      clearDekFromSession(auth.session.userId)
-      this.dek = null
-      this.dekReady = false
+    clearSessionData() {
       this.items = []
       this.templates = []
       this.lastError = ''
-    },
-    tryRestoreDek(): boolean {
-      if (this.dek) {
-        this.dekReady = true
-        return true
-      }
-      const auth = useAuthStore()
-      const ownerId = auth.session.userId
-      if (!ownerId) return false
-      const restored = loadDekFromSession(ownerId)
-      if (!restored) return false
-      this.dek = restored
-      this.dekReady = true
-      return true
+      this.ready = false
     },
     async refreshInitialization() {
       try {
-        this.keyBundle = await vaultApi.getKeyBundle()
-        this.initialized = true
-        if (!this.dek) {
-          this.tryRestoreDek()
-        } else {
-          this.dekReady = true
-        }
-        if (this.dekReady && this.items.length === 0) {
-          try {
-            await this.loadItems()
-          } catch {
-            // 列表加载失败不阻断进入布局；页面内再提示
-          }
-        }
+        this.requireOwnerId()
+        await this.loadItems()
       } catch (error) {
-        if (error instanceof ApiRequestError && error.status === 404) {
-          this.keyBundle = null
-          this.initialized = false
-          this.clearDek()
-          return
-        }
+        this.lastError = error instanceof Error ? error.message : '加载保险箱失败'
         throw error
       } finally {
         this.ready = true
       }
     },
-    async setup(loginPassword: string) {
-      const result = await setupVault(loginPassword)
-      this.keyBundle = await vaultApi.createKeyBundle(result.bundle)
-      this.initialized = true
-      this.setDek(result.dek)
-      await this.loadItems()
-    },
-    async openWithPassword(loginPassword: string) {
-      if (!this.keyBundle) await this.refreshInitialization()
-      if (!this.keyBundle) throw new Error('尚未初始化保险箱')
-      const dek = await openWithLoginPassword(this.keyBundle, loginPassword)
-      this.setDek(dek)
-      await this.loadItems()
-    },
     async loadItems() {
-      const ownerId = this.requireOwnerId()
-      const dek = this.requireDek()
-      const envelopes = await vaultApi.listItems()
-      const items: DecryptedItem[] = []
-      for (const envelope of envelopes) {
-        const payload = vaultItemPayloadSchema.parse(
-          await decryptJson<VaultItemPayload>(envelope, dek, ownerId, envelope.id),
-        )
-        items.push({ envelope, payload })
-      }
-      this.items = items
+      this.requireOwnerId()
+      const records = await vaultApi.listItems()
+      this.items = records.map(toItem)
     },
     async loadTemplates() {
-      const ownerId = this.requireOwnerId()
-      const dek = this.requireDek()
-      const envelopes = await vaultApi.listTemplates()
-      const templates: DecryptedTemplate[] = []
-      for (const envelope of envelopes) {
-        const payload = privateTemplatePayloadSchema.parse(
-          await decryptJson<PrivateTemplatePayload>(envelope, dek, ownerId, envelope.id),
-        )
-        templates.push({ envelope, payload })
-      }
-      this.templates = templates
+      this.requireOwnerId()
+      const records = await vaultApi.listTemplates()
+      this.templates = records.map(toTemplate)
     },
     async getItem(id: string) {
       const cached = this.items.find((item) => item.envelope.id === id)
       if (cached) return cached
-      const ownerId = this.requireOwnerId()
-      const dek = this.requireDek()
-      const envelope = await vaultApi.getItem(id)
-      const payload = vaultItemPayloadSchema.parse(
-        await decryptJson<VaultItemPayload>(envelope, dek, ownerId, envelope.id),
-      )
-      return { envelope, payload }
+      this.requireOwnerId()
+      return toItem(await vaultApi.getItem(id))
     },
     async saveItem(id: string | null, payload: VaultItemPayload) {
-      const ownerId = this.requireOwnerId()
-      const dek = this.requireDek()
+      this.requireOwnerId()
       const parsed = vaultItemPayloadSchema.parse(payload)
       const entityId = id ?? createEntityId()
-      const encrypted = await encryptJson(parsed, dek, ownerId, entityId)
       const existing = id ? this.items.find((item) => item.envelope.id === id) : undefined
       const body = {
         id: entityId,
-        ...encrypted,
+        payload: parsed,
         revision: existing?.envelope.revision ?? 0,
       }
-      const envelope = existing
+      const record = existing
         ? await vaultApi.updateItem(entityId, body)
         : await vaultApi.createItem(body)
       await this.loadItems()
-      return envelope.id
+      return record.id
     },
     async deleteItem(id: string) {
       await vaultApi.deleteItem(id)
       this.items = this.items.filter((item) => item.envelope.id !== id)
     },
     async saveTemplate(id: string | null, payload: PrivateTemplatePayload) {
-      const ownerId = this.requireOwnerId()
-      const dek = this.requireDek()
+      this.requireOwnerId()
       const parsed = privateTemplatePayloadSchema.parse(payload)
       const entityId = id ?? createEntityId()
-      const encrypted = await encryptJson(parsed, dek, ownerId, entityId)
       const existing = id ? this.templates.find((item) => item.envelope.id === id) : undefined
       const body = {
         id: entityId,
-        ...encrypted,
+        payload: parsed,
         revision: existing?.envelope.revision ?? 0,
       }
-      const envelope = existing
+      const record = existing
         ? await vaultApi.updateTemplate(entityId, body)
         : await vaultApi.createTemplate(body)
       await this.loadTemplates()
-      return envelope.id
+      return record.id
     },
     async deleteTemplate(id: string) {
       await vaultApi.deleteTemplate(id)
@@ -233,6 +160,7 @@ export const useVaultStore = defineStore('vault', {
         ...base,
         platform: template.payload.platform || base.platform,
         channel: template.payload.channel || base.channel,
+        channelUrl: template.payload.channelUrl || base.channelUrl,
         fields: fieldsFromTemplate(template.payload),
         templateSnapshot: {
           templateId: template.envelope.id,

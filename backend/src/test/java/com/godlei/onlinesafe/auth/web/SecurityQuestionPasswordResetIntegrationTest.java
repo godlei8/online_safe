@@ -1,5 +1,6 @@
 package com.godlei.onlinesafe.auth.web;
 
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import com.godlei.onlinesafe.admin.application.InvitationCodeHasher;
 import com.godlei.onlinesafe.admin.domain.AdminUser;
@@ -8,11 +9,10 @@ import com.godlei.onlinesafe.admin.infrastructure.AdminUserRepository;
 import com.godlei.onlinesafe.admin.infrastructure.RegistrationInviteRepository;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
 import com.godlei.onlinesafe.auth.infrastructure.UserSecurityQuestionRepository;
+import com.godlei.onlinesafe.vault.application.VaultPayloadCipher;
 import com.godlei.onlinesafe.vault.domain.VaultItem;
-import com.godlei.onlinesafe.vault.domain.VaultKeyBundle;
 import com.godlei.onlinesafe.vault.infrastructure.PrivateTemplateRepository;
 import com.godlei.onlinesafe.vault.infrastructure.VaultItemRepository;
-import com.godlei.onlinesafe.vault.infrastructure.VaultKeyBundleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +25,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,13 +72,13 @@ class SecurityQuestionPasswordResetIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private VaultKeyBundleRepository vaultKeyBundleRepository;
-
-    @Autowired
     private VaultItemRepository vaultItemRepository;
 
     @Autowired
     private PrivateTemplateRepository privateTemplateRepository;
+
+    @Autowired
+    private VaultPayloadCipher vaultPayloadCipher;
 
     private MockMvc mockMvc;
     private String adminId;
@@ -88,7 +87,6 @@ class SecurityQuestionPasswordResetIntegrationTest {
     void setUp() {
         privateTemplateRepository.deleteAll();
         vaultItemRepository.deleteAll();
-        vaultKeyBundleRepository.deleteAll();
         securityQuestionRepository.deleteAll();
         inviteRepository.deleteAll();
         userRepository.deleteAll();
@@ -101,7 +99,7 @@ class SecurityQuestionPasswordResetIntegrationTest {
     }
 
     @Test
-    void registersWithSecurityQuestionsAndResetsPassword() throws Exception {
+    void registersWithSecurityQuestionsAndResetsPasswordWithoutClearingVault() throws Exception {
         seedInvite("TEST_INVITE_CODE", 10);
 
         mockMvc.perform(post("/api/auth/register")
@@ -113,8 +111,7 @@ class SecurityQuestionPasswordResetIntegrationTest {
         assertThat(securityQuestionRepository.count()).isEqualTo(2);
 
         var alice = userRepository.findByNormalizedUsername("alice").orElseThrow();
-        seedVaultData(alice.getId());
-        assertThat(vaultKeyBundleRepository.existsByOwnerId(alice.getId())).isTrue();
+        String itemId = seedVaultItem(alice.getId());
         assertThat(vaultItemRepository.count()).isEqualTo(1);
 
         mockMvc.perform(get("/api/auth/security-questions/builtins"))
@@ -160,8 +157,7 @@ class SecurityQuestionPasswordResetIntegrationTest {
                         ))))
                 .andExpect(status().isNoContent());
 
-        assertThat(vaultKeyBundleRepository.existsByOwnerId(alice.getId())).isFalse();
-        assertThat(vaultItemRepository.count()).isZero();
+        assertThat(vaultItemRepository.count()).isEqualTo(1);
         assertThat(privateTemplateRepository.count()).isZero();
 
         MockHttpSession session = new MockHttpSession();
@@ -186,9 +182,9 @@ class SecurityQuestionPasswordResetIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.authenticated").value(true));
 
-        mockMvc.perform(get("/api/v1/vault/key-bundle").session(session))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("VAULT_NOT_INITIALIZED"));
+        mockMvc.perform(get("/api/v1/vault/items/" + itemId).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.payload.name").value("保留记录"));
     }
 
     @Test
@@ -221,32 +217,32 @@ class SecurityQuestionPasswordResetIntegrationTest {
         ));
     }
 
-    private void seedVaultData(String ownerId) {
-        byte[] salt = new byte[16];
-        byte[] nonce = new byte[24];
-        byte[] blob = new byte[32];
-        Arrays.fill(salt, (byte) 1);
-        Arrays.fill(nonce, (byte) 2);
-        Arrays.fill(blob, (byte) 3);
-        vaultKeyBundleRepository.save(VaultKeyBundle.create(
-                ownerId,
-                salt,
-                2L,
-                67108864L,
-                blob,
-                nonce,
-                blob,
-                nonce,
-                1
+    private String seedVaultItem(String ownerId) {
+        String itemId = UUID.randomUUID().toString();
+        JsonNode payload = objectMapper.valueToTree(Map.of(
+                "name", "保留记录",
+                "platform", "Test",
+                "channel", "",
+                "status", "NORMAL",
+                "fields", List.of(),
+                "notes", ""
         ));
+        VaultPayloadCipher.SealedPayload sealed = vaultPayloadCipher.encrypt(
+                ownerId,
+                "ITEM",
+                itemId,
+                payload
+        );
         vaultItemRepository.save(VaultItem.create(
-                UUID.randomUUID().toString(),
+                itemId,
                 ownerId,
-                blob,
-                nonce,
-                1,
-                1
+                sealed.ciphertext(),
+                sealed.nonce(),
+                sealed.algoVersion(),
+                sealed.payloadVersion(),
+                sealed.keyId()
         ));
+        return itemId;
     }
 
     private String registrationJson(String phone, String username) throws Exception {

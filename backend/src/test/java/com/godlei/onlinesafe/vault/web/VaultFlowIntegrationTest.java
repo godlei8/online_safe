@@ -5,7 +5,6 @@ import com.godlei.onlinesafe.auth.domain.AppUser;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
 import com.godlei.onlinesafe.vault.infrastructure.PrivateTemplateRepository;
 import com.godlei.onlinesafe.vault.infrastructure.VaultItemRepository;
-import com.godlei.onlinesafe.vault.infrastructure.VaultKeyBundleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +18,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -53,9 +52,6 @@ class VaultFlowIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private VaultKeyBundleRepository keyBundleRepository;
-
-    @Autowired
     private VaultItemRepository itemRepository;
 
     @Autowired
@@ -67,7 +63,6 @@ class VaultFlowIntegrationTest {
     void setUp() {
         templateRepository.deleteAll();
         itemRepository.deleteAll();
-        keyBundleRepository.deleteAll();
         userRepository.deleteAll();
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext)
                 .apply(springSecurity())
@@ -75,43 +70,14 @@ class VaultFlowIntegrationTest {
     }
 
     @Test
-    void keyBundleItemAndTemplateFlowWithOwnerIsolation() throws Exception {
-        AppUser alice = saveUser("13800138001", "alice");
-        AppUser bob = saveUser("13800138002", "bob");
+    void itemAndTemplateFlowWithOwnerIsolationAndServerEncryption() throws Exception {
+        saveUser("13800138001", "alice");
+        saveUser("13800138002", "bob");
         MockHttpSession aliceSession = login("alice");
         MockHttpSession bobSession = login("bob");
 
-        mockMvc.perform(get("/api/v1/vault/key-bundle").session(aliceSession))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("VAULT_NOT_INITIALIZED"));
-
-        Map<String, Object> bundle = sampleKeyBundle();
-        mockMvc.perform(put("/api/v1/vault/key-bundle")
-                        .session(aliceSession)
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(bundle)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.algoVersion").value(1))
-                .andExpect(jsonPath("$.revision").value(0));
-
-        mockMvc.perform(put("/api/v1/vault/key-bundle")
-                        .session(aliceSession)
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(bundle)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("VAULT_ALREADY_INITIALIZED"));
-
-        mockMvc.perform(get("/api/v1/vault/key-bundle").session(bobSession))
-                .andExpect(status().isNotFound());
-
-        mockMvc.perform(get("/api/v1/vault/key-bundle").session(aliceSession))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.kdfOpsLimit").value(2));
-
         String itemId = UUID.randomUUID().toString();
-        Map<String, Object> itemCreate = sampleEnvelope(itemId, 0L);
+        Map<String, Object> itemCreate = sampleItem(itemId, 0L, "初始密码");
         mockMvc.perform(post("/api/v1/vault/items")
                         .session(aliceSession)
                         .with(csrf())
@@ -119,7 +85,15 @@ class VaultFlowIntegrationTest {
                         .content(objectMapper.writeValueAsString(itemCreate)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(itemId))
-                .andExpect(jsonPath("$.revision").value(0));
+                .andExpect(jsonPath("$.revision").value(0))
+                .andExpect(jsonPath("$.payload.name").value("工作邮箱"))
+                .andExpect(jsonPath("$.payload.fields[1].value").value("初始密码"));
+
+        var stored = itemRepository.findById(itemId).orElseThrow();
+        String cipherText = new String(stored.getCiphertext());
+        assertThat(cipherText).doesNotContain("初始密码");
+        assertThat(stored.getNonce()).hasSize(12);
+        assertThat(stored.getAlgoVersion()).isEqualTo(2);
 
         mockMvc.perform(get("/api/v1/vault/items/" + itemId).session(bobSession))
                 .andExpect(status().isNotFound());
@@ -128,25 +102,21 @@ class VaultFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
 
-        Map<String, Object> itemUpdate = new HashMap<>(sampleEnvelope(itemId, 0L));
-        itemUpdate.put("ciphertextBase64", Base64.getEncoder().encodeToString("updated-cipher".getBytes()));
-        MvcResult updated = mockMvc.perform(put("/api/v1/vault/items/" + itemId)
+        Map<String, Object> itemUpdate = sampleItem(itemId, 0L, "更新后密码");
+        mockMvc.perform(put("/api/v1/vault/items/" + itemId)
                         .session(aliceSession)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(itemUpdate)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.revision").value(1))
-                .andReturn();
-
-        assertThat(updated.getResponse().getContentAsString()).doesNotContain("password");
-        assertThat(updated.getResponse().getContentAsString()).doesNotContain(alice.getUsername());
+                .andExpect(jsonPath("$.payload.fields[1].value").value("更新后密码"));
 
         mockMvc.perform(put("/api/v1/vault/items/" + itemId)
                         .session(aliceSession)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(sampleEnvelope(itemId, 0L))))
+                        .content(objectMapper.writeValueAsString(sampleItem(itemId, 0L, "冲突"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("VAULT_REVISION_CONFLICT"));
 
@@ -155,8 +125,9 @@ class VaultFlowIntegrationTest {
                         .session(aliceSession)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(sampleEnvelope(templateId, 0L))))
-                .andExpect(status().isCreated());
+                        .content(objectMapper.writeValueAsString(sampleTemplate(templateId, 0L))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.payload.name").value("常用登录"));
 
         mockMvc.perform(get("/api/v1/vault/private-templates/" + templateId).session(bobSession))
                 .andExpect(status().isNotFound());
@@ -173,9 +144,6 @@ class VaultFlowIntegrationTest {
                         .session(aliceSession)
                         .with(csrf()))
                 .andExpect(status().isNoContent());
-
-        assertThat(keyBundleRepository.findByOwnerId(alice.getId())).isPresent();
-        assertThat(keyBundleRepository.findByOwnerId(bob.getId())).isEmpty();
     }
 
     private AppUser saveUser(String phone, String username) {
@@ -200,35 +168,70 @@ class VaultFlowIntegrationTest {
         return (MockHttpSession) result.getRequest().getSession(false);
     }
 
-    private static Map<String, Object> sampleKeyBundle() {
-        return Map.of(
-                "kdfSaltBase64", b64(16),
-                "kdfOpsLimit", 2L,
-                "kdfMemLimit", 8192L,
-                "wrappedDekMasterBase64", b64(48),
-                "wrappedDekMasterNonceBase64", b64(24),
-                "wrappedDekRecoveryBase64", b64(48),
-                "wrappedDekRecoveryNonceBase64", b64(24),
-                "algoVersion", 1
-        );
+    private static Map<String, Object> sampleItem(String id, long revision, String password) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("name", "工作邮箱");
+        payload.put("platform", "Google");
+        payload.put("channel", "自行注册");
+        payload.put("status", "NORMAL");
+        payload.put("expiresAt", null);
+        payload.put("tags", List.of());
+        payload.put("notes", "");
+        payload.put("templateSnapshot", null);
+        payload.put("fields", List.of(
+                Map.of(
+                        "id", UUID.randomUUID().toString(),
+                        "name", "账号",
+                        "type", "TEXT",
+                        "value", "a@example.com",
+                        "required", true,
+                        "sensitive", false,
+                        "copyable", true,
+                        "hint", "",
+                        "order", 0,
+                        "systemKey", "account"
+                ),
+                Map.of(
+                        "id", UUID.randomUUID().toString(),
+                        "name", "密码",
+                        "type", "PASSWORD",
+                        "value", password,
+                        "required", true,
+                        "sensitive", true,
+                        "copyable", true,
+                        "hint", "",
+                        "order", 1,
+                        "systemKey", "password"
+                )
+        ));
+        Map<String, Object> body = new HashMap<>();
+        body.put("id", id);
+        body.put("payload", payload);
+        body.put("revision", revision);
+        return body;
     }
 
-    private static Map<String, Object> sampleEnvelope(String id, long revision) {
-        Map<String, Object> envelope = new HashMap<>();
-        envelope.put("id", id);
-        envelope.put("ciphertextBase64", Base64.getEncoder().encodeToString("cipher-bytes".getBytes()));
-        envelope.put("nonceBase64", b64(24));
-        envelope.put("algoVersion", 1);
-        envelope.put("payloadVersion", 1);
-        envelope.put("revision", revision);
-        return envelope;
-    }
-
-    private static String b64(int length) {
-        byte[] bytes = new byte[length];
-        for (int i = 0; i < length; i++) {
-            bytes[i] = (byte) (i + 1);
-        }
-        return Base64.getEncoder().encodeToString(bytes);
+    private static Map<String, Object> sampleTemplate(String id, long revision) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("name", "常用登录");
+        payload.put("platform", "通用");
+        payload.put("channel", "");
+        payload.put("fields", List.of(
+                Map.of(
+                        "id", UUID.randomUUID().toString(),
+                        "name", "账号",
+                        "type", "TEXT",
+                        "required", true,
+                        "sensitive", false,
+                        "copyable", true,
+                        "hint", "",
+                        "order", 0
+                )
+        ));
+        Map<String, Object> body = new HashMap<>();
+        body.put("id", id);
+        body.put("payload", payload);
+        body.put("revision", revision);
+        return body;
     }
 }

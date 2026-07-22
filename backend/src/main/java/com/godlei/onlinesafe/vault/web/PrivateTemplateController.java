@@ -28,12 +28,12 @@ public class PrivateTemplateController {
     }
 
     @GetMapping
-    public List<VaultCipherEnvelopeResponse> list(@AuthenticationPrincipal AppUserPrincipal principal) {
+    public List<VaultRecordResponse> list(@AuthenticationPrincipal AppUserPrincipal principal) {
         return privateTemplateService.list(principal.userId());
     }
 
     @GetMapping("/{id}")
-    public VaultCipherEnvelopeResponse get(
+    public VaultRecordResponse get(
             @AuthenticationPrincipal AppUserPrincipal principal,
             @PathVariable String id
     ) {
@@ -42,18 +42,18 @@ public class PrivateTemplateController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public VaultCipherEnvelopeResponse create(
+    public VaultRecordResponse create(
             @AuthenticationPrincipal AppUserPrincipal principal,
-            @Valid @RequestBody VaultCipherEnvelopeRequest request
+            @Valid @RequestBody VaultRecordRequest request
     ) {
         return privateTemplateService.create(principal.userId(), request);
     }
 
     @PutMapping("/{id}")
-    public VaultCipherEnvelopeResponse update(
+    public VaultRecordResponse update(
             @AuthenticationPrincipal AppUserPrincipal principal,
             @PathVariable String id,
-            @Valid @RequestBody VaultCipherEnvelopeRequest request
+            @Valid @RequestBody VaultRecordRequest request
     ) {
         return privateTemplateService.update(principal.userId(), id, request);
     }

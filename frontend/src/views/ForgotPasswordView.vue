@@ -118,13 +118,13 @@ async function confirm() {
 
     <v-alert
       v-if="step === 3"
-      type="warning"
+      type="info"
       variant="tonal"
       density="comfortable"
       class="auth-form-alert"
       role="status"
     >
-      重置登录密码后需重新初始化保险箱，旧密文将无法保留。
+      重置后请使用新密码登录；保险箱中的账密记录会保留。
     </v-alert>
 
     <form v-if="step === 1" class="auth-reset-form" @submit.prevent="lookup">

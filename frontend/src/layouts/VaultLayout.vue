@@ -41,7 +41,7 @@ async function logout() {
 }
 
 function consumeEditorQuery() {
-  if (!vault.dekReady) return
+  if (!vault.ready) return
   const editId = typeof route.query.edit === 'string' ? route.query.edit : null
   const templateId = typeof route.query.templateId === 'string' ? route.query.templateId : null
   const isNew = route.query.new === '1' || route.query.new === 'true'
@@ -63,14 +63,11 @@ function consumeEditorQuery() {
   router.replace({ path: route.path, query: nextQuery })
 }
 
-function onSaved(id: string, created: boolean) {
-  // 新增成功：关闭弹窗即可，不跳转详情
-  if (created) return
+function onSaved(id: string, _created: boolean) {
+  // 新增/编辑成功：关闭弹窗即可；若当前已在该条详情则刷新，不从列表跳进详情
   if (route.name === 'vault-item' && String(route.params.id) === id) {
     router.replace({ path: `/vault/items/${id}`, query: { refreshed: String(Date.now()) } })
-    return
   }
-  router.push(`/vault/items/${id}`)
 }
 
 onMounted(() => {
@@ -82,7 +79,7 @@ onMounted(() => {
 })
 
 watch(
-  () => [route.fullPath, vault.dekReady] as const,
+  () => [route.fullPath, vault.ready] as const,
   () => {
     if (route.query.edit || route.query.templateId || route.query.new) {
       consumeEditorQuery()
@@ -151,7 +148,7 @@ watch(
         <div class="vault-topbar__actions">
           <span class="vault-lock-status">
             <v-icon icon="mdi-shield-check-outline" size="15" />
-            已登录 · 详情默认明文
+            已登录
           </span>
           <v-btn icon="mdi-bell-outline" variant="text" aria-label="查看通知" @click="notifyUnavailable('通知')" />
           <v-menu location="bottom end">
@@ -186,8 +183,8 @@ watch(
       </header>
 
       <div class="vault-panel">
-        <router-view v-if="vault.dekReady" />
-        <div v-else class="pa-8 text-medium-emphasis">正在准备保险箱…</div>
+        <router-view v-if="vault.ready" />
+        <div v-else class="pa-8 text-medium-emphasis">正在加载保险箱…</div>
       </div>
 
       <nav class="vault-mobile-nav" aria-label="移动端导航">

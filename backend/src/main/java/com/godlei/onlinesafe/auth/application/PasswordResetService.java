@@ -7,9 +7,6 @@ import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
 import com.godlei.onlinesafe.auth.web.PasswordResetConfirmRequest;
 import com.godlei.onlinesafe.auth.web.PasswordResetLookupResponse;
 import com.godlei.onlinesafe.auth.web.PasswordResetQuestionResponse;
-import com.godlei.onlinesafe.vault.infrastructure.PrivateTemplateRepository;
-import com.godlei.onlinesafe.vault.infrastructure.VaultItemRepository;
-import com.godlei.onlinesafe.vault.infrastructure.VaultKeyBundleRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +28,6 @@ public class PasswordResetService {
     private final UsernameNormalizer usernameNormalizer;
     private final UserSessionRepository userSessionRepository;
     private final PasswordResetRateLimiter rateLimiter;
-    private final VaultKeyBundleRepository vaultKeyBundleRepository;
-    private final VaultItemRepository vaultItemRepository;
-    private final PrivateTemplateRepository privateTemplateRepository;
 
     public PasswordResetService(
             AppUserRepository userRepository,
@@ -42,10 +36,7 @@ public class PasswordResetService {
             PhoneNormalizer phoneNormalizer,
             UsernameNormalizer usernameNormalizer,
             UserSessionRepository userSessionRepository,
-            PasswordResetRateLimiter rateLimiter,
-            VaultKeyBundleRepository vaultKeyBundleRepository,
-            VaultItemRepository vaultItemRepository,
-            PrivateTemplateRepository privateTemplateRepository
+            PasswordResetRateLimiter rateLimiter
     ) {
         this.userRepository = userRepository;
         this.securityQuestionService = securityQuestionService;
@@ -54,9 +45,6 @@ public class PasswordResetService {
         this.usernameNormalizer = usernameNormalizer;
         this.userSessionRepository = userSessionRepository;
         this.rateLimiter = rateLimiter;
-        this.vaultKeyBundleRepository = vaultKeyBundleRepository;
-        this.vaultItemRepository = vaultItemRepository;
-        this.privateTemplateRepository = privateTemplateRepository;
     }
 
     @Transactional(readOnly = true)
@@ -99,17 +87,10 @@ public class PasswordResetService {
 
         user.changePassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
-        // 登录密码已变，旧信封无法用新密码解包：清除保险箱密文，下次登录重新初始化
-        clearVaultData(user.getId());
+        // 登录密码与保险箱加解密无关：仅吊销会话，保留账密记录
         userSessionRepository.deleteByPrincipalName(user.getUsername());
         rateLimiter.clear("confirm:" + clientKey + ":" + normalizeRateKey(request.identifier()));
         rateLimiter.clear("lookup:" + clientKey);
-    }
-
-    private void clearVaultData(String ownerId) {
-        vaultItemRepository.deleteByOwnerId(ownerId);
-        privateTemplateRepository.deleteByOwnerId(ownerId);
-        vaultKeyBundleRepository.deleteByOwnerId(ownerId);
     }
 
     private Optional<AppUser> findUser(String identifier) {

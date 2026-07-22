@@ -2,66 +2,85 @@ package com.godlei.onlinesafe.vault.application;
 
 import com.godlei.onlinesafe.vault.domain.VaultItem;
 import com.godlei.onlinesafe.vault.infrastructure.VaultItemRepository;
-import com.godlei.onlinesafe.vault.web.VaultCipherEnvelopeRequest;
-import com.godlei.onlinesafe.vault.web.VaultCipherEnvelopeResponse;
+import com.godlei.onlinesafe.vault.web.VaultRecordRequest;
+import com.godlei.onlinesafe.vault.web.VaultRecordResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
 
 import java.util.List;
 
 @Service
 public class VaultItemService {
 
-    private final VaultItemRepository repository;
+    public static final String ENTITY_TYPE = "ITEM";
 
-    public VaultItemService(VaultItemRepository repository) {
+    private final VaultItemRepository repository;
+    private final VaultPayloadCipher cipher;
+
+    public VaultItemService(VaultItemRepository repository, VaultPayloadCipher cipher) {
         this.repository = repository;
+        this.cipher = cipher;
     }
 
     @Transactional(readOnly = true)
-    public List<VaultCipherEnvelopeResponse> list(String ownerId) {
+    public List<VaultRecordResponse> list(String ownerId) {
         return repository.findByOwnerIdAndDeletedAtIsNullOrderByUpdatedAtDesc(ownerId).stream()
-                .map(VaultItemService::toResponse)
+                .map(item -> toResponse(ownerId, item))
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public VaultCipherEnvelopeResponse get(String ownerId, String id) {
-        return toResponse(requireOwned(ownerId, id));
+    public VaultRecordResponse get(String ownerId, String id) {
+        return toResponse(ownerId, requireOwned(ownerId, id));
     }
 
     @Transactional
-    public VaultCipherEnvelopeResponse create(String ownerId, VaultCipherEnvelopeRequest request) {
-        VaultEnvelopeSupport.requireUuid(request.id());
+    public VaultRecordResponse create(String ownerId, VaultRecordRequest request) {
+        VaultRecordSupport.requireUuid(request.id());
+        VaultRecordSupport.requireItemPayload(request.payload());
         if (repository.existsById(request.id())) {
             throw new InvalidVaultEnvelopeException("ITEM_ID_CONFLICT", "记录 ID 已存在");
         }
-        DecodedEnvelope envelope = decode(request);
+        VaultPayloadCipher.SealedPayload sealed = cipher.encrypt(
+                ownerId,
+                ENTITY_TYPE,
+                request.id().trim(),
+                request.payload()
+        );
         VaultItem saved = repository.saveAndFlush(VaultItem.create(
                 request.id().trim(),
                 ownerId,
-                envelope.ciphertext(),
-                envelope.nonce(),
-                envelope.algoVersion(),
-                envelope.payloadVersion()
+                sealed.ciphertext(),
+                sealed.nonce(),
+                sealed.algoVersion(),
+                sealed.payloadVersion(),
+                sealed.keyId()
         ));
-        return toResponse(saved);
+        return toResponse(ownerId, saved);
     }
 
     @Transactional
-    public VaultCipherEnvelopeResponse update(String ownerId, String id, VaultCipherEnvelopeRequest request) {
+    public VaultRecordResponse update(String ownerId, String id, VaultRecordRequest request) {
         VaultItem item = requireOwned(ownerId, id);
         if (request.revision() != item.getVersion()) {
             throw new VaultRevisionConflictException();
         }
-        DecodedEnvelope envelope = decode(request);
-        item.replaceCiphertext(
-                envelope.ciphertext(),
-                envelope.nonce(),
-                envelope.algoVersion(),
-                envelope.payloadVersion()
+        VaultRecordSupport.requireItemPayload(request.payload());
+        VaultPayloadCipher.SealedPayload sealed = cipher.encrypt(
+                ownerId,
+                ENTITY_TYPE,
+                id,
+                request.payload()
         );
-        return toResponse(repository.saveAndFlush(item));
+        item.replaceCiphertext(
+                sealed.ciphertext(),
+                sealed.nonce(),
+                sealed.algoVersion(),
+                sealed.payloadVersion(),
+                sealed.keyId()
+        );
+        return toResponse(ownerId, repository.saveAndFlush(item));
     }
 
     @Transactional
@@ -76,29 +95,23 @@ public class VaultItemService {
                 .orElseThrow(VaultItemNotFoundException::new);
     }
 
-    private static DecodedEnvelope decode(VaultCipherEnvelopeRequest request) {
-        byte[] ciphertext = VaultEnvelopeSupport.decodeBase64(request.ciphertextBase64(), "ciphertextBase64");
-        byte[] nonce = VaultEnvelopeSupport.decodeBase64(request.nonceBase64(), "nonceBase64");
-        VaultEnvelopeSupport.requireNonEmpty(ciphertext, "ciphertextBase64");
-        VaultEnvelopeSupport.requireNonce(nonce, "nonceBase64");
-        VaultEnvelopeSupport.requireAlgoVersion(request.algoVersion());
-        VaultEnvelopeSupport.requirePayloadVersion(request.payloadVersion());
-        return new DecodedEnvelope(ciphertext, nonce, request.algoVersion(), request.payloadVersion());
-    }
-
-    private static VaultCipherEnvelopeResponse toResponse(VaultItem item) {
-        return new VaultCipherEnvelopeResponse(
+    private VaultRecordResponse toResponse(String ownerId, VaultItem item) {
+        JsonNode payload = cipher.decrypt(
+                ownerId,
+                ENTITY_TYPE,
                 item.getId(),
-                VaultEnvelopeSupport.encodeBase64(item.getCiphertext()),
-                VaultEnvelopeSupport.encodeBase64(item.getNonce()),
+                item.getCiphertext(),
+                item.getNonce(),
                 item.getAlgoVersion(),
                 item.getPayloadVersion(),
+                item.getKeyId()
+        );
+        return new VaultRecordResponse(
+                item.getId(),
+                payload,
                 item.getVersion(),
                 item.getCreatedAt(),
                 item.getUpdatedAt()
         );
-    }
-
-    private record DecodedEnvelope(byte[] ciphertext, byte[] nonce, int algoVersion, int payloadVersion) {
     }
 }

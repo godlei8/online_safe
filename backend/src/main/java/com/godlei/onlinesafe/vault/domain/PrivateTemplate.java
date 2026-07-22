@@ -24,13 +24,12 @@ public class PrivateTemplate {
     @Column(name = "owner_id", nullable = false, length = 36, updatable = false)
     private String ownerId;
 
-    // Hibernate 7：LONG32VARBINARY 的 DDL 仍走 BLOB，默认 length=255 → TINYBLOB；显式锁定 LONGBLOB
     @JdbcTypeCode(SqlTypes.BLOB)
     @Column(name = "ciphertext", nullable = false, columnDefinition = "LONGBLOB")
     private byte[] ciphertext;
 
     @JdbcTypeCode(SqlTypes.BINARY)
-    @Column(name = "nonce", nullable = false, length = 24)
+    @Column(name = "nonce", nullable = false, length = 12)
     private byte[] nonce;
 
     @Column(name = "algo_version", nullable = false)
@@ -38,6 +37,9 @@ public class PrivateTemplate {
 
     @Column(name = "payload_version", nullable = false)
     private int payloadVersion;
+
+    @Column(name = "key_id", nullable = false)
+    private short keyId;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
@@ -61,7 +63,8 @@ public class PrivateTemplate {
             byte[] ciphertext,
             byte[] nonce,
             int algoVersion,
-            int payloadVersion
+            int payloadVersion,
+            short keyId
     ) {
         this.id = Objects.requireNonNull(id);
         this.ownerId = Objects.requireNonNull(ownerId);
@@ -69,6 +72,7 @@ public class PrivateTemplate {
         this.nonce = Objects.requireNonNull(nonce);
         this.algoVersion = algoVersion;
         this.payloadVersion = payloadVersion;
+        this.keyId = keyId;
     }
 
     public static PrivateTemplate create(
@@ -77,16 +81,24 @@ public class PrivateTemplate {
             byte[] ciphertext,
             byte[] nonce,
             int algoVersion,
-            int payloadVersion
+            int payloadVersion,
+            int keyId
     ) {
-        return new PrivateTemplate(id, ownerId, ciphertext, nonce, algoVersion, payloadVersion);
+        return new PrivateTemplate(id, ownerId, ciphertext, nonce, algoVersion, payloadVersion, (short) keyId);
     }
 
-    public void replaceCiphertext(byte[] ciphertext, byte[] nonce, int algoVersion, int payloadVersion) {
+    public void replaceCiphertext(
+            byte[] ciphertext,
+            byte[] nonce,
+            int algoVersion,
+            int payloadVersion,
+            int keyId
+    ) {
         this.ciphertext = Objects.requireNonNull(ciphertext);
         this.nonce = Objects.requireNonNull(nonce);
         this.algoVersion = algoVersion;
         this.payloadVersion = payloadVersion;
+        this.keyId = (short) keyId;
     }
 
     public void softDelete() {
@@ -131,6 +143,10 @@ public class PrivateTemplate {
 
     public int getPayloadVersion() {
         return payloadVersion;
+    }
+
+    public int getKeyId() {
+        return keyId;
     }
 
     public Instant getDeletedAt() {

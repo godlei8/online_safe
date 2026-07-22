@@ -3,13 +3,11 @@ package com.godlei.onlinesafe.vault.web;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import tools.jackson.databind.JsonNode;
 
-public record VaultCipherEnvelopeRequest(
+public record VaultRecordRequest(
         @NotBlank String id,
-        @NotBlank String ciphertextBase64,
-        @NotBlank String nonceBase64,
-        @NotNull @Min(1) Integer algoVersion,
-        @NotNull @Min(1) Integer payloadVersion,
+        @NotNull JsonNode payload,
         @NotNull @Min(0) Long revision
 ) {
 }

@@ -4,13 +4,13 @@ import { useDisplay } from 'vuetify'
 import { useRouter } from 'vue-router'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import {
+  channelExternalHref,
   cloneVaultItemPayload,
   effectiveStatus,
   maskSecret,
   pickListCredentials,
   statusFilterOptions,
   statusLabel,
-  toExternalHref,
   truncatePlain,
 } from '@/domain/vaultPayload'
 import { useVaultStore } from '@/stores/vault'
@@ -49,7 +49,8 @@ const records = computed(() => vault.items.map(({ envelope, payload }) => {
     平台: payload.platform,
     渠道: payload.channel?.trim() || '',
     渠道筛选: payload.channel?.trim() || '未填写',
-    渠道链接: toExternalHref(payload.channel?.trim() || ''),
+    渠道链接: channelExternalHref(payload),
+    渠道网址: payload.channelUrl?.trim() || '',
     状态: statusLabel[status],
     状态码: status,
     有效期: payload.expiresAt ? payload.expiresAt.slice(0, 10) : '',
@@ -74,7 +75,7 @@ const sortOptions: 排序方式[] = ['最近更新', '最早创建', '名称']
 const filteredRecords = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
   const result = records.value.filter((item) => {
-    const matchesKeyword = !keyword || [item.名称, item.平台, item.渠道, item.账号名, item.有效期]
+    const matchesKeyword = !keyword || [item.名称, item.平台, item.渠道, item.渠道网址, item.账号名, item.有效期]
       .join(' ')
       .toLowerCase()
       .includes(keyword)
@@ -325,22 +326,31 @@ onMounted(loadRecords)
           <div class="vault-record-card__title">
             <strong>{{ item.名称 }}</strong>
             <span class="vault-record-card__platform">{{ item.平台 }}</span>
-            <a
-              v-if="item.渠道 && item.渠道链接"
-              class="vault-record-card__channel"
-              :href="item.渠道链接"
-              target="_blank"
-              rel="noopener noreferrer"
-              :title="item.渠道"
-              @click.stop
-            >{{ item.渠道 }}</a>
-            <span
-              v-else-if="item.渠道"
-              class="vault-record-card__channel"
-              :title="item.渠道"
-            >{{ item.渠道 }}</span>
           </div>
           <span class="vault-record-card__status" :data-tone="statusTone(item.状态)">{{ item.状态 }}</span>
+        </div>
+
+        <div
+          v-if="item.渠道 || item.渠道链接"
+          class="vault-record-card__source"
+          @click.stop
+          @keydown.stop
+        >
+          <span class="vault-record-card__source-label">来源</span>
+          <a
+            v-if="item.渠道链接"
+            class="vault-record-card__source-value"
+            :href="item.渠道链接"
+            target="_blank"
+            rel="noopener noreferrer"
+            :title="item.渠道 || item.渠道网址"
+            @click.stop
+          >{{ item.渠道 || item.渠道网址 }}</a>
+          <span
+            v-else
+            class="vault-record-card__source-value"
+            :title="item.渠道"
+          >{{ item.渠道 }}</span>
         </div>
 
         <div class="vault-record-card__secrets" @click.stop @keydown.stop>

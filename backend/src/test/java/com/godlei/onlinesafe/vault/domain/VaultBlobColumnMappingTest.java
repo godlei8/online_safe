@@ -27,13 +27,11 @@ class VaultBlobColumnMappingTest {
     static void setUpMetadata() {
         registry = new StandardServiceRegistryBuilder()
                 .applySetting(AvailableSettings.DIALECT, MySQLDialect.class.getName())
-                // 仅校验映射元数据，不连库
                 .applySetting(AvailableSettings.ALLOW_METADATA_ON_BOOT, false)
                 .build();
         metadata = new MetadataSources(registry)
                 .addAnnotatedClass(PrivateTemplate.class)
                 .addAnnotatedClass(VaultItem.class)
-                .addAnnotatedClass(VaultKeyBundle.class)
                 .buildMetadata();
     }
 
@@ -52,12 +50,6 @@ class VaultBlobColumnMappingTest {
     @Test
     void vaultItemCiphertextMapsToLongblob() {
         assertColumnSqlType(VaultItem.class, "ciphertext", "longblob");
-    }
-
-    @Test
-    void vaultKeyBundleWrappedDekColumnsMapToLongblob() {
-        assertColumnSqlType(VaultKeyBundle.class, "wrapped_dek_master", "longblob");
-        assertColumnSqlType(VaultKeyBundle.class, "wrapped_dek_recovery", "longblob");
     }
 
     private static void assertColumnSqlType(Class<?> entityClass, String columnName, String expectedSqlType) {

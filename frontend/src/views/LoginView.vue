@@ -27,8 +27,7 @@ const required = (message: string) => (value: string) => Boolean(value?.trim()) 
 
 onMounted(() => {
   if (route.query.reset === '1') {
-    infoMessage.value =
-      '登录密码已重置。若此前已初始化保险箱，旧密文已清除，登录后需重新初始化空保险箱。'
+    infoMessage.value = '登录密码已重置，请使用新密码登录。保险箱中的账密记录会保留。'
   }
   if (auth.session.authenticated) router.replace('/vault')
 })

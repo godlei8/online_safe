@@ -1,5 +1,3 @@
-import { clearDekFromSession } from '@/crypto/dekSession'
-
 export type ApiError = {
   status: number
   code?: string
@@ -39,12 +37,11 @@ async function handleSessionExpired(path: string): Promise<void> {
   if (handlingUnauthorized) return
   handlingUnauthorized = true
   try {
-    clearDekFromSession()
     const [{ useVaultStore }, { useAuthStore }] = await Promise.all([
       import('@/stores/vault'),
       import('@/stores/auth'),
     ])
-    useVaultStore().clearDek()
+    useVaultStore().clearSessionData()
     useAuthStore().$patch({
       session: { authenticated: false, userId: null, username: null, role: null },
       ready: true,

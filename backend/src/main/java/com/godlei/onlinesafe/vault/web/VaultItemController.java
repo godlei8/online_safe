@@ -28,12 +28,12 @@ public class VaultItemController {
     }
 
     @GetMapping
-    public List<VaultCipherEnvelopeResponse> list(@AuthenticationPrincipal AppUserPrincipal principal) {
+    public List<VaultRecordResponse> list(@AuthenticationPrincipal AppUserPrincipal principal) {
         return vaultItemService.list(principal.userId());
     }
 
     @GetMapping("/{id}")
-    public VaultCipherEnvelopeResponse get(
+    public VaultRecordResponse get(
             @AuthenticationPrincipal AppUserPrincipal principal,
             @PathVariable String id
     ) {
@@ -42,18 +42,18 @@ public class VaultItemController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public VaultCipherEnvelopeResponse create(
+    public VaultRecordResponse create(
             @AuthenticationPrincipal AppUserPrincipal principal,
-            @Valid @RequestBody VaultCipherEnvelopeRequest request
+            @Valid @RequestBody VaultRecordRequest request
     ) {
         return vaultItemService.create(principal.userId(), request);
     }
 
     @PutMapping("/{id}")
-    public VaultCipherEnvelopeResponse update(
+    public VaultRecordResponse update(
             @AuthenticationPrincipal AppUserPrincipal principal,
             @PathVariable String id,
-            @Valid @RequestBody VaultCipherEnvelopeRequest request
+            @Valid @RequestBody VaultRecordRequest request
     ) {
         return vaultItemService.update(principal.userId(), id, request);
     }

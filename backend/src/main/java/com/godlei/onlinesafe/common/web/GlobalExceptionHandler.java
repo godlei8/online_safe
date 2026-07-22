@@ -9,9 +9,7 @@ import com.godlei.onlinesafe.auth.application.PasswordResetException;
 import com.godlei.onlinesafe.auth.application.RegistrationConflictException;
 import com.godlei.onlinesafe.vault.application.InvalidVaultEnvelopeException;
 import com.godlei.onlinesafe.vault.application.PrivateTemplateNotFoundException;
-import com.godlei.onlinesafe.vault.application.VaultAlreadyInitializedException;
 import com.godlei.onlinesafe.vault.application.VaultItemNotFoundException;
-import com.godlei.onlinesafe.vault.application.VaultNotInitializedException;
 import com.godlei.onlinesafe.vault.application.VaultRevisionConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -93,22 +91,6 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);
-    }
-
-    @ExceptionHandler(VaultNotInitializedException.class)
-    ResponseEntity<ApiError> handleVaultNotInitialized(
-            VaultNotInitializedException exception,
-            HttpServletRequest request
-    ) {
-        return response(HttpStatus.NOT_FOUND, "VAULT_NOT_INITIALIZED", exception.getMessage(), request, null);
-    }
-
-    @ExceptionHandler(VaultAlreadyInitializedException.class)
-    ResponseEntity<ApiError> handleVaultAlreadyInitialized(
-            VaultAlreadyInitializedException exception,
-            HttpServletRequest request
-    ) {
-        return response(HttpStatus.CONFLICT, "VAULT_ALREADY_INITIALIZED", exception.getMessage(), request, null);
     }
 
     @ExceptionHandler(VaultItemNotFoundException.class)

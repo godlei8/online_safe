@@ -991,22 +991,88 @@ a.vault-nav__item.vault-nav__item--active { color: var(--os-primary); }
   white-space: nowrap;
 }
 
-/* 渠道：紧贴平台下方；橙色小字，网址可跳转 */
-.vault-record-card__channel {
-  display: block;
-  margin-top: 1px;
+/* 来源：账密框横线上方，字号略小 */
+.vault-record-card__source {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  margin: 2px 0 2px;
+  overflow: hidden;
+}
+
+.vault-record-card__source-label {
+  flex: 0 0 auto;
+  color: var(--os-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.vault-record-card__source-value {
+  min-width: 0;
   color: #e67e22;
   font-size: 0.6875rem;
-  line-height: 1.25;
+  font-weight: 600;
+  line-height: 1.3;
   overflow: hidden;
-  text-align: left;
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-a.vault-record-card__channel:hover {
+a.vault-record-card__source-value:hover {
   text-decoration: underline;
+}
+
+/* 列表卡：账号 / 密码同一行 */
+
+.vault-record-card__secrets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 6px 0;
+  border-top: 1px solid var(--os-border);
+  border-bottom: 1px solid var(--os-border);
+}
+
+.vault-secret-row {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 2px 0;
+  flex: 1 1 auto;
+}
+
+.vault-secret-row + .vault-secret-row {
+  border-top: 0;
+}
+
+.vault-secret-row__label {
+  color: var(--os-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.vault-secret-row__value {
+  min-width: 0;
+  color: var(--os-text-title);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-secret-row__value--masked {
+  color: var(--os-text-body);
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 右上仅保留状态文字 */
@@ -1067,49 +1133,7 @@ a.vault-record-card__channel:hover {
   outline-offset: 1px;
 }
 
-/* 凭证区：细边框分区，不用厚灰底套娃 */
-.vault-record-card__secrets {
-  display: grid;
-  gap: 0;
-  padding: 2px 0;
-  border-top: 1px solid var(--os-border);
-  border-bottom: 1px solid var(--os-border);
-}
-
-.vault-secret-row {
-  display: grid;
-  grid-template-columns: 2.5em minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 10px;
-  min-height: 36px;
-  padding: 4px 0;
-}
-
-.vault-secret-row + .vault-secret-row {
-  border-top: 1px solid #eef2f7;
-}
-
-.vault-secret-row__label {
-  color: var(--os-text-muted);
-  font-size: 0.75rem;
-  line-height: 1.3;
-}
-
-.vault-secret-row__value {
-  min-width: 0;
-  color: var(--os-text-title);
-  font-size: 0.875rem;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.vault-secret-row__value--masked {
-  color: var(--os-text-body);
-  letter-spacing: 0.12em;
-  font-variant-numeric: tabular-nums;
-}
+/* 凭证区布局见上方「来源 / 账号 / 密码同一行」 */
 
 .vault-secret-row__copy {
   display: inline-grid;

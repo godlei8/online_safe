@@ -40,6 +40,8 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD}
       SESSION_COOKIE_SECURE: "true"
       INVITATION_ENCRYPTION_KEY: ${INVITATION_ENCRYPTION_KEY}
+      VAULT_ENCRYPTION_KEY: ${VAULT_ENCRYPTION_KEY}
+      VAULT_CURRENT_KEY_ID: ${VAULT_CURRENT_KEY_ID:-1}
     depends_on:
       mysql:
         condition: service_healthy

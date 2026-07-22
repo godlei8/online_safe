@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  channelExternalHref,
   effectiveStatus,
   fieldTypeLabel,
   statusLabel,
@@ -99,6 +100,10 @@ const displayStatus = computed(() => (
   payload.value ? statusLabel[effectiveStatus(payload.value)] : ''
 ))
 
+const channelHref = computed(() => (
+  payload.value ? channelExternalHref(payload.value) : null
+))
+
 const statusTone = computed(() => {
   const status = displayStatus.value
   if (status === '正常') return 'ok'
@@ -126,15 +131,16 @@ const statusTone = computed(() => {
         <h1>{{ payload.name }}</h1>
         <p class="vault-detail-panel__meta">
           <span>{{ payload.platform }}</span>
-          <template v-if="payload.channel">
+          <template v-if="payload.channel || channelHref">
             <span class="vault-detail-panel__dot">·</span>
+            <span class="vault-detail-panel__channel-label">来源</span>
             <a
-              v-if="toExternalHref(payload.channel)"
+              v-if="channelHref"
               class="vault-detail-panel__channel"
-              :href="toExternalHref(payload.channel)!"
+              :href="channelHref"
               target="_blank"
               rel="noopener noreferrer"
-            >{{ payload.channel }}</a>
+            >{{ payload.channel || payload.channelUrl }}</a>
             <span v-else class="vault-detail-panel__channel">{{ payload.channel }}</span>
           </template>
           <span class="vault-detail-panel__dot">·</span>
@@ -240,6 +246,11 @@ const statusTone = computed(() => {
 
 .vault-detail-panel__dot {
   color: var(--os-text-muted);
+}
+
+.vault-detail-panel__channel-label {
+  color: var(--os-text-muted);
+  margin-right: 0.5em;
 }
 
 .vault-detail-panel__channel {

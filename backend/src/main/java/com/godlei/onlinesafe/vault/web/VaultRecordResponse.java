@@ -1,13 +1,12 @@
 package com.godlei.onlinesafe.vault.web;
 
+import tools.jackson.databind.JsonNode;
+
 import java.time.Instant;
 
-public record VaultCipherEnvelopeResponse(
+public record VaultRecordResponse(
         String id,
-        String ciphertextBase64,
-        String nonceBase64,
-        int algoVersion,
-        int payloadVersion,
+        JsonNode payload,
         long revision,
         Instant createdAt,
         Instant updatedAt

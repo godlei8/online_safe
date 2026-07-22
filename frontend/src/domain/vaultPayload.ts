@@ -79,7 +79,10 @@ function normalizeStatus(raw: unknown): ItemStatus {
 export const vaultItemPayloadSchema = z.object({
   name: z.string().min(1),
   platform: z.string().min(1),
+  /** 渠道名 */
   channel: z.string(),
+  /** 渠道网址；旧数据可能没有此字段 */
+  channelUrl: z.string().optional().transform((value) => value ?? ''),
   status: z.preprocess(normalizeStatus, itemStatusSchema),
   /** YYYY-MM-DD；空表示不过期 */
   expiresAt: z.string().nullable().optional().transform((value) => value ?? null),
@@ -95,6 +98,7 @@ export const privateTemplatePayloadSchema = z.object({
   name: z.string().min(1),
   platform: z.string(),
   channel: z.string(),
+  channelUrl: z.string().optional().transform((value) => value ?? ''),
   fields: z.array(vaultFieldSchema.omit({ value: true }).extend({ value: z.string().optional() })),
 })
 
@@ -210,6 +214,8 @@ export function ensureCredentialFields(payload: VaultItemPayload): VaultItemPayl
     ...payload,
     status: nextStatus,
     tags: [],
+    channel: payload.channel ?? '',
+    channelUrl: payload.channelUrl ?? '',
     expiresAt: payload.expiresAt ?? null,
     fields: normalized,
   }
@@ -220,6 +226,7 @@ export function emptyItemPayload(): VaultItemPayload {
     name: '',
     platform: '',
     channel: '',
+    channelUrl: '',
     status: 'NORMAL',
     expiresAt: null,
     tags: [],
@@ -307,4 +314,12 @@ export function toExternalHref(raw: string): string | null {
   } catch {
     return null
   }
+}
+
+/** 渠道跳转：优先 channelUrl；兼容旧数据把网址写在 channel 里 */
+export function channelExternalHref(
+  payload: Pick<VaultItemPayload, 'channel' | 'channelUrl'>,
+): string | null {
+  return toExternalHref(payload.channelUrl || '')
+    ?? toExternalHref(payload.channel || '')
 }

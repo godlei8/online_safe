@@ -4,7 +4,6 @@ import RegisterView from '@/views/RegisterView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import VaultLayout from '@/layouts/VaultLayout.vue'
 import VaultHomeView from '@/views/VaultHomeView.vue'
-import VaultSetupView from '@/views/vault/VaultSetupView.vue'
 import VaultItemDetailView from '@/views/vault/VaultItemDetailView.vue'
 import VaultTemplatesView from '@/views/vault/VaultTemplatesView.vue'
 import AdminLoginView from '@/views/AdminLoginView.vue'
@@ -24,7 +23,7 @@ const router = createRouter({
     { path: '/login', name: 'login', component: LoginView },
     { path: '/register', name: 'register', component: RegisterView },
     { path: '/forgot-password', name: 'forgot-password', component: ForgotPasswordView },
-    { path: '/vault/setup', name: 'vault-setup', component: VaultSetupView, meta: { requiresUser: true, vaultGate: 'setup' } },
+    { path: '/vault/setup', redirect: '/vault' },
     { path: '/vault/unlock', redirect: '/vault' },
     { path: '/vault/rewrap', redirect: '/vault' },
     {
@@ -136,32 +135,6 @@ router.beforeEach(async (to) => {
     const vault = useVaultStore()
     if (!vault.ready) {
       await vault.refreshInitialization()
-    }
-
-    if (to.meta.vaultGate === 'setup') {
-      if (vault.initialized && vault.dekReady) return '/vault'
-      if (vault.initialized && !vault.dekReady) {
-        // 无 sessionStorage DEK 时需重新登录以解包
-        try {
-          await auth.logout()
-        } catch {
-          /* 忽略登出失败，仍引导登录 */
-        }
-        return { path: '/login', query: { redirect: to.fullPath } }
-      }
-      return true
-    }
-
-    if (to.meta.requiresVaultReady || to.matched.some((record) => record.meta.requiresVaultReady)) {
-      if (!vault.initialized) return '/vault/setup'
-      if (!vault.dekReady) {
-        try {
-          await auth.logout()
-        } catch {
-          /* 忽略登出失败，仍引导登录 */
-        }
-        return { path: '/login', query: { redirect: to.fullPath } }
-      }
     }
   }
 

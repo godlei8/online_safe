@@ -14,6 +14,7 @@ const form = ref<PrivateTemplatePayload>({
   name: '',
   platform: '',
   channel: '',
+  channelUrl: '',
   fields: [],
 })
 
@@ -30,6 +31,7 @@ function openCreate() {
     name: '',
     platform: '',
     channel: '',
+    channelUrl: '',
     fields: [
       {
         id: crypto.randomUUID(),
@@ -153,8 +155,9 @@ function createFromTemplate(id: string) {
         <v-text-field v-model="form.name" label="模板名称" />
         <div class="vault-template-dialog__columns">
           <v-text-field v-model="form.platform" label="默认平台" />
-          <v-text-field v-model="form.channel" label="默认渠道" />
+          <v-text-field v-model="form.channel" label="默认渠道名" />
         </div>
+        <v-text-field v-model="form.channelUrl" label="默认渠道网址" hint="可选" persistent-hint />
         <div class="d-flex justify-space-between align-center mb-2">
           <h3>字段</h3>
           <v-btn size="small" variant="tonal" color="primary" @click="addField">添加字段</v-btn>
