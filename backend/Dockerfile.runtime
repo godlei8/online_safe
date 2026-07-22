@@ -1,0 +1,17 @@
+# 仅打包本机已构建的 JAR，避免在服务器跑 Maven。
+FROM eclipse-temurin:25-jre
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --create-home --uid 10001 appuser
+
+WORKDIR /app
+# 部署脚本将产物放到 backend/app.jar（避免 target/ 被 .dockerignore 排除）
+COPY app.jar app.jar
+
+USER appuser
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]
