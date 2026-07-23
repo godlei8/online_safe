@@ -8,6 +8,7 @@ import {
   ensureCredentialFields,
   type VaultItemPayload,
 } from '@/domain/vaultPayload'
+import { useOsToast } from '@/composables/useOsToast'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import { useVaultStore } from '@/stores/vault'
 import VaultItemForm from '@/components/vault/VaultItemForm.vue'
@@ -20,10 +21,10 @@ const { smAndDown } = useDisplay()
 const vault = useVaultStore()
 const editor = useVaultItemEditor()
 
+const toast = useOsToast()
 const form = ref<VaultItemPayload>(emptyItemPayload())
 const loading = ref(false)
 const saving = ref(false)
-const errorMessage = ref('')
 const loadToken = ref(0)
 
 const isEdit = computed(() => Boolean(editor.editingId.value))
@@ -65,7 +66,6 @@ watch(
   async ([visible, itemId, tmplId, tmplSource]) => {
     if (!visible) return
     const token = ++loadToken.value
-    errorMessage.value = ''
     loading.value = true
     try {
       if (itemId) {
@@ -85,7 +85,7 @@ watch(
       }
     } catch (error) {
       if (token !== loadToken.value) return
-      errorMessage.value = friendlyError(error, '加载记录失败，请重试')
+      toast.error(friendlyError(error, '加载记录失败，请重试'))
       form.value = emptyItemPayload()
     } finally {
       if (token === loadToken.value) loading.value = false
@@ -94,21 +94,20 @@ watch(
 )
 
 async function save() {
-  errorMessage.value = ''
   const draft = ensureCredentialFields(form.value)
   if (!draft.name.trim() || !draft.platform.trim()) {
-    errorMessage.value = '请填写记录名称和平台'
+    toast.error('请填写记录名称和平台')
     return
   }
   const account = draft.fields.find((field) => field.systemKey === 'account')
   const password = draft.fields.find((field) => field.systemKey === 'password')
   if (!account?.value.trim() || !password?.value.trim()) {
-    errorMessage.value = '请填写账号和密码'
+    toast.error('请填写账号和密码')
     return
   }
   for (const field of draft.fields) {
     if (field.required && !field.value.trim()) {
-      errorMessage.value = `请填写必填字段：${field.name}`
+      toast.error(`请填写必填字段：${field.name}`)
       return
     }
   }
@@ -129,7 +128,7 @@ async function save() {
     editor.close()
     emit('saved', id, created)
   } catch (error) {
-    errorMessage.value = friendlyError(error, '保存失败，请重试')
+    toast.error(friendlyError(error, '保存失败，请重试'))
   } finally {
     saving.value = false
   }
@@ -172,7 +171,6 @@ function cancel() {
         <VaultItemForm
           v-model="form"
           :loading="loading"
-          :error-message="errorMessage"
           :mode="isEdit ? 'edit' : 'create'"
         />
       </v-card-text>

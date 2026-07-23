@@ -7,6 +7,7 @@ import {
   type PrivateTemplatePayload,
 } from '@/domain/vaultPayload'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+import { useOsToast } from '@/composables/useOsToast'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import { useVaultStore } from '@/stores/vault'
 
@@ -31,12 +32,12 @@ type ViewingTemplate = {
 
 const vault = useVaultStore()
 const editor = useVaultItemEditor()
+const toast = useOsToast()
 const loading = ref(true)
 const activeTab = ref<TemplateTab>('private')
 const dialog = ref(false)
 const editingId = ref<string | null>(null)
 const saving = ref(false)
-const errorMessage = ref('')
 const viewOpen = ref(false)
 const viewing = ref<ViewingTemplate | null>(null)
 const form = ref<PrivateTemplatePayload>({
@@ -111,7 +112,6 @@ function openEditPrivate(id: string) {
   activeTab.value = 'private'
   editingId.value = id
   form.value = JSON.parse(JSON.stringify(item.payload)) as PrivateTemplatePayload
-  errorMessage.value = ''
   dialog.value = true
 }
 
@@ -137,9 +137,8 @@ function removeTemplateField(id: string) {
 }
 
 async function save() {
-  errorMessage.value = ''
   if (!form.value.name.trim()) {
-    errorMessage.value = '请填写模板名称'
+    toast.error('请填写模板名称')
     return
   }
   saving.value = true
@@ -148,7 +147,7 @@ async function save() {
     dialog.value = false
     editingId.value = null
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '保存失败'
+    toast.error(error instanceof Error ? error.message : '保存失败')
   } finally {
     saving.value = false
   }
@@ -558,8 +557,6 @@ function fieldFlags(field: { required: boolean; sensitive: boolean; copyable: bo
         </v-card-title>
 
         <v-card-text class="os-form-dialog__body">
-          <v-alert v-if="errorMessage" type="error" variant="tonal" density="compact">{{ errorMessage }}</v-alert>
-
           <section class="os-form-dialog__section os-form-dialog__section--basic">
             <header class="os-form-dialog__section-head">
               <span class="os-form-dialog__section-icon" aria-hidden="true">

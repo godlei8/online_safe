@@ -9,6 +9,7 @@ import {
 } from '@/api/invitations'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+import { useOsToast } from '@/composables/useOsToast'
 
 const loading = ref(false)
 const creating = ref(false)
@@ -34,7 +35,7 @@ const purpose = ref<InvitePurpose>('USER_REGISTRATION')
 const maxUses = ref(1)
 const note = ref('')
 const expiresAtLocal = ref('')
-const createError = ref('')
+const toast = useOsToast()
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalElements.value / pageSize)))
 
@@ -142,7 +143,6 @@ function formatTime(value: string | null) {
 }
 
 function openCreate() {
-  createError.value = ''
   purpose.value = 'USER_REGISTRATION'
   maxUses.value = 1
   note.value = ''
@@ -151,13 +151,12 @@ function openCreate() {
 }
 
 async function submitCreate() {
-  createError.value = ''
   if (!purpose.value) {
-    createError.value = '请选择邀请码类型'
+    toast.error('请选择邀请码类型')
     return
   }
   if (!Number.isInteger(maxUses.value) || maxUses.value < 1) {
-    createError.value = '请填写有效的最大使用次数'
+    toast.error('请填写有效的最大使用次数')
     return
   }
   creating.value = true
@@ -176,7 +175,7 @@ async function submitCreate() {
     await copyText(result.plainCode, '邀请码已复制到剪贴板')
     await loadData()
   } catch (error) {
-    createError.value = error instanceof ApiRequestError ? error.message : '创建失败，请稍后重试。'
+    toast.error(error instanceof ApiRequestError ? error.message : '创建失败，请稍后重试。')
   } finally {
     creating.value = false
   }
@@ -470,10 +469,6 @@ function copyCreatedPlainCode() {
         </v-card-title>
 
         <v-card-text class="os-form-dialog__body">
-          <v-alert v-if="createError" type="error" variant="tonal" density="compact" class="mb-3">
-            {{ createError }}
-          </v-alert>
-
           <section class="os-form-dialog__section os-form-dialog__section--basic">
             <header class="os-form-dialog__section-head">
               <span class="os-form-dialog__section-icon" aria-hidden="true">

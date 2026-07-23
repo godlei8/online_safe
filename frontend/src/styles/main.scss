@@ -953,6 +953,146 @@ h1, h2, h3, h4, h5, h6 {
 .connection-snackbar .v-snackbar__wrapper { min-width: min(94vw, 560px); }
 .vault-feedback-snackbar .v-snackbar__wrapper { margin-bottom: 0; }
 
+/* ---------- 全局轻提示 os-toast（校验/保存失败等） ---------- */
+.os-toast.v-snackbar {
+  z-index: 2600;
+}
+
+.os-toast .v-snackbar__wrapper {
+  min-width: min(92vw, 360px);
+  max-width: min(94vw, 440px);
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius-card);
+  background: var(--os-surface) !important;
+  color: var(--os-text-title) !important;
+  box-shadow: var(--os-shadow-2) !important;
+  animation: os-toast-in var(--os-duration-base) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.os-toast.v-snackbar--bottom .v-snackbar__wrapper {
+  animation-name: os-toast-in-up;
+}
+
+.os-toast .v-snackbar__content {
+  padding: 0;
+  width: 100%;
+}
+
+.os-toast__inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+}
+
+.os-toast__mark {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  animation: os-toast-mark-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.os-toast__text {
+  flex: 1 1 auto;
+  margin: 0;
+  padding-top: 0;
+  color: var(--os-text-title);
+  font-size: 0.75rem;
+  font-weight: 550;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.os-toast--error .os-toast__mark {
+  color: var(--os-error);
+  background: var(--os-error-tint);
+}
+
+.os-toast--error .v-snackbar__wrapper {
+  border-color: var(--os-error-border);
+  box-shadow:
+    0 6px 16px -6px rgb(180 35 24 / 22%),
+    var(--os-shadow-1) !important;
+}
+
+.os-toast--warning .os-toast__mark {
+  color: var(--os-warning);
+  background: var(--os-warning-tint);
+}
+
+.os-toast--warning .v-snackbar__wrapper {
+  border-color: #f5d0a9;
+}
+
+.os-toast--success .os-toast__mark {
+  color: var(--os-success);
+  background: var(--os-success-tint);
+}
+
+.os-toast--success .v-snackbar__wrapper {
+  border-color: rgb(16 140 61 / 28%);
+}
+
+.os-toast--primary .os-toast__mark,
+.os-toast--info .os-toast__mark {
+  color: var(--os-primary);
+  background: var(--os-primary-tint);
+}
+
+.os-toast--primary .v-snackbar__wrapper,
+.os-toast--info .v-snackbar__wrapper {
+  border-color: var(--os-primary-border);
+}
+
+@keyframes os-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes os-toast-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes os-toast-mark-in {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-toast .v-snackbar__wrapper,
+  .os-toast__mark {
+    animation: none !important;
+  }
+}
+
 /* ============================================================
    保险箱初始化页（vault-gate）：与认证页同一套令牌
    ============================================================ */
@@ -2028,31 +2168,31 @@ a.vault-record-card__source-value:hover {
   text-decoration: underline;
 }
 
-/* 列表卡：账号 / 密码同一行 */
+/* 列表卡：账号 / 密码各占一行（与内容长短无关） */
 
 .vault-record-card__secrets {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 16px;
-  padding: 6px 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 4px 0;
   border-top: 1px solid var(--os-border);
   border-bottom: 1px solid var(--os-border);
 }
 
 .vault-secret-row {
-  display: inline-grid;
+  display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 12px;
+  width: 100%;
   min-width: 0;
   min-height: 32px;
-  padding: 2px 0;
-  flex: 1 1 auto;
+  padding: 4px 0;
 }
 
 .vault-secret-row + .vault-secret-row {
-  border-top: 0;
+  border-top: 1px solid var(--os-border);
 }
 
 .vault-secret-row__label {
@@ -2142,7 +2282,7 @@ a.vault-record-card__source-value:hover {
   outline-offset: 1px;
 }
 
-/* 凭证区布局见上方「来源 / 账号 / 密码同一行」 */
+/* 凭证区布局见上方：账号 / 密码各占一行 */
 
 .vault-secret-row__action {
   display: inline-grid;

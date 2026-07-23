@@ -8,6 +8,7 @@ import {
   type SystemTemplateStatus,
 } from '@/api/systemTemplates'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
+import { useOsToast } from '@/composables/useOsToast'
 import { fieldTypeItems, type FieldType } from '@/domain/vaultPayload'
 
 const loading = ref(false)
@@ -29,8 +30,8 @@ const channel = ref('')
 const channelUrl = ref('')
 const sortOrder = ref(0)
 const fields = ref<SystemTemplateField[]>([])
-const formError = ref('')
-const toast = ref(false)
+const toast = useOsToast()
+const successToast = ref(false)
 const toastText = ref('')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalElements.value / pageSize)))
@@ -109,7 +110,6 @@ function openCreate() {
   channelUrl.value = ''
   sortOrder.value = 0
   fields.value = defaultFields()
-  formError.value = ''
   editorOpen.value = true
 }
 
@@ -121,7 +121,6 @@ function openEdit(item: AdminSystemTemplate) {
   channelUrl.value = item.channelUrl
   sortOrder.value = item.sortOrder
   fields.value = item.fields.map((field) => ({ ...field, value: '' }))
-  formError.value = ''
   editorOpen.value = true
 }
 
@@ -153,9 +152,8 @@ function onTypeChange(field: SystemTemplateField, type: FieldType) {
 }
 
 async function submitEditor() {
-  formError.value = ''
   if (!name.value.trim() || !platform.value.trim()) {
-    formError.value = '请填写模板名称和所属平台'
+    toast.error('请填写模板名称和所属平台')
     return
   }
   saving.value = true
@@ -179,11 +177,11 @@ async function submitEditor() {
       await adminSystemTemplatesApi.create(payload)
       toastText.value = '草稿已创建'
     }
-    toast.value = true
+    successToast.value = true
     editorOpen.value = false
     await loadData()
   } catch (error) {
-    formError.value = error instanceof ApiRequestError ? error.message : '保存失败'
+    toast.error(error instanceof ApiRequestError ? error.message : '保存失败')
   } finally {
     saving.value = false
   }
@@ -193,7 +191,7 @@ async function publish(item: AdminSystemTemplate) {
   try {
     await adminSystemTemplatesApi.publish(item.id)
     toastText.value = '模板已发布'
-    toast.value = true
+    successToast.value = true
     await loadData()
   } catch (error) {
     errorMessage.value = error instanceof ApiRequestError ? error.message : '发布失败'
@@ -204,7 +202,7 @@ async function offline(item: AdminSystemTemplate) {
   try {
     await adminSystemTemplatesApi.offline(item.id)
     toastText.value = '模板已下线'
-    toast.value = true
+    successToast.value = true
     await loadData()
   } catch (error) {
     errorMessage.value = error instanceof ApiRequestError ? error.message : '下线失败'
@@ -215,7 +213,7 @@ async function removeDraft(item: AdminSystemTemplate) {
   try {
     await adminSystemTemplatesApi.remove(item.id)
     toastText.value = '草稿已删除'
-    toast.value = true
+    successToast.value = true
     await loadData()
   } catch (error) {
     errorMessage.value = error instanceof ApiRequestError ? error.message : '删除失败'
@@ -437,8 +435,6 @@ function fieldTone(type: string): string {
         </v-card-title>
 
         <v-card-text class="os-form-dialog__body">
-          <v-alert v-if="formError" type="error" variant="tonal" density="compact">{{ formError }}</v-alert>
-
           <section class="os-form-dialog__section os-form-dialog__section--basic">
             <header class="os-form-dialog__section-head">
               <span class="os-form-dialog__section-icon" aria-hidden="true">
@@ -595,6 +591,6 @@ function fieldTone(type: string): string {
       </v-card>
     </v-dialog>
 
-    <v-snackbar v-model="toast" :timeout="2200" color="primary">{{ toastText }}</v-snackbar>
+    <v-snackbar v-model="successToast" :timeout="2200" color="primary">{{ toastText }}</v-snackbar>
   </div>
 </template>

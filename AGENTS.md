@@ -20,6 +20,10 @@
 
 `v-select` / `v-autocomplete` / `v-combobox` 必须紧凑：字段约 **34px**，选项行高 **32px**（`os-select-menu`）。禁止恢复偏高默认列表项。详见 `docs/Design.md` §3.4。
 
+## 表单校验提示
+
+弹窗内校验失败、保存失败使用 `useOsToast().error(...)` 独立弹出，禁止再在表单顶部挂红色 `v-alert` 横幅。
+
 ## 项目记忆
 
 跨会话需查阅与维护：

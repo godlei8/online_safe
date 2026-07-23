@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
+import OsToastHost from '@/components/OsToastHost.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 
@@ -56,6 +57,7 @@ onMounted(initialize)
           <v-btn icon="mdi-close" variant="text" aria-label="关闭提示" @click="showInitializationError = false" />
         </template>
       </v-snackbar>
+      <OsToastHost />
     </v-main>
   </v-app>
 </template>

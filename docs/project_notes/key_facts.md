@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | 表单录入弹窗（记录/模板） | `os-form-dialog*` | `docs/Design.md` |
 | 二次确认（删除/异常/禁用等） | `OsConfirmDialog` / `os-confirm-dialog*` | `docs/Design.md` §5.3.1 |
+| 表单校验/保存失败提示 | `useOsToast` / `OsToastHost`（独立弹出，勿用弹窗内红条） | `docs/Design.md` §5 |
 
 ## 按钮高度（相对旧规范 −10px）
 

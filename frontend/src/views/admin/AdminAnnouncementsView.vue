@@ -9,6 +9,7 @@ import {
   type AnnouncementStatus,
 } from '@/api/announcements'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
+import { useOsToast } from '@/composables/useOsToast'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -26,8 +27,8 @@ const body = ref('')
 const pinned = ref(false)
 const startsAtLocal = ref('')
 const endsAtLocal = ref('')
-const formError = ref('')
-const toast = ref(false)
+const toast = useOsToast()
+const successToast = ref(false)
 const toastText = ref('')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalElements.value / pageSize)))
@@ -76,7 +77,6 @@ function openCreate() {
   pinned.value = false
   startsAtLocal.value = ''
   endsAtLocal.value = ''
-  formError.value = ''
   editorOpen.value = true
 }
 
@@ -87,14 +87,12 @@ function openEdit(item: AdminAnnouncement) {
   pinned.value = item.pinned
   startsAtLocal.value = localInputFromIso(item.startsAt)
   endsAtLocal.value = localInputFromIso(item.endsAt)
-  formError.value = ''
   editorOpen.value = true
 }
 
 async function submitEditor() {
-  formError.value = ''
   if (!title.value.trim() || !body.value.trim()) {
-    formError.value = '请填写标题和正文'
+    toast.error('请填写标题和正文')
     return
   }
   saving.value = true
@@ -116,11 +114,11 @@ async function submitEditor() {
       await adminAnnouncementsApi.create(payload)
       toastText.value = '草稿已创建'
     }
-    toast.value = true
+    successToast.value = true
     editorOpen.value = false
     await loadData()
   } catch (error) {
-    formError.value = error instanceof ApiRequestError ? error.message : '保存失败，请稍后重试。'
+    toast.error(error instanceof ApiRequestError ? error.message : '保存失败，请稍后重试。')
   } finally {
     saving.value = false
   }
@@ -130,7 +128,7 @@ async function publish(item: AdminAnnouncement) {
   try {
     await adminAnnouncementsApi.publish(item.id)
     toastText.value = '公告已发布'
-    toast.value = true
+    successToast.value = true
     await loadData()
   } catch (error) {
     errorMessage.value = error instanceof ApiRequestError ? error.message : '发布失败'
@@ -141,7 +139,7 @@ async function offline(item: AdminAnnouncement) {
   try {
     await adminAnnouncementsApi.offline(item.id)
     toastText.value = '公告已下线'
-    toast.value = true
+    successToast.value = true
     await loadData()
   } catch (error) {
     errorMessage.value = error instanceof ApiRequestError ? error.message : '下线失败'
@@ -317,8 +315,6 @@ function formatWindow(item: AdminAnnouncement) {
         </header>
 
         <div class="admin-announcement-editor__body">
-          <v-alert v-if="formError" type="error" variant="tonal" density="compact">{{ formError }}</v-alert>
-
           <section class="admin-announcement-editor__section">
             <h3>内容</h3>
             <v-text-field
@@ -409,6 +405,6 @@ function formatWindow(item: AdminAnnouncement) {
       </v-card>
     </v-dialog>
 
-    <v-snackbar v-model="toast" color="primary" :timeout="2200">{{ toastText }}</v-snackbar>
+    <v-snackbar v-model="successToast" color="primary" :timeout="2200">{{ toastText }}</v-snackbar>
   </div>
 </template>

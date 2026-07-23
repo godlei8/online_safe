@@ -92,6 +92,7 @@ online-word/
 10. **二次确认弹窗**：删除、标记异常、禁用用户等一律用 `OsConfirmDialog`（`os-confirm-dialog*` 色彩与动效）；禁止 `window.confirm` 与临时白框。详见 `docs/Design.md` §5.3.1 与 `docs/project_notes/decisions.md`。
 11. **按钮高度**：相对旧规范整体 −10px——工作区默认 **30px**、认证主按钮 **38px**、确认弹窗按钮 **28px**；令牌见 `--os-control-*` / `docs/Design.md` §3.3。禁止再使用偏高的 40/48 默认。
 12. **下拉框**：字段约 **34px**、选项行高 **32px**（`os-select-menu` / `--os-select-item`）；`vuetify.ts` 已默认挂 `menuProps.contentClass`。禁止偏高默认列表项。见 `docs/Design.md` §3.4。
+13. **表单校验提示**：弹窗内校验/保存失败用 `useOsToast().error(...)` 独立弹出；禁止弹窗顶部红色 `v-alert` 横幅。
 
 ## 6. 关键 API（现状）
 

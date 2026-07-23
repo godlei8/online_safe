@@ -208,6 +208,7 @@ Online Safe 面向需要保存多来源账号资料的个人用户与管理员�
 - 复制成功反馈"已复制 + 字段名"，不回显字段值。
 - 新建/编辑走弹窗（Level 3 阴影、12px 圆角、内容区可滚、底部固定取消/保存）。
 - **表单弹窗一律**对齐「记录新增/编辑」规范：紧凑控件（约 34px 高）、分区色标 + 字段类型色条，入场/hover 微动效；实现类名 `os-form-dialog*`（见 `frontend/src/styles/main.scss`）。禁止再做宽松白底、无分区色的大控件录入弹窗。
+- **表单校验/保存失败**：用全局轻提示 `useOsToast().error(...)`（`OsToastHost`）单独弹出：白底卡片 + 语义图标块 + 入场微动效；禁止在弹窗顶部再挂红色 `v-alert` 横幅，也避免整条纯色红底 snackbar。
 - **二次确认弹窗一律**使用统一组件 `OsConfirmDialog`（类名 `os-confirm-dialog*`）：删除/危险操作用 `danger`，警告类用 `warning`，普通确认用 `primary`。禁止再用浏览器 `window.confirm` 或无图标的纯文字小白框。
 
 ### 5.3.1 统一二次确认弹窗（强制）

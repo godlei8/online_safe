@@ -11,7 +11,6 @@ const form = defineModel<VaultItemPayload>({ required: true })
 
 defineProps<{
   loading?: boolean
-  errorMessage?: string
   /** 新建/编辑均可留空有效期，表示永久有效 */
   mode?: 'create' | 'edit'
 }>()
@@ -127,10 +126,6 @@ function valuePlaceholder(type: FieldType | string): string | undefined {
 <template>
   <div class="vault-item-form">
     <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-2" height="2" />
-
-    <v-alert v-if="errorMessage" type="error" variant="tonal" density="compact" class="mb-2">
-      {{ errorMessage }}
-    </v-alert>
 
     <template v-if="!loading">
       <section class="vault-item-form__section vault-item-form__section--basic">
