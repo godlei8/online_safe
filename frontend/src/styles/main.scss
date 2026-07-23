@@ -62,6 +62,36 @@
 
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 
+/* 全局细滚动条：与信任蓝体系一致，弹窗 / 列表同步生效 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c5d0e0 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #c5d0e0;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #9eb0c9;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 a { color: inherit; }
 
 h1, h2, h3, h4, h5, h6 {
@@ -93,13 +123,24 @@ h1, h2, h3, h4, h5, h6 {
 /* 次操作：浅蓝边框 + 信任蓝文字 */
 .v-btn--variant-outlined.text-primary { border-color: var(--os-primary-border); }
 
-/* 输入框：静态浅灰边；聚焦保持 1px 柔和描边，避免高饱和粗边 + 强外光 */
-.v-field {
+/* 输入框：静态浅灰边；聚焦只换描边色，禁止外圈光晕 / 加粗双边 */
+.v-field,
+.v-field--focused,
+.v-field--error,
+.v-input--focused .v-field,
+.v-text-field .v-field,
+.v-select .v-field,
+.v-autocomplete .v-field,
+.v-combobox .v-field,
+.v-textarea .v-field {
   --v-field-border-width: 1px;
   --v-field-border-opacity: 1;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .v-field__outline {
+  --v-field-border-width: 1px;
   --v-field-border-opacity: 1;
   color: var(--os-border);
 }
@@ -108,26 +149,30 @@ h1, h2, h3, h4, h5, h6 {
   color: #c9d5e5;
 }
 
-.v-field--focused {
+/* 覆盖 Vuetify 默认「聚焦描边 2px」，避免上下出现双边浅蓝框 */
+.v-field--variant-outlined.v-field--focused .v-field__outline,
+.v-field.v-field--focused .v-field__outline {
   --v-field-border-width: 1px;
-  box-shadow: 0 0 0 3px var(--os-focus-ring);
-}
-
-.v-field--focused .v-field__outline {
-  color: var(--os-field-focus);
+  color: var(--os-primary);
 }
 
 .v-field--focused .v-label,
 .v-field--focused .v-field-label {
-  color: var(--os-field-focus) !important;
+  color: var(--os-primary) !important;
   opacity: 1;
 }
 
 .v-field--error .v-field__outline { color: var(--os-error); }
-.v-field--error { box-shadow: 0 0 0 3px rgb(180 35 24 / 10%); }
 .v-field--disabled { background: var(--os-bg); opacity: 0.72; }
 .v-label { color: var(--os-text-body); }
 .v-field__input { color: var(--os-text-title); }
+
+.v-field__input:focus,
+.v-field__input:focus-visible,
+.v-field :focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
 
 /* 弹窗：12px 圆角 + Level 3 浮层阴影 */
 .v-dialog > .v-overlay__content > .v-card {

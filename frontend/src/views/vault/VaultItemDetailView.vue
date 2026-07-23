@@ -7,6 +7,7 @@ import {
   fieldTypeLabel,
   statusLabel,
   toExternalHref,
+  toPhoneHref,
   type VaultItemPayload,
 } from '@/domain/vaultPayload'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
@@ -160,7 +161,7 @@ const statusTone = computed(() => {
       </header>
 
       <v-alert type="info" variant="tonal" class="mb-4">
-        敏感字段默认以暗文显示，可点击眼睛图标临时查看；网址可点击跳转，并支持一键复制。
+        敏感字段默认暗文显示；网址可跳转，手机号可拨打，并支持一键复制。
       </v-alert>
 
       <div class="vault-field-list">
@@ -175,6 +176,13 @@ const statusTone = computed(() => {
                 class="vault-field-row__link"
                 target="_blank"
                 rel="noopener noreferrer"
+              >
+                {{ field.value }}
+              </a>
+              <a
+                v-else-if="field.type === 'PHONE' && toPhoneHref(field.value) && !isMasked(field)"
+                :href="toPhoneHref(field.value)!"
+                class="vault-field-row__link"
               >
                 {{ field.value }}
               </a>

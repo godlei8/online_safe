@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-/** 动态字段可选类型（UI 仅开放这四种） */
-export const fieldTypeSchema = z.enum(['TEXT', 'PASSWORD', 'EMAIL', 'URL'])
+/** 动态字段可选类型（UI 开放：文本 / 密码 / 邮箱 / 网址 / 手机号） */
+export const fieldTypeSchema = z.enum(['TEXT', 'PASSWORD', 'EMAIL', 'URL', 'PHONE'])
 export type FieldType = z.infer<typeof fieldTypeSchema>
 
 /** 兼容历史密文中可能出现的旧类型 */
@@ -22,6 +22,7 @@ export const fieldTypeLabels: Record<FieldType, string> = {
   PASSWORD: '密码',
   EMAIL: '邮箱',
   URL: '网址',
+  PHONE: '手机号',
 }
 
 export const fieldTypeItems = (Object.keys(fieldTypeLabels) as FieldType[]).map((value) => ({
@@ -32,7 +33,6 @@ export const fieldTypeItems = (Object.keys(fieldTypeLabels) as FieldType[]).map(
 export function fieldTypeLabel(type: string): string {
   if (type in fieldTypeLabels) return fieldTypeLabels[type as FieldType]
   const legacy: Record<string, string> = {
-    PHONE: '手机号',
     CODE: '代码',
     DATETIME: '日期时间',
     MULTILINE: '多行文本',
@@ -45,6 +45,7 @@ function normalizeFieldType(type: string): FieldType {
   if (type === 'PASSWORD') return 'PASSWORD'
   if (type === 'EMAIL') return 'EMAIL'
   if (type === 'URL') return 'URL'
+  if (type === 'PHONE') return 'PHONE'
   return 'TEXT'
 }
 
@@ -173,7 +174,7 @@ export function ensureCredentialFields(payload: VaultItemPayload): VaultItemPayl
     ? {
         ...account,
         name: '账号',
-        type: account.type === 'EMAIL' ? 'EMAIL' : 'TEXT',
+        type: account.type === 'EMAIL' || account.type === 'PHONE' ? account.type : 'TEXT',
         required: true,
         copyable: true,
         systemKey: 'account',
@@ -284,7 +285,7 @@ export function pickListCredentials(fields: VaultField[]): {
     ?? sorted.find((field) => !isPasswordField(field) && isAccountField(field))
     ?? sorted.find((field) => (
       !isPasswordField(field)
-      && (field.type === 'EMAIL' || field.type === 'TEXT')
+      && (field.type === 'EMAIL' || field.type === 'PHONE' || field.type === 'TEXT')
     ))
     ?? null
   return { account, password }
@@ -314,6 +315,15 @@ export function toExternalHref(raw: string): string | null {
   } catch {
     return null
   }
+}
+
+/** 将手机号规范为可拨打 tel: 链接 */
+export function toPhoneHref(raw: string): string | null {
+  const value = raw.trim()
+  if (!value) return null
+  const compact = value.replace(/[\s()-]/g, '')
+  if (!/^\+?\d{7,15}$/.test(compact)) return null
+  return `tel:${compact}`
 }
 
 /** 渠道跳转：优先 channelUrl；兼容旧数据把网址写在 channel 里 */
