@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useRouter } from 'vue-router'
+import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import {
   channelExternalHref,
@@ -18,9 +19,10 @@ import { useVaultStore } from '@/stores/vault'
 
 type 排序方式 = '最近更新' | '最早创建' | '名称'
 type 展示方式 = '卡片' | '列表'
+type TemplatePickerTab = 'private' | 'system'
 
 const router = useRouter()
-const { xs } = useDisplay()
+const { xs, smAndDown } = useDisplay()
 const vault = useVaultStore()
 const announcements = useAnnouncementsStore()
 const editor = useVaultItemEditor()
@@ -41,6 +43,9 @@ const abnormalTargetId = ref<string | null>(null)
 const markingAbnormal = ref(false)
 /** 列表卡片中已临时明文显示密码的记录 id */
 const revealedPasswordIds = ref<Record<string, boolean>>({})
+const templatePickerOpen = ref(false)
+const templatePickerTab = ref<TemplatePickerTab>('private')
+const templatePickerLoading = ref(false)
 
 const records = computed(() => vault.items.map(({ envelope, payload }) => {
   const { account, password } = pickListCredentials(payload.fields)
@@ -215,7 +220,47 @@ async function loadRecords() {
   }
 }
 
-onMounted(loadRecords)
+async function preloadTemplates() {
+  try {
+    await Promise.all([vault.loadTemplates(), vault.loadSystemTemplates()])
+  } catch {
+    // 模板预加载失败不挡列表
+  }
+}
+
+async function openTemplatePicker() {
+  templatePickerTab.value = 'private'
+  templatePickerOpen.value = true
+  templatePickerLoading.value = true
+  try {
+    await Promise.all([vault.loadTemplates(), vault.loadSystemTemplates()])
+  } catch {
+    snackbarText.value = '模板列表加载失败，请稍后重试'
+    snackbar.value = true
+  } finally {
+    templatePickerLoading.value = false
+  }
+}
+
+function createFromPrivateTemplate(id: string) {
+  templatePickerOpen.value = false
+  editor.openCreate({ templateId: id, templateSource: 'private' })
+}
+
+function createFromSystemTemplate(id: string) {
+  templatePickerOpen.value = false
+  editor.openCreate({ templateId: id, templateSource: 'system' })
+}
+
+function goTemplatesCenter() {
+  templatePickerOpen.value = false
+  void router.push({ name: 'vault-templates' })
+}
+
+onMounted(() => {
+  void loadRecords()
+  void preloadTemplates()
+})
 </script>
 
 <template>
@@ -228,20 +273,45 @@ onMounted(loadRecords)
           <span>{{ filteredRecords.length }} 条记录</span>
         </div>
       </div>
-      <v-btn
-        color="primary"
-        class="vault-new-record"
-        size="small"
-        prepend-icon="mdi-plus"
-        @click="editor.openCreate()"
-      >
-        新增记录
-      </v-btn>
     </div>
 
-    <div class="vault-privacy-note" role="note">
-      <v-icon icon="mdi-lock-check-outline" size="16" />
-      <span>列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常或编辑，点击卡片进入详情。</span>
+    <div class="vault-hint-row">
+      <div class="vault-privacy-note" role="note">
+        <v-icon icon="mdi-lock-check-outline" size="16" />
+        <span>列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常或编辑，点击卡片进入详情。</span>
+      </div>
+
+      <div class="vault-new-record-group">
+        <v-btn
+          color="primary"
+          class="vault-new-record"
+          size="small"
+          prepend-icon="mdi-plus"
+          @click="editor.openCreate()"
+        >
+          新增记录
+        </v-btn>
+        <v-menu location="bottom end">
+          <template #activator="{ props: menuProps }">
+            <v-btn
+              v-bind="menuProps"
+              color="primary"
+              class="vault-new-record-group__caret"
+              size="small"
+              aria-label="更多创建方式"
+              icon="mdi-menu-down"
+            />
+          </template>
+          <v-list density="compact" class="vault-new-record-menu" nav>
+            <v-list-item
+              prepend-icon="mdi-file-document-plus-outline"
+              title="从模板创建"
+              subtitle="选用个人或系统模板"
+              @click="openTemplatePicker"
+            />
+          </v-list>
+        </v-menu>
+      </div>
     </div>
 
     <aside
@@ -249,17 +319,19 @@ onMounted(loadRecords)
       class="vault-pinned-announcement"
       role="status"
     >
-      <div class="vault-pinned-announcement__mark">
-        <v-icon icon="mdi-bullhorn-outline" size="18" />
+      <div class="vault-pinned-announcement__mark" aria-hidden="true">
+        <v-icon icon="mdi-bullhorn-outline" size="16" />
       </div>
-      <div class="vault-pinned-announcement__content">
+      <div class="vault-pinned-announcement__text">
         <strong>{{ announcements.pinnedBanner.title }}</strong>
-        <p>{{ announcements.pinnedBanner.body }}</p>
+        <span>{{ announcements.pinnedBanner.body }}</span>
       </div>
       <v-btn
-        size="small"
+        class="vault-pinned-announcement__action"
+        size="x-small"
         variant="text"
         color="primary"
+        append-icon="mdi-chevron-right"
         @click="announcements.openList()"
       >
         查看全部
@@ -498,9 +570,46 @@ onMounted(loadRecords)
       <p class="vault-eyebrow">从第一条记录开始</p>
       <h2>你的保险箱还是空的</h2>
       <p>新增后可按平台、渠道、状态在本地搜索；可复制账号密码，也可直接编辑或标记异常。</p>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="editor.openCreate()">
-        添加第一条记录
-      </v-btn>
+      <div class="vault-empty-state__actions">
+        <div class="vault-new-record-group">
+          <v-btn
+            color="primary"
+            class="vault-new-record"
+            prepend-icon="mdi-plus"
+            @click="editor.openCreate()"
+          >
+            添加第一条记录
+          </v-btn>
+          <v-menu location="bottom end">
+            <template #activator="{ props: menuProps }">
+              <v-btn
+                v-bind="menuProps"
+                color="primary"
+                class="vault-new-record-group__caret"
+                aria-label="更多创建方式"
+                icon="mdi-menu-down"
+              />
+            </template>
+            <v-list density="compact" class="vault-new-record-menu" nav>
+              <v-list-item
+                prepend-icon="mdi-file-document-plus-outline"
+                title="从模板创建"
+                subtitle="选用个人或系统模板"
+                @click="openTemplatePicker"
+              />
+            </v-list>
+          </v-menu>
+        </div>
+        <v-btn
+          variant="text"
+          color="primary"
+          size="small"
+          prepend-icon="mdi-file-document-plus-outline"
+          @click="openTemplatePicker"
+        >
+          从模板创建
+        </v-btn>
+      </div>
     </section>
 
     <section v-else-if="!loading" class="vault-empty-state" aria-label="无匹配记录">
@@ -515,34 +624,157 @@ onMounted(loadRecords)
       </v-btn>
     </section>
 
-    <v-dialog v-model="abnormalConfirmOpen" max-width="360">
-      <v-card class="vault-confirm-dialog">
-        <v-card-title class="vault-confirm-dialog__title">确认标记异常？</v-card-title>
-        <v-card-text class="vault-confirm-dialog__body">
-          标记后该记录状态将变为「异常」。此操作可在列表中立即看到，是否继续？
+    <OsConfirmDialog
+      v-model="abnormalConfirmOpen"
+      variant="warning"
+      icon="mdi-alert-decagram-outline"
+      title="确认标记异常？"
+      message="标记后该记录状态将变为「异常」。此操作可在列表中立即看到，是否继续？"
+      confirm-text="确认标记"
+      :loading="markingAbnormal"
+      @confirm="confirmMarkAbnormal"
+    />
+
+    <v-dialog
+      v-model="templatePickerOpen"
+      :fullscreen="smAndDown"
+      :max-width="smAndDown ? undefined : 560"
+      scrollable
+    >
+      <v-card class="os-form-dialog vault-template-picker">
+        <v-card-title class="os-form-dialog__title">
+          <div class="os-form-dialog__heading">
+            <span class="os-form-dialog__mark" aria-hidden="true">
+              <v-icon icon="mdi-file-document-plus-outline" size="18" />
+            </span>
+            <div>
+              <p class="os-form-dialog__eyebrow">选用模板</p>
+              <h2>从模板创建</h2>
+            </div>
+          </div>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            size="small"
+            aria-label="关闭"
+            @click="templatePickerOpen = false"
+          />
+        </v-card-title>
+
+        <v-card-text class="os-form-dialog__body">
+          <div class="vault-template-picker__tabs" role="tablist" aria-label="模板分类">
+            <button
+              type="button"
+              role="tab"
+              class="vault-template-picker__tab"
+              :class="{ 'vault-template-picker__tab--active': templatePickerTab === 'private' }"
+              :aria-selected="templatePickerTab === 'private'"
+              @click="templatePickerTab = 'private'"
+            >
+              我的模板
+              <span class="vault-template-picker__count">{{ vault.templates.length }}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="vault-template-picker__tab"
+              :class="{ 'vault-template-picker__tab--active': templatePickerTab === 'system' }"
+              :aria-selected="templatePickerTab === 'system'"
+              @click="templatePickerTab = 'system'"
+            >
+              系统模板
+              <span class="vault-template-picker__count">{{ vault.systemTemplates.length }}</span>
+            </button>
+          </div>
+
+          <v-progress-linear
+            v-if="templatePickerLoading"
+            indeterminate
+            color="primary"
+            class="mb-3"
+            height="2"
+          />
+
+          <template v-else-if="templatePickerTab === 'private'">
+            <div v-if="vault.templates.length" class="vault-template-picker__list">
+              <article
+                v-for="item in vault.templates"
+                :key="item.envelope.id"
+                class="vault-template-picker__card"
+              >
+                <div class="vault-template-picker__card-main">
+                  <strong>{{ item.payload.name }}</strong>
+                  <span>
+                    {{ item.payload.platform || '未指定平台' }}
+                    · {{ item.payload.fields.length }} 个字段
+                  </span>
+                </div>
+                <v-btn
+                  class="vault-template-picker__use"
+                  size="x-small"
+                  color="primary"
+                  variant="flat"
+                  prepend-icon="mdi-file-plus-outline"
+                  @click="createFromPrivateTemplate(item.envelope.id)"
+                >
+                  使用
+                </v-btn>
+              </article>
+            </div>
+            <div v-else class="vault-template-picker__empty">
+              <p>还没有个人模板</p>
+              <v-btn
+                size="small"
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-arrow-right"
+                @click="goTemplatesCenter"
+              >
+                前往模板中心
+              </v-btn>
+            </div>
+          </template>
+
+          <template v-else>
+            <div v-if="vault.systemTemplates.length" class="vault-template-picker__list">
+              <article
+                v-for="item in vault.systemTemplates"
+                :key="item.id"
+                class="vault-template-picker__card vault-template-picker__card--system"
+              >
+                <div class="vault-template-picker__card-main">
+                  <strong>{{ item.name }}</strong>
+                  <span>
+                    {{ item.platform || '未指定平台' }}
+                    · {{ item.fields.length }} 个字段
+                  </span>
+                </div>
+                <v-btn
+                  class="vault-template-picker__use"
+                  size="x-small"
+                  color="primary"
+                  variant="flat"
+                  prepend-icon="mdi-file-plus-outline"
+                  @click="createFromSystemTemplate(item.id)"
+                >
+                  使用
+                </v-btn>
+              </article>
+            </div>
+            <div v-else class="vault-template-picker__empty">
+              <p>暂无已发布的系统模板</p>
+              <v-btn
+                size="small"
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-arrow-right"
+                @click="goTemplatesCenter"
+              >
+                前往模板中心
+              </v-btn>
+            </div>
+          </template>
         </v-card-text>
-        <v-card-actions class="vault-confirm-dialog__actions">
-          <v-spacer />
-          <v-btn
-            variant="text"
-            size="small"
-            density="compact"
-            :disabled="markingAbnormal"
-            @click="abnormalConfirmOpen = false"
-          >
-            取消
-          </v-btn>
-          <v-btn
-            color="error"
-            variant="text"
-            size="small"
-            density="compact"
-            :loading="markingAbnormal"
-            @click="confirmMarkAbnormal"
-          >
-            确认标记
-          </v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
 

@@ -2,6 +2,9 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { ApiRequestError } from '@/api/client'
 import { usersApi, type ManagedUser, type ManagedUserStats } from '@/api/users'
+import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+
+type UserConfirmAction = 'disable' | 'enable' | 'revokeSessions'
 
 const loading = ref(false)
 const acting = ref(false)
@@ -91,19 +94,64 @@ function formatRelative(value: string | null) {
   return formatTime(value)
 }
 
-async function disableUser(user: ManagedUser) {
-  if (!window.confirm(`确认禁用用户「${user.username}」？将同时使其现有会话失效。`)) return
-  await runAction(() => usersApi.disable(user.id), '已禁用用户')
+const confirmOpen = ref(false)
+const confirmAction = ref<UserConfirmAction | null>(null)
+const confirmUser = ref<ManagedUser | null>(null)
+
+const confirmTitle = computed(() => {
+  if (confirmAction.value === 'disable') return '确认禁用用户？'
+  if (confirmAction.value === 'enable') return '确认启用用户？'
+  if (confirmAction.value === 'revokeSessions') return '确认使会话失效？'
+  return '确认操作？'
+})
+
+const confirmMessage = computed(() => {
+  const name = confirmUser.value?.username || '该用户'
+  if (confirmAction.value === 'disable') {
+    return `将禁用用户「${name}」，并同时使其现有会话失效。是否继续？`
+  }
+  if (confirmAction.value === 'enable') {
+    return `将启用用户「${name}」。是否继续？`
+  }
+  if (confirmAction.value === 'revokeSessions') {
+    return `将使用户「${name}」的全部登录会话失效。是否继续？`
+  }
+  return '是否继续？'
+})
+
+const confirmText = computed(() => {
+  if (confirmAction.value === 'disable') return '确认禁用'
+  if (confirmAction.value === 'enable') return '确认启用'
+  if (confirmAction.value === 'revokeSessions') return '确认失效'
+  return '确认'
+})
+
+const confirmVariant = computed(() => (
+  confirmAction.value === 'enable' ? 'primary' : 'danger'
+))
+
+function askUserAction(action: UserConfirmAction, user: ManagedUser) {
+  confirmAction.value = action
+  confirmUser.value = user
+  confirmOpen.value = true
 }
 
-async function enableUser(user: ManagedUser) {
-  if (!window.confirm(`确认启用用户「${user.username}」？`)) return
-  await runAction(() => usersApi.enable(user.id), '已启用用户')
-}
-
-async function revokeSessions(user: ManagedUser) {
-  if (!window.confirm(`确认使用户「${user.username}」的全部登录会话失效？`)) return
-  await runAction(() => usersApi.revokeSessions(user.id), '已使会话失效')
+async function confirmUserAction() {
+  if (!confirmUser.value || !confirmAction.value) return
+  const user = confirmUser.value
+  const action = confirmAction.value
+  let ok = false
+  if (action === 'disable') {
+    ok = await runAction(() => usersApi.disable(user.id), '已禁用用户')
+  } else if (action === 'enable') {
+    ok = await runAction(() => usersApi.enable(user.id), '已启用用户')
+  } else {
+    ok = await runAction(() => usersApi.revokeSessions(user.id), '已使会话失效')
+  }
+  if (!ok) return
+  confirmOpen.value = false
+  confirmAction.value = null
+  confirmUser.value = null
 }
 
 async function runAction(action: () => Promise<ManagedUser>, successText: string) {
@@ -114,8 +162,10 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
     toastText.value = successText
     toast.value = true
     await loadData()
+    return true
   } catch (error) {
     errorMessage.value = error instanceof ApiRequestError ? error.message : '操作失败，请稍后重试。'
+    return false
   } finally {
     acting.value = false
   }
@@ -242,33 +292,39 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
             <td data-label="记录数">—</td>
             <td data-label="活跃会话">{{ item.activeSessionCount }}</td>
             <td data-label="操作">
-              <div class="d-flex flex-wrap ga-1">
+              <div class="admin-row-actions">
                 <v-btn
                   v-if="item.status === 'ACTIVE'"
-                  size="small"
+                  class="admin-row-actions__btn admin-row-actions__btn--danger"
+                  size="x-small"
                   variant="text"
                   color="error"
+                  prepend-icon="mdi-account-off-outline"
                   :disabled="acting"
-                  @click="disableUser(item)"
+                  @click="askUserAction('disable', item)"
                 >
                   禁用
                 </v-btn>
                 <v-btn
                   v-else
-                  size="small"
-                  variant="text"
+                  class="admin-row-actions__btn admin-row-actions__btn--primary"
+                  size="x-small"
+                  variant="flat"
                   color="primary"
+                  prepend-icon="mdi-account-check-outline"
                   :disabled="acting"
-                  @click="enableUser(item)"
+                  @click="askUserAction('enable', item)"
                 >
                   启用
                 </v-btn>
                 <v-btn
-                  size="small"
+                  class="admin-row-actions__btn"
+                  size="x-small"
                   variant="text"
                   color="primary"
+                  prepend-icon="mdi-logout-variant"
                   :disabled="acting"
-                  @click="revokeSessions(item)"
+                  @click="askUserAction('revokeSessions', item)"
                 >
                   使会话失效
                 </v-btn>
@@ -285,6 +341,16 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
         <v-pagination v-model="page" :length="totalPages" total-visible="5" />
       </div>
     </v-card>
+
+    <OsConfirmDialog
+      v-model="confirmOpen"
+      :variant="confirmVariant"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-text="confirmText"
+      :loading="acting"
+      @confirm="confirmUserAction"
+    />
 
     <v-snackbar v-model="toast" color="success" timeout="2400" location="top">{{ toastText }}</v-snackbar>
   </div>

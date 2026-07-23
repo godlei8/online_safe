@@ -57,7 +57,7 @@ export const vaultFieldSchema = z.object({
   required: z.boolean(),
   sensitive: z.boolean(),
   copyable: z.boolean(),
-  hint: z.string(),
+  hint: z.string().nullish().transform((value) => value ?? ''),
   order: z.number().int().nonnegative(),
   options: z.array(z.string()).optional(),
   /** 系统固定字段：账号 / 密码 */
@@ -94,6 +94,12 @@ export const vaultItemPayloadSchema = z.object({
 })
 
 export type VaultItemPayload = z.infer<typeof vaultItemPayloadSchema>
+
+/** 录入草稿允许名称/平台暂空（使用模板创建时常见） */
+const vaultItemDraftSchema = vaultItemPayloadSchema.extend({
+  name: z.string(),
+  platform: z.string(),
+})
 
 export const privateTemplatePayloadSchema = z.object({
   name: z.string().min(1),
@@ -237,10 +243,10 @@ export function emptyItemPayload(): VaultItemPayload {
   })
 }
 
-/** 深拷贝为纯对象，并补齐系统字段 */
+/** 深拷贝为纯对象，并补齐系统字段（草稿不强制名称/平台非空） */
 export function cloneVaultItemPayload(payload: VaultItemPayload): VaultItemPayload {
   return ensureCredentialFields(
-    vaultItemPayloadSchema.parse(JSON.parse(JSON.stringify(payload))),
+    vaultItemDraftSchema.parse(JSON.parse(JSON.stringify(payload))),
   )
 }
 

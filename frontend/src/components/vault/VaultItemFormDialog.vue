@@ -27,8 +27,19 @@ const errorMessage = ref('')
 const loadToken = ref(0)
 
 const isEdit = computed(() => Boolean(editor.editingId.value))
-const title = computed(() => (isEdit.value ? '编辑记录' : '手动录入账密'))
-const subtitle = computed(() => (isEdit.value ? '修改账密记录' : '新增账密记录'))
+const fromTemplate = computed(() => Boolean(editor.templateId.value) && !isEdit.value)
+const title = computed(() => {
+  if (isEdit.value) return '编辑记录'
+  if (fromTemplate.value) {
+    return editor.templateSource.value === 'system' ? '系统模板创建' : '模板创建'
+  }
+  return '手动录入账密'
+})
+const subtitle = computed(() => {
+  if (isEdit.value) return '修改账密记录'
+  if (fromTemplate.value) return '按模板结构填写账密'
+  return '新增账密记录'
+})
 
 const dialogOpen = computed({
   get: () => editor.visible.value,
@@ -137,14 +148,14 @@ function cancel() {
     scrollable
     persistent
   >
-    <v-card class="vault-item-form-dialog">
-      <v-card-title class="vault-item-form-dialog__title">
-        <div class="vault-item-form-dialog__heading">
-          <span class="vault-item-form-dialog__mark" aria-hidden="true">
+    <v-card class="os-form-dialog">
+      <v-card-title class="os-form-dialog__title">
+        <div class="os-form-dialog__heading">
+          <span class="os-form-dialog__mark" aria-hidden="true">
             <v-icon :icon="isEdit ? 'mdi-pencil-outline' : 'mdi-plus-circle-outline'" size="18" />
           </span>
           <div>
-            <p class="vault-item-form-dialog__eyebrow">{{ title }}</p>
+            <p class="os-form-dialog__eyebrow">{{ title }}</p>
             <h2>{{ subtitle }}</h2>
           </div>
         </div>
@@ -157,7 +168,7 @@ function cancel() {
         />
       </v-card-title>
 
-      <v-card-text class="vault-item-form-dialog__body">
+      <v-card-text class="os-form-dialog__body">
         <VaultItemForm
           v-model="form"
           :loading="loading"
@@ -166,11 +177,11 @@ function cancel() {
         />
       </v-card-text>
 
-      <v-card-actions class="vault-item-form-dialog__actions">
+      <v-card-actions class="os-form-dialog__actions">
         <v-spacer />
         <v-btn variant="text" size="small" :disabled="saving" @click="cancel">取消</v-btn>
         <v-btn
-          class="vault-item-form-dialog__save"
+          class="os-form-dialog__save"
           color="primary"
           size="small"
           :loading="saving"
@@ -183,96 +194,3 @@ function cancel() {
     </v-card>
   </v-dialog>
 </template>
-
-<style scoped>
-.vault-item-form-dialog {
-  display: flex;
-  flex-direction: column;
-  max-height: min(90vh, 860px);
-  overflow: hidden;
-}
-
-.vault-item-form-dialog__title {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px 16px 10px !important;
-  border-bottom: 1px solid var(--os-border);
-  background:
-    linear-gradient(120deg, rgb(21 94 239 / 8%), transparent 55%),
-    var(--os-surface);
-}
-
-.vault-item-form-dialog__heading {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 0;
-}
-
-.vault-item-form-dialog__mark {
-  display: inline-grid;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 9px;
-  color: #fff;
-  background: linear-gradient(145deg, #3b82f6, #155eef);
-  box-shadow: 0 6px 14px -6px rgb(21 94 239 / 55%);
-}
-
-.vault-item-form-dialog__eyebrow {
-  margin: 0;
-  color: var(--os-primary);
-  font-size: 0.6875rem;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-}
-
-.vault-item-form-dialog__title h2 {
-  margin: 1px 0 0;
-  color: var(--os-text-title);
-  font-size: 1.05rem;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-}
-
-.vault-item-form-dialog__body {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 12px 10px 12px 14px !important;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  background: linear-gradient(180deg, #f8faff 0%, var(--os-bg) 48%);
-  scrollbar-gutter: stable;
-}
-
-.vault-item-form-dialog__actions {
-  flex: 0 0 auto;
-  padding: 10px 14px !important;
-  border-top: 1px solid var(--os-border);
-  background: var(--os-surface);
-}
-
-.vault-item-form-dialog__save {
-  min-width: 84px;
-  transition: transform 160ms ease, box-shadow 160ms ease;
-}
-
-.vault-item-form-dialog__save:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 16px -8px rgb(21 94 239 / 55%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vault-item-form-dialog__save {
-    transition: none;
-  }
-
-  .vault-item-form-dialog__save:hover {
-    transform: none;
-  }
-}
-</style>

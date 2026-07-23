@@ -238,22 +238,35 @@ function formatWindow(item: AdminAnnouncement) {
             <td data-label="发布时间">{{ formatTime(item.publishedAt) }}</td>
             <td data-label="更新时间">{{ formatTime(item.updatedAt) }}</td>
             <td data-label="操作">
-              <div class="d-flex flex-wrap ga-1 justify-end">
-                <v-btn size="small" variant="text" @click="openEdit(item)">编辑</v-btn>
+              <div class="admin-row-actions">
                 <v-btn
-                  v-if="item.status !== 'PUBLISHED'"
-                  size="small"
+                  class="admin-row-actions__btn"
+                  size="x-small"
                   variant="text"
                   color="primary"
+                  prepend-icon="mdi-pencil-outline"
+                  @click="openEdit(item)"
+                >
+                  编辑
+                </v-btn>
+                <v-btn
+                  v-if="item.status !== 'PUBLISHED'"
+                  class="admin-row-actions__btn admin-row-actions__btn--primary"
+                  size="x-small"
+                  variant="flat"
+                  color="primary"
+                  prepend-icon="mdi-publish"
                   @click="publish(item)"
                 >
                   发布
                 </v-btn>
                 <v-btn
                   v-if="item.status === 'PUBLISHED'"
-                  size="small"
+                  class="admin-row-actions__btn admin-row-actions__btn--warn"
+                  size="x-small"
                   variant="text"
                   color="warning"
+                  prepend-icon="mdi-eye-off-outline"
                   @click="offline(item)"
                 >
                   下线

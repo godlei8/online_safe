@@ -29,46 +29,56 @@ const passwordField = computed(() =>
   form.value.fields.find((field) => field.systemKey === 'password')!,
 )
 
-const requiredFields = computed(() => [accountField.value, passwordField.value].filter(Boolean))
-
-/** 动态字段默认空；仅用户点击「添加字段」后才有 */
-const customFields = computed(() =>
-  form.value.fields.filter((field) => !field.systemKey),
+/** 账号/密码 + 模板标记必填的字段 */
+const requiredFields = computed(() =>
+  form.value.fields.filter((field) => Boolean(field.systemKey) || field.required),
 )
 
+/** 未标记必填的扩展字段 */
+const customFields = computed(() =>
+  form.value.fields.filter((field) => !field.systemKey && !field.required),
+)
+
+function syncFieldOrders(required: VaultField[], customs: VaultField[]) {
+  form.value.fields = [...required, ...customs].map((field, order) => ({ ...field, order }))
+}
+
 function addField() {
-  form.value.fields.push({
-    id: crypto.randomUUID(),
-    name: `字段 ${customFields.value.length + 1}`,
-    type: 'TEXT',
-    value: '',
-    required: false,
-    sensitive: false,
-    copyable: true,
-    hint: '',
-    order: form.value.fields.length,
-  })
+  const required = requiredFields.value
+  const customs = [
+    ...customFields.value,
+    {
+      id: crypto.randomUUID(),
+      name: `字段 ${customFields.value.length + 1}`,
+      type: 'TEXT' as const,
+      value: '',
+      required: false,
+      sensitive: false,
+      copyable: true,
+      hint: '',
+      order: 0,
+    },
+  ]
+  syncFieldOrders(required, customs)
 }
 
 function removeField(id: string) {
-  form.value.fields = form.value.fields
-    .filter((field) => field.systemKey || field.id !== id)
-    .map((field, index) => ({ ...field, order: index }))
+  const target = form.value.fields.find((field) => field.id === id)
+  if (!target || target.systemKey || target.required) return
+  syncFieldOrders(
+    requiredFields.value,
+    customFields.value.filter((field) => field.id !== id),
+  )
 }
 
 function moveField(id: string, delta: number) {
-  const customs = customFields.value
+  const customs = [...customFields.value]
   const index = customs.findIndex((field) => field.id === id)
   const target = index + delta
   if (index < 0 || target < 0 || target >= customs.length) return
-  const next = [...customs]
-  const [item] = next.splice(index, 1)
-  next.splice(target, 0, item)
-  form.value.fields = [
-    accountField.value,
-    passwordField.value,
-    ...next.map((field, order) => ({ ...field, order: order + 2 })),
-  ]
+  const [item] = customs.splice(index, 1)
+  customs.splice(target, 0, item)
+  syncFieldOrders(requiredFields.value, customs)
 }
 
 function onTypeChange(field: VaultField, type: FieldType) {
@@ -188,7 +198,7 @@ function valuePlaceholder(type: FieldType | string): string | undefined {
           </span>
           <div>
             <h3 class="vault-item-form__section-title">必填字段</h3>
-            <p class="vault-item-form__section-hint">账号与密码固定必填，不可删除</p>
+            <p class="vault-item-form__section-hint">账号、密码及模板标记为必填的字段，不可删除</p>
           </div>
         </header>
 
@@ -211,11 +221,15 @@ function valuePlaceholder(type: FieldType | string): string | undefined {
             <v-select
               class="vault-item-form__control"
               :model-value="field.type"
-              :items="field.systemKey === 'password' ? fieldTypes.filter((item) => item.value === 'PASSWORD') : accountTypeItems"
+              :items="field.systemKey === 'password'
+                ? fieldTypes.filter((item) => item.value === 'PASSWORD')
+                : field.systemKey === 'account'
+                  ? accountTypeItems
+                  : fieldTypes"
               label="类型"
               density="compact"
               hide-details
-              :disabled="field.systemKey === 'password'"
+              :disabled="Boolean(field.systemKey)"
               @update:model-value="(value) => onTypeChange(field, value as FieldType)"
             />
           </div>
@@ -258,7 +272,7 @@ function valuePlaceholder(type: FieldType | string): string | undefined {
             </span>
             <div>
               <h3 class="vault-item-form__section-title">动态字段</h3>
-              <p class="vault-item-form__section-hint">按需补充手机号、接码邮箱等</p>
+              <p class="vault-item-form__section-hint">模板未标必填的字段，可按需增删</p>
             </div>
           </div>
           <v-btn
@@ -371,7 +385,7 @@ function valuePlaceholder(type: FieldType | string): string | undefined {
           </span>
           <div>
             <h3 class="vault-item-form__section-title">备注</h3>
-            <p class="vault-item-form__section-hint">可选补充说明</p>
+            <p class="vault-item-form__section-hint">常用补充说明，可选填写</p>
           </div>
         </header>
         <v-textarea

@@ -33,8 +33,8 @@ export default createVuetify({
     },
   },
   defaults: {
-    // 工具栏/筛选区默认紧凑；认证页主按钮通过 .auth-submit 等局部样式保持 48px
-    VBtn: { height: 40, elevation: 0 },
+    // 工作区默认按钮高 30px（相对旧 40 -10）；认证页主按钮见 .auth-submit（38px）
+    VBtn: { height: 30, elevation: 0 },
     VTextField: {
       variant: 'outlined',
       density: 'compact',

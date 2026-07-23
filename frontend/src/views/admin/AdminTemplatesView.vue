@@ -244,6 +244,14 @@ function formatTime(value: string | null) {
 function accountTypeItems() {
   return fieldTypeItems.filter((item) => item.value === 'TEXT' || item.value === 'EMAIL' || item.value === 'PHONE')
 }
+
+function fieldTone(type: string): string {
+  if (type === 'PASSWORD') return 'password'
+  if (type === 'EMAIL') return 'email'
+  if (type === 'URL') return 'url'
+  if (type === 'PHONE') return 'phone'
+  return 'text'
+}
 </script>
 
 <template>
@@ -336,31 +344,46 @@ function accountTypeItems() {
             </td>
             <td>{{ formatTime(item.updatedAt) }}</td>
             <td>
-              <div class="d-flex flex-wrap ga-1">
-                <v-btn size="small" variant="text" @click="openEdit(item)">编辑</v-btn>
+              <div class="admin-row-actions">
+                <v-btn
+                  class="admin-row-actions__btn"
+                  size="x-small"
+                  variant="text"
+                  color="primary"
+                  prepend-icon="mdi-pencil-outline"
+                  @click="openEdit(item)"
+                >
+                  编辑
+                </v-btn>
                 <v-btn
                   v-if="item.status !== 'PUBLISHED'"
-                  size="small"
-                  variant="tonal"
+                  class="admin-row-actions__btn admin-row-actions__btn--primary"
+                  size="x-small"
+                  variant="flat"
                   color="primary"
+                  prepend-icon="mdi-publish"
                   @click="publish(item)"
                 >
                   发布
                 </v-btn>
                 <v-btn
                   v-if="item.status === 'PUBLISHED'"
-                  size="small"
-                  variant="tonal"
+                  class="admin-row-actions__btn admin-row-actions__btn--warn"
+                  size="x-small"
+                  variant="text"
                   color="warning"
+                  prepend-icon="mdi-eye-off-outline"
                   @click="offline(item)"
                 >
                   下线
                 </v-btn>
                 <v-btn
                   v-if="item.status === 'DRAFT'"
-                  size="small"
+                  class="admin-row-actions__btn admin-row-actions__btn--danger"
+                  size="x-small"
                   variant="text"
                   color="error"
+                  prepend-icon="mdi-delete-outline"
                   @click="removeDraft(item)"
                 >
                   删除
@@ -377,75 +400,182 @@ function accountTypeItems() {
     </v-card>
 
     <v-dialog v-model="editorOpen" max-width="720" scrollable persistent>
-      <v-card class="admin-dialog-card">
-        <v-card-title>{{ isEdit ? '编辑系统模板' : '新建系统模板' }}</v-card-title>
-        <v-card-text>
-          <div class="admin-template-grid">
-            <v-text-field v-model="name" label="模板名称" density="compact" hide-details="auto" />
-            <v-text-field v-model="platform" label="所属平台" density="compact" hide-details="auto" />
-            <v-text-field v-model="channel" label="渠道名" density="compact" hide-details="auto" />
-            <v-text-field v-model="channelUrl" label="渠道网址" density="compact" hide-details="auto" />
-            <v-text-field
-              v-model.number="sortOrder"
-              type="number"
-              label="排序值"
-              density="compact"
-              hide-details="auto"
-              class="admin-template-grid__span"
-            />
+      <v-card class="os-form-dialog">
+        <v-card-title class="os-form-dialog__title">
+          <div class="os-form-dialog__heading">
+            <span class="os-form-dialog__mark" aria-hidden="true">
+              <v-icon :icon="isEdit ? 'mdi-pencil-outline' : 'mdi-view-grid-plus-outline'" size="18" />
+            </span>
+            <div>
+              <p class="os-form-dialog__eyebrow">{{ isEdit ? '编辑模板' : '新建模板' }}</p>
+              <h2>{{ isEdit ? '编辑系统模板' : '新建系统模板' }}</h2>
+            </div>
           </div>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            size="small"
+            aria-label="关闭"
+            :disabled="saving"
+            @click="editorOpen = false"
+          />
+        </v-card-title>
 
-          <div class="d-flex justify-space-between align-center mt-4 mb-2">
-            <h3 class="text-subtitle-2 mb-0">字段结构</h3>
-            <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-plus" @click="addField">
-              添加字段
-            </v-btn>
-          </div>
+        <v-card-text class="os-form-dialog__body">
+          <v-alert v-if="formError" type="error" variant="tonal" density="compact">{{ formError }}</v-alert>
 
-          <div v-for="field in fields" :key="field.id" class="admin-template-field">
-            <div class="admin-template-grid">
+          <section class="os-form-dialog__section os-form-dialog__section--basic">
+            <header class="os-form-dialog__section-head">
+              <span class="os-form-dialog__section-icon" aria-hidden="true">
+                <v-icon icon="mdi-card-account-details-outline" size="14" />
+              </span>
+              <div>
+                <h3 class="os-form-dialog__section-title">基本信息</h3>
+                <p class="os-form-dialog__section-hint">名称、平台与渠道；排序越小越靠前</p>
+              </div>
+            </header>
+            <div class="os-form-dialog__grid">
               <v-text-field
-                v-model="field.name"
-                label="字段名称"
+                v-model="name"
+                class="os-form-dialog__control"
+                label="模板名称"
                 density="compact"
-                hide-details
-                :readonly="Boolean(field.systemKey)"
+                hide-details="auto"
               />
-              <v-select
-                :model-value="field.type"
-                :items="field.systemKey === 'password'
-                  ? fieldTypeItems.filter((item) => item.value === 'PASSWORD')
-                  : field.systemKey === 'account' ? accountTypeItems() : fieldTypeItems"
-                label="类型"
+              <v-text-field
+                v-model="platform"
+                class="os-form-dialog__control"
+                label="所属平台"
                 density="compact"
-                hide-details
-                :disabled="field.systemKey === 'password'"
-                @update:model-value="(value) => onTypeChange(field, value as FieldType)"
+                hide-details="auto"
+              />
+              <v-text-field
+                v-model="channel"
+                class="os-form-dialog__control"
+                label="渠道名"
+                density="compact"
+                hide-details="auto"
+              />
+              <v-text-field
+                v-model="channelUrl"
+                class="os-form-dialog__control"
+                label="渠道网址"
+                density="compact"
+                hide-details="auto"
+              />
+              <v-text-field
+                v-model.number="sortOrder"
+                class="os-form-dialog__control os-form-dialog__control--span"
+                type="number"
+                label="排序值"
+                density="compact"
+                hide-details="auto"
               />
             </div>
-            <div class="d-flex flex-wrap align-center ga-2 mt-1">
-              <v-checkbox v-model="field.required" label="必填" hide-details density="compact" :disabled="Boolean(field.systemKey)" />
-              <v-checkbox v-model="field.sensitive" label="敏感" hide-details density="compact" />
-              <v-checkbox v-model="field.copyable" label="可复制" hide-details density="compact" />
-              <v-spacer />
-              <v-btn
-                v-if="!field.systemKey"
-                size="x-small"
-                variant="text"
-                color="error"
-                icon="mdi-delete-outline"
-                aria-label="删除字段"
-                @click="removeField(field.id)"
-              />
-            </div>
-          </div>
+          </section>
 
-          <v-alert v-if="formError" type="error" variant="tonal" class="mt-3">{{ formError }}</v-alert>
+          <section class="os-form-dialog__section os-form-dialog__section--fields">
+            <header class="os-form-dialog__section-head os-form-dialog__section-head--row">
+              <div class="os-form-dialog__section-head-main">
+                <span class="os-form-dialog__section-icon" aria-hidden="true">
+                  <v-icon icon="mdi-form-select" size="14" />
+                </span>
+                <div>
+                  <h3 class="os-form-dialog__section-title">字段结构</h3>
+                  <p class="os-form-dialog__section-hint">勾选「必填」的字段会进入用户录入时的必填区</p>
+                </div>
+              </div>
+              <v-btn
+                class="os-form-dialog__add-btn"
+                size="small"
+                variant="flat"
+                color="primary"
+                prepend-icon="mdi-plus"
+                @click="addField"
+              >
+                添加字段
+              </v-btn>
+            </header>
+
+            <div
+              v-for="(field, index) in fields"
+              :key="field.id"
+              class="os-form-dialog__field"
+              :class="`os-form-dialog__field--${fieldTone(String(field.type))}`"
+              :style="{ '--field-delay': `${index * 40}ms` }"
+            >
+              <div class="os-form-dialog__field-meta">
+                <v-text-field
+                  v-model="field.name"
+                  class="os-form-dialog__control"
+                  label="字段名称"
+                  density="compact"
+                  hide-details
+                  :readonly="Boolean(field.systemKey)"
+                />
+                <v-select
+                  class="os-form-dialog__control"
+                  :model-value="field.type"
+                  :items="field.systemKey === 'password'
+                    ? fieldTypeItems.filter((item) => item.value === 'PASSWORD')
+                    : field.systemKey === 'account' ? accountTypeItems() : fieldTypeItems"
+                  label="类型"
+                  density="compact"
+                  hide-details
+                  :disabled="field.systemKey === 'password'"
+                  @update:model-value="(value) => onTypeChange(field, value as FieldType)"
+                />
+              </div>
+              <div class="os-form-dialog__field-actions">
+                <v-checkbox
+                  v-model="field.required"
+                  class="os-form-dialog__check"
+                  label="必填"
+                  hide-details
+                  density="compact"
+                  :disabled="Boolean(field.systemKey)"
+                />
+                <v-checkbox
+                  v-model="field.sensitive"
+                  class="os-form-dialog__check"
+                  label="敏感"
+                  hide-details
+                  density="compact"
+                />
+                <v-checkbox
+                  v-model="field.copyable"
+                  class="os-form-dialog__check"
+                  label="可复制"
+                  hide-details
+                  density="compact"
+                />
+                <v-spacer />
+                <v-btn
+                  v-if="!field.systemKey"
+                  size="x-small"
+                  variant="text"
+                  color="error"
+                  icon="mdi-delete-outline"
+                  aria-label="删除字段"
+                  @click="removeField(field.id)"
+                />
+              </div>
+            </div>
+          </section>
         </v-card-text>
-        <v-card-actions>
+
+        <v-card-actions class="os-form-dialog__actions">
           <v-spacer />
-          <v-btn variant="text" :disabled="saving" @click="editorOpen = false">取消</v-btn>
-          <v-btn color="primary" :loading="saving" @click="submitEditor">保存</v-btn>
+          <v-btn variant="text" size="small" :disabled="saving" @click="editorOpen = false">取消</v-btn>
+          <v-btn
+            class="os-form-dialog__save"
+            color="primary"
+            size="small"
+            :loading="saving"
+            @click="submitEditor"
+          >
+            保存
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -453,29 +583,3 @@ function accountTypeItems() {
     <v-snackbar v-model="toast" :timeout="2200" color="primary">{{ toastText }}</v-snackbar>
   </div>
 </template>
-
-<style scoped>
-.admin-template-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-}
-
-.admin-template-grid__span {
-  grid-column: 1 / -1;
-}
-
-.admin-template-field {
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--os-border);
-  border-radius: 8px;
-  background: var(--os-bg);
-}
-
-@media (max-width: 720px) {
-  .admin-template-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

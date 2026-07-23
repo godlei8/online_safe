@@ -35,7 +35,8 @@ online-word/
 ├─ CURSOR.md                          # 本文件
 ├─ README.md
 ├─ docs/
-│  ├─ Design.md                       # UI/交互规范
+│  ├─ Design.md                       # UI/交互规范（含统一二次确认弹窗）
+│  ├─ project_notes/                  # 决策与关键事实（decisions / key_facts）
 │  ├─ 在线账密保险箱-产品需求文档-v1.0.md
 │  ├─ 在线账密保险箱-技术选型与架构设计-v1.0.md
 │  └─ superpowers/specs/              # 专题设计（含密保与登录即开信封）
@@ -88,6 +89,8 @@ online-word/
 7. **数据迁移**：结构变更只走 Flyway；JPA `ddl-auto=validate`。
 8. **密钥与本地配置**：勿提交 `application-local.yml`、真实密钥。
 9. **UI**：遵循 `docs/Design.md`；主色 `#155EEF`。
+10. **二次确认弹窗**：删除、标记异常、禁用用户等一律用 `OsConfirmDialog`（`os-confirm-dialog*` 色彩与动效）；禁止 `window.confirm` 与临时白框。详见 `docs/Design.md` §5.3.1 与 `docs/project_notes/decisions.md`。
+11. **按钮高度**：相对旧规范整体 −10px——工作区默认 **30px**、认证主按钮 **38px**、确认弹窗按钮 **28px**；令牌见 `--os-control-*` / `docs/Design.md` §3.3。禁止再使用偏高的 40/48 默认。
 
 ## 6. 关键 API（现状）
 

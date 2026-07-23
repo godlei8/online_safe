@@ -6,6 +6,7 @@ import {
   type Invitation,
   type InvitationStats,
 } from '@/api/invitations'
+import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
 
 const loading = ref(false)
 const creating = ref(false)
@@ -156,15 +157,29 @@ async function submitCreate() {
   }
 }
 
-async function deleteInvite(item: Invitation) {
-  if (!window.confirm(`确认删除邀请码 ${item.codeHint}？删除后不可恢复。`)) return
+const deleteConfirmOpen = ref(false)
+const deleting = ref(false)
+const deleteTarget = ref<Invitation | null>(null)
+
+function askDeleteInvite(item: Invitation) {
+  deleteTarget.value = item
+  deleteConfirmOpen.value = true
+}
+
+async function confirmDeleteInvite() {
+  if (!deleteTarget.value) return
+  deleting.value = true
   loading.value = true
   try {
-    await invitationsApi.remove(item.id)
+    await invitationsApi.remove(deleteTarget.value.id)
+    deleteConfirmOpen.value = false
+    deleteTarget.value = null
     await loadData()
   } catch (error) {
     errorMessage.value = error instanceof ApiRequestError ? error.message : '删除失败，请稍后重试。'
     loading.value = false
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -353,9 +368,18 @@ function copyCreatedPlainCode() {
             <td data-label="创建者">{{ item.creatorUsername }}</td>
             <td data-label="最近使用">{{ item.lastUsedAt ? formatTime(item.lastUsedAt) : '—' }}</td>
             <td data-label="操作">
-              <v-btn size="small" variant="text" color="error" @click="deleteInvite(item)">
-                删除
-              </v-btn>
+              <div class="admin-row-actions">
+                <v-btn
+                  class="admin-row-actions__btn admin-row-actions__btn--danger"
+                  size="x-small"
+                  variant="text"
+                  color="error"
+                  prepend-icon="mdi-delete-outline"
+                  @click="askDeleteInvite(item)"
+                >
+                  删除
+                </v-btn>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -369,49 +393,175 @@ function copyCreatedPlainCode() {
       </div>
     </v-card>
 
-    <v-dialog v-model="createDialog" max-width="480">
-      <v-card class="admin-dialog-card pa-2">
-        <v-card-title>创建邀请码</v-card-title>
-        <v-card-text>
-          <v-alert v-if="createError" type="error" variant="tonal" class="mb-4">{{ createError }}</v-alert>
-          <v-text-field v-model.number="maxUses" type="number" min="1" label="最大使用次数" hint="1 表示单次邀请码" />
-          <v-text-field
-            v-model="expiresAtLocal"
-            class="mt-2"
-            type="datetime-local"
-            label="过期时间（可选）"
-            hint="留空表示不过期"
+    <v-dialog v-model="createDialog" max-width="480" persistent>
+      <v-card class="os-form-dialog">
+        <v-card-title class="os-form-dialog__title">
+          <div class="os-form-dialog__heading">
+            <span class="os-form-dialog__mark" aria-hidden="true">
+              <v-icon icon="mdi-ticket-confirmation-outline" size="18" />
+            </span>
+            <div>
+              <p class="os-form-dialog__eyebrow">邀请管理</p>
+              <h2>创建邀请码</h2>
+            </div>
+          </div>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            size="small"
+            aria-label="关闭"
+            :disabled="creating"
+            @click="createDialog = false"
           />
-          <v-text-field v-model="note" class="mt-2" label="备注（可选）" maxlength="200" />
+        </v-card-title>
+
+        <v-card-text class="os-form-dialog__body">
+          <v-alert v-if="createError" type="error" variant="tonal" density="compact" class="mb-3">
+            {{ createError }}
+          </v-alert>
+
+          <section class="os-form-dialog__section os-form-dialog__section--basic">
+            <header class="os-form-dialog__section-head">
+              <span class="os-form-dialog__section-icon" aria-hidden="true">
+                <v-icon icon="mdi-cog-outline" size="14" />
+              </span>
+              <div>
+                <h3 class="os-form-dialog__section-title">使用规则</h3>
+                <p class="os-form-dialog__section-hint">次数与有效期，创建后立即生效</p>
+              </div>
+            </header>
+            <div class="os-form-dialog__grid">
+              <v-text-field
+                v-model.number="maxUses"
+                class="os-form-dialog__control os-form-dialog__control--span"
+                type="number"
+                min="1"
+                label="最大使用次数"
+                hint="1 表示单次邀请码"
+                density="compact"
+                hide-details="auto"
+              />
+              <v-text-field
+                v-model="expiresAtLocal"
+                class="os-form-dialog__control os-form-dialog__control--span"
+                type="datetime-local"
+                label="过期时间（可选）"
+                hint="留空表示不过期"
+                density="compact"
+                hide-details="auto"
+                clearable
+              />
+              <v-text-field
+                v-model="note"
+                class="os-form-dialog__control os-form-dialog__control--span"
+                label="备注（可选）"
+                maxlength="200"
+                density="compact"
+                hide-details="auto"
+              />
+            </div>
+          </section>
         </v-card-text>
-        <v-card-actions>
+
+        <v-card-actions class="os-form-dialog__actions">
+          <v-btn
+            variant="text"
+            size="small"
+            :disabled="creating"
+            @click="createDialog = false"
+          >
+            取消
+          </v-btn>
           <v-spacer />
-          <v-btn variant="text" @click="createDialog = false">取消</v-btn>
-          <v-btn color="primary" :loading="creating" @click="submitCreate">创建</v-btn>
+          <v-btn
+            class="os-form-dialog__save"
+            color="primary"
+            size="small"
+            prepend-icon="mdi-plus"
+            :loading="creating"
+            @click="submitCreate"
+          >
+            创建
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="plainCodeDialog" max-width="520">
-      <v-card class="admin-dialog-card pa-2">
-        <v-card-title>邀请码已创建</v-card-title>
-        <v-card-text>
-          <p class="mb-3">页面仅显示掩码。完整邀请码已写入剪贴板，也可再次点击「复制」。</p>
-          <v-text-field
-            :model-value="createdCodeHint"
-            readonly
-            label="邀请码（掩码）"
-            append-inner-icon="mdi-content-copy"
-            @click:append-inner="copyCreatedPlainCode"
+    <v-dialog v-model="plainCodeDialog" max-width="480">
+      <v-card class="os-form-dialog">
+        <v-card-title class="os-form-dialog__title">
+          <div class="os-form-dialog__heading">
+            <span class="os-form-dialog__mark" aria-hidden="true">
+              <v-icon icon="mdi-check-circle-outline" size="18" />
+            </span>
+            <div>
+              <p class="os-form-dialog__eyebrow">创建成功</p>
+              <h2>邀请码已生成</h2>
+            </div>
+          </div>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            size="small"
+            aria-label="关闭"
+            @click="plainCodeDialog = false"
           />
+        </v-card-title>
+        <v-card-text class="os-form-dialog__body">
+          <section class="os-form-dialog__section os-form-dialog__section--basic">
+            <header class="os-form-dialog__section-head">
+              <span class="os-form-dialog__section-icon" aria-hidden="true">
+                <v-icon icon="mdi-key-outline" size="14" />
+              </span>
+              <div>
+                <h3 class="os-form-dialog__section-title">邀请码</h3>
+                <p class="os-form-dialog__section-hint">页面仅显示掩码；完整码可再次复制</p>
+              </div>
+            </header>
+            <v-text-field
+              class="os-form-dialog__control"
+              :model-value="createdCodeHint"
+              readonly
+              label="邀请码（掩码）"
+              density="compact"
+              hide-details
+              append-inner-icon="mdi-content-copy"
+              @click:append-inner="copyCreatedPlainCode"
+            />
+          </section>
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="os-form-dialog__actions">
+          <v-btn
+            variant="text"
+            size="small"
+            color="primary"
+            prepend-icon="mdi-content-copy"
+            @click="copyCreatedPlainCode"
+          >
+            复制完整邀请码
+          </v-btn>
           <v-spacer />
-          <v-btn variant="tonal" color="primary" @click="copyCreatedPlainCode">复制完整邀请码</v-btn>
-          <v-btn color="primary" @click="plainCodeDialog = false">关闭</v-btn>
+          <v-btn
+            class="os-form-dialog__save"
+            color="primary"
+            size="small"
+            @click="plainCodeDialog = false"
+          >
+            关闭
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <OsConfirmDialog
+      v-model="deleteConfirmOpen"
+      variant="danger"
+      title="确认删除邀请码？"
+      :message="`将删除邀请码 ${deleteTarget?.codeHint || ''}。删除后不可恢复，是否继续？`"
+      confirm-text="确认删除"
+      :loading="deleting"
+      @confirm="confirmDeleteInvite"
+    />
 
     <v-snackbar v-model="copyToast" :color="copyToastColor" timeout="2600" location="top">
       {{ copyToastText }}
