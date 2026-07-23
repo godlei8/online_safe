@@ -20,6 +20,23 @@
 - 管理端邀请码删除、用户禁用/启用/会话失效已迁移到该组件。
 - 需尊重 `prefers-reduced-motion`（已在样式中处理）。
 
+## 2026-07-23 — 下拉框紧凑规范
+
+### 背景
+
+创建邀请码等表单中 `v-select` 展开选项行过高、字号偏大，与已收紧的按钮/输入节奏不一致。
+
+### 决策
+
+1. 全局默认：`VSelect` / `VAutocomplete` / `VCombobox` 使用 `density="compact"`，并挂 `menuProps.contentClass = 'os-select-menu'`。
+2. 字段高约 **34px**（`--os-control-field`），选项行高 **32px**（`--os-select-item`），选项标题 13px。
+3. 规范写入 `docs/Design.md` §3.4，并同步 `CURSOR.md` / `AGENTS.md` / `key_facts.md`。
+
+### 后果
+
+- 新下拉默认即紧凑，无需逐页改样式。
+- 自定义菜单仍应复用 `os-select-menu` 或等价行高。
+
 ## 2026-07-23 — 按钮高度整体 −10px
 
 ### 背景

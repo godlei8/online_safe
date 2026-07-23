@@ -122,7 +122,18 @@ Online Safe 面向需要保存多来源账号资料的个人用户与管理员�
 
 后续新增按钮一律按上表，禁止再回到 40/48 的「偏高」默认；表格行内禁止大块 `variant="tonal"` 操作钮。
 
-### 3.4 结构与动效
+### 3.4 下拉框（紧凑规范）
+
+| 要素 | 规范 |
+| --- | --- |
+| 字段 | `v-select` / `v-autocomplete` / `v-combobox`：`outlined` + `density="compact"`，字段高约 **34px**（`--os-control-field`），字号 13px |
+| 选项列表 | 菜单挂 `contentClass: os-select-menu`；选项行高 **32px**（`--os-select-item`），标题 13px/500，上下内边距克制 |
+| 全局默认 | `frontend/src/plugins/vuetify.ts` 已写入 `menuProps.contentClass = 'os-select-menu'` |
+| 禁止 | 使用默认偏高的 Vuetify 列表项（约 48px）、放大字号或宽松 padding |
+
+筛选栏、表单弹窗与业务页下拉一律遵循上表；需要自定义菜单时仍应挂 `os-select-menu` 或等价紧凑样式。
+
+### 3.5 结构与动效
 
 - 4px 间距网格，常用 8、12、16、20、24、32、48px；卡片内边距 16–20px，区块间距 24–32px。
 - 层级由「背景 → 卡片 → 浮层」的阴影纵深表达；同层内部才用 1px 边框或分隔线。
@@ -239,7 +250,7 @@ Online Safe 面向需要保存多来源账号资料的个人用户与管理员�
 | 主操作 | `v-btn`，信任蓝、**38px（认证页）/ 30px（工作区）**（相对旧规范整体 −10px）、6px 圆角、无渐变；hover 加深为 `#0E4FD1` |
 | 次操作 | `v-btn variant="outlined"`，边框 `#D6E0FF` 级浅蓝、文字信任蓝 |
 | 输入与搜索 | `v-text-field` `outlined` `density="compact"`、6px 圆角、静态边框 `#E6EBF1`、focus 信任蓝 + 焦点环 |
-| 下拉筛选 | `v-select`，与搜索框同高同边框 |
+| 下拉筛选 / 表单选择 | `v-select` `outlined` `density="compact"`，字段约 34px；选项列表 `os-select-menu`（行高 32px），见 §3.4 |
 | 入口切换 | 语义化 `role="tablist"`，选中项蓝字 + 2px 下划线 |
 | 状态提示 | `v-alert` `density="compact"`、10px 圆角、语义浅底色 |
 | 弹窗 | `v-dialog`，12px 圆角、Level 3 阴影 |

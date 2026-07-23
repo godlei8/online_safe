@@ -1,8 +1,12 @@
 import { requestJson } from './client'
 
+/** 邀请码用途类型 */
+export type InvitePurpose = 'USER_REGISTRATION'
+
 export type Invitation = {
   id: string
   codeHint: string
+  purpose: InvitePurpose
   type: 'SINGLE' | 'MULTI'
   usedCount: number
   maxUses: number
@@ -30,6 +34,7 @@ export type InvitationPage = {
 }
 
 export type CreateInvitationPayload = {
+  purpose: InvitePurpose
   maxUses: number
   expiresAt?: string | null
   note?: string | null
@@ -44,6 +49,7 @@ export type InvitationQuery = {
   page?: number
   size?: number
   status?: string
+  purpose?: InvitePurpose | string
   type?: string
   q?: string
 }
@@ -53,6 +59,7 @@ function toQuery(params: InvitationQuery) {
   if (params.page != null) search.set('page', String(params.page))
   if (params.size != null) search.set('size', String(params.size))
   if (params.status) search.set('status', params.status)
+  if (params.purpose) search.set('purpose', params.purpose)
   if (params.type) search.set('type', params.type)
   if (params.q) search.set('q', params.q)
   const text = search.toString()

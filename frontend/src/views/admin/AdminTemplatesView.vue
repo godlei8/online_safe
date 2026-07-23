@@ -7,6 +7,7 @@ import {
   type SystemTemplateField,
   type SystemTemplateStatus,
 } from '@/api/systemTemplates'
+import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
 import { fieldTypeItems, type FieldType } from '@/domain/vaultPayload'
 
 const loading = ref(false)
@@ -173,7 +174,7 @@ async function submitEditor() {
     }
     if (editingId.value) {
       await adminSystemTemplatesApi.update(editingId.value, payload)
-      toastText.value = '模板已更新'
+      toastText.value = '已保存为草稿，请重新发布后用户端才会更新'
     } else {
       await adminSystemTemplatesApi.create(payload)
       toastText.value = '草稿已创建'
@@ -258,7 +259,7 @@ function fieldTone(type: string): string {
   <div>
     <div class="d-flex flex-wrap align-center justify-space-between ga-3 mb-6">
       <p class="text-body-2 text-medium-emphasis mb-0">
-        系统模板只保存字段结构；发布后全体用户可选用创建记录。已发布可直接编辑，不影响历史记录。
+        系统模板只保存字段结构；发布后全体用户可选用创建记录。编辑已发布/已下线模板会回到草稿，需重新发布后用户端才更新；不影响已创建记录。
       </p>
       <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
         新建模板
@@ -309,6 +310,8 @@ function fieldTone(type: string): string {
           <tr>
             <th>名称</th>
             <th>平台</th>
+            <th>渠道</th>
+            <th>渠道网址</th>
             <th>状态</th>
             <th>字段数</th>
             <th>排序</th>
@@ -318,31 +321,40 @@ function fieldTone(type: string): string {
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="7" class="text-medium-emphasis">加载中…</td>
+            <td colspan="9" class="text-medium-emphasis">加载中…</td>
           </tr>
           <tr v-else-if="!items.length">
-            <td colspan="7" class="text-medium-emphasis">暂无系统模板</td>
+            <td colspan="9" class="text-medium-emphasis">暂无系统模板</td>
           </tr>
           <tr v-for="item in items" :key="item.id">
-            <td>
-              <strong>{{ item.name }}</strong>
-              <div class="text-caption text-medium-emphasis">{{ item.channel || '未填渠道' }}</div>
+            <td data-label="名称">
+              <AdminEllipsisText class="font-weight-medium" :text="item.name" max-width="10rem" />
             </td>
-            <td>{{ item.platform }}</td>
-            <td>
+            <td data-label="平台">
+              <AdminEllipsisText :text="item.platform" max-width="8rem" />
+            </td>
+            <td data-label="渠道">
+              <AdminEllipsisText :text="item.channel" empty="未填渠道" max-width="8rem" />
+            </td>
+            <td data-label="渠道网址">
+              <AdminEllipsisText :text="item.channelUrl" max-width="12rem" />
+            </td>
+            <td data-label="状态">
               <v-chip size="small" :color="statusTone(item.status)" variant="tonal">
                 {{ statusLabelMap[item.status] }}
               </v-chip>
             </td>
-            <td>{{ item.fields.length }}</td>
-            <td>
+            <td data-label="字段数">{{ item.fields.length }}</td>
+            <td data-label="排序">
               <div class="d-flex align-center ga-1">
                 <span>{{ item.sortOrder }}</span>
                 <v-btn size="x-small" variant="text" icon="mdi-arrow-up" aria-label="上移" @click="bumpSort(item, -1)" />
                 <v-btn size="x-small" variant="text" icon="mdi-arrow-down" aria-label="下移" @click="bumpSort(item, 1)" />
               </div>
             </td>
-            <td>{{ formatTime(item.updatedAt) }}</td>
+            <td data-label="更新时间">
+              <AdminEllipsisText :text="formatTime(item.updatedAt)" max-width="9rem" />
+            </td>
             <td>
               <div class="admin-row-actions">
                 <v-btn
@@ -409,6 +421,9 @@ function fieldTone(type: string): string {
             <div>
               <p class="os-form-dialog__eyebrow">{{ isEdit ? '编辑模板' : '新建模板' }}</p>
               <h2>{{ isEdit ? '编辑系统模板' : '新建系统模板' }}</h2>
+              <p v-if="isEdit" class="text-caption text-medium-emphasis mt-1 mb-0">
+                修改已发布或已下线模板后会回到草稿，需重新发布后用户端才更新。
+              </p>
             </div>
           </div>
           <v-btn

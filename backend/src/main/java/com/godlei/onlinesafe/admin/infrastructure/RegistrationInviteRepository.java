@@ -1,5 +1,6 @@
 package com.godlei.onlinesafe.admin.infrastructure;
 
+import com.godlei.onlinesafe.admin.domain.InvitePurpose;
 import com.godlei.onlinesafe.admin.domain.InviteStatus;
 import com.godlei.onlinesafe.admin.domain.RegistrationInvite;
 import org.springframework.data.domain.Page;
@@ -33,6 +34,7 @@ public interface RegistrationInviteRepository extends JpaRepository<Registration
     @Query("""
             SELECT i FROM RegistrationInvite i
             WHERE (:status IS NULL OR i.status = :status)
+              AND (:purpose IS NULL OR i.purpose = :purpose)
               AND (
                 :singleUse IS NULL
                 OR (:singleUse = TRUE AND i.maxUses = 1)
@@ -49,6 +51,7 @@ public interface RegistrationInviteRepository extends JpaRepository<Registration
             """)
     Page<RegistrationInvite> search(
             @Param("status") InviteStatus status,
+            @Param("purpose") InvitePurpose purpose,
             @Param("singleUse") Boolean singleUse,
             @Param("query") String query,
             Pageable pageable

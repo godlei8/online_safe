@@ -20,6 +20,22 @@
 
 实现：`frontend/src/plugins/vuetify.ts`（`VBtn.height = 30`）、`main.scss` 令牌与 `.auth-submit` / `.os-confirm-dialog__*`。
 
+## 下拉框（紧凑）
+
+| 要素 | 值 |
+| --- | --- |
+| 字段高 `--os-control-field` | 34px |
+| 选项行高 `--os-select-item` | 32px |
+| 菜单类名 | `os-select-menu`（Vuetify 默认已挂） |
+
+实现：`frontend/src/plugins/vuetify.ts`（`VSelect`/`VAutocomplete`/`VCombobox` 的 `menuProps`）、`main.scss` 中 `.os-select-menu`；规范见 `docs/Design.md` §3.4。
+
+## 系统模板状态
+
+- 编辑已发布/已下线模板 → 回到 `DRAFT`，用户侧立即不可见，需重新发布。
+- 仅改排序不改变发布状态。
+- 已创建记录的 `templateSnapshot` 不受模板后续编辑影响。
+
 ## 确认弹窗变体速查
 
 - `danger`：不可恢复删除

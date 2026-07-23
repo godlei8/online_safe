@@ -1,6 +1,7 @@
 package com.godlei.onlinesafe.admin.web;
 
 import com.godlei.onlinesafe.admin.application.InvitationService;
+import com.godlei.onlinesafe.admin.domain.InvitePurpose;
 import com.godlei.onlinesafe.admin.domain.InviteStatus;
 import com.godlei.onlinesafe.security.AdminUserPrincipal;
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ public class InvitationController {
     @GetMapping
     public Page<InvitationResponse> list(
             @RequestParam(required = false) InviteStatus status,
+            @RequestParam(required = false) InvitePurpose purpose,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
@@ -46,6 +48,7 @@ public class InvitationController {
         int safeSize = Math.min(Math.max(size, 1), 100);
         return invitationService.list(
                 status,
+                purpose,
                 singleUse,
                 q,
                 PageRequest.of(page, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"))

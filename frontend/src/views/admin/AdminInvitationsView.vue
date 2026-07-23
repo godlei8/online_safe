@@ -5,7 +5,9 @@ import {
   invitationsApi,
   type Invitation,
   type InvitationStats,
+  type InvitePurpose,
 } from '@/api/invitations'
+import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
 
 const loading = ref(false)
@@ -17,7 +19,8 @@ const page = ref(1)
 const pageSize = 10
 const totalElements = ref(0)
 const statusFilter = ref('')
-const typeFilter = ref('')
+const purposeFilter = ref('')
+const usageFilter = ref('')
 const query = ref('')
 
 const createDialog = ref(false)
@@ -27,6 +30,7 @@ const createdPlainCode = ref('')
 const copyToast = ref(false)
 const copyToastText = ref('')
 const copyToastColor = ref<'success' | 'warning'>('success')
+const purpose = ref<InvitePurpose>('USER_REGISTRATION')
 const maxUses = ref(1)
 const note = ref('')
 const expiresAtLocal = ref('')
@@ -42,14 +46,23 @@ const statusOptions = [
   { title: '已过期', value: 'EXPIRED' },
 ]
 
-const typeOptions = [
+const purposeOptions = [
   { title: '类型：全部', value: '' },
+  { title: '用户注册', value: 'USER_REGISTRATION' },
+]
+
+const purposeCreateOptions = [
+  { title: '用户注册', value: 'USER_REGISTRATION' },
+]
+
+const usageOptions = [
+  { title: '使用方式：全部', value: '' },
   { title: '单次', value: 'SINGLE' },
   { title: '多次', value: 'MULTI' },
 ]
 
 onMounted(loadData)
-watch([page, statusFilter, typeFilter], loadData)
+watch([page, statusFilter, purposeFilter, usageFilter], loadData)
 
 async function loadData() {
   loading.value = true
@@ -61,7 +74,8 @@ async function loadData() {
         page: page.value - 1,
         size: pageSize,
         status: statusFilter.value || undefined,
-        type: typeFilter.value || undefined,
+        purpose: purposeFilter.value || undefined,
+        type: usageFilter.value || undefined,
         q: query.value.trim() || undefined,
       }),
     ])
@@ -113,7 +127,12 @@ function statusColor(status: string) {
   }
 }
 
-function typeLabel(type: string) {
+function purposeLabel(value: string | null | undefined) {
+  if (value === 'USER_REGISTRATION') return '用户注册'
+  return value || '—'
+}
+
+function usageLabel(type: string) {
   return type === 'SINGLE' ? '单次' : '多次'
 }
 
@@ -124,6 +143,7 @@ function formatTime(value: string | null) {
 
 function openCreate() {
   createError.value = ''
+  purpose.value = 'USER_REGISTRATION'
   maxUses.value = 1
   note.value = ''
   expiresAtLocal.value = ''
@@ -132,6 +152,10 @@ function openCreate() {
 
 async function submitCreate() {
   createError.value = ''
+  if (!purpose.value) {
+    createError.value = '请选择邀请码类型'
+    return
+  }
   if (!Number.isInteger(maxUses.value) || maxUses.value < 1) {
     createError.value = '请填写有效的最大使用次数'
     return
@@ -139,6 +163,7 @@ async function submitCreate() {
   creating.value = true
   try {
     const payload = {
+      purpose: purpose.value,
       maxUses: maxUses.value,
       note: note.value.trim() || null,
       expiresAt: expiresAtLocal.value ? new Date(expiresAtLocal.value).toISOString() : null,
@@ -298,10 +323,18 @@ function copyCreatedPlainCode() {
           item-value="value"
         />
         <v-select
-          v-model="typeFilter"
+          v-model="purposeFilter"
           class="admin-filter-select"
           hide-details
-          :items="typeOptions"
+          :items="purposeOptions"
+          item-title="title"
+          item-value="value"
+        />
+        <v-select
+          v-model="usageFilter"
+          class="admin-filter-select"
+          hide-details
+          :items="usageOptions"
           item-title="title"
           item-value="value"
         />
@@ -315,28 +348,35 @@ function copyCreatedPlainCode() {
       <v-table class="admin-table">
         <thead>
           <tr>
-            <th>邀请码</th>
             <th>类型</th>
+            <th>邀请码</th>
+            <th>使用方式</th>
             <th>使用进度</th>
             <th>有效期</th>
             <th>状态</th>
             <th>创建者</th>
             <th>最近使用</th>
+            <th>备注</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="!loading && items.length === 0">
-            <td colspan="8" class="text-medium-emphasis py-8 text-center">暂无邀请码，点击右上角创建。</td>
+            <td colspan="10" class="text-medium-emphasis py-8 text-center">暂无邀请码，点击右上角创建。</td>
           </tr>
           <tr
             v-for="item in items"
             :key="item.id"
             :class="{ 'admin-table__row--disabled': item.status === 'DISABLED' }"
           >
+            <td data-label="类型">{{ purposeLabel(item.purpose) }}</td>
             <td data-label="邀请码">
-              <div class="d-flex align-center ga-1">
-                <span class="font-weight-medium">{{ item.codeHint }}</span>
+              <div class="d-flex align-center ga-1" style="min-width: 0">
+                <AdminEllipsisText
+                  class="font-weight-medium"
+                  :text="item.codeHint"
+                  max-width="9rem"
+                />
                 <v-btn
                   class="admin-icon-action"
                   icon="mdi-content-copy"
@@ -347,9 +387,8 @@ function copyCreatedPlainCode() {
                   @click="copyInviteCode(item)"
                 />
               </div>
-              <div v-if="item.note" class="text-caption text-medium-emphasis">{{ item.note }}</div>
             </td>
-            <td data-label="类型">{{ typeLabel(item.type) }}</td>
+            <td data-label="使用方式">{{ usageLabel(item.type) }}</td>
             <td data-label="使用进度" style="min-width: 140px">
               <div class="mb-1">{{ item.usedCount }} / {{ item.maxUses }}</div>
               <v-progress-linear
@@ -359,14 +398,29 @@ function copyCreatedPlainCode() {
                 rounded
               />
             </td>
-            <td data-label="有效期">{{ item.expiresAt ? formatTime(item.expiresAt) : '无限制' }}</td>
+            <td data-label="有效期">
+              <AdminEllipsisText
+                :text="item.expiresAt ? formatTime(item.expiresAt) : '无限制'"
+                max-width="9rem"
+              />
+            </td>
             <td data-label="状态">
               <span class="admin-status-text" :data-tone="statusColor(item.status)">
                 {{ statusLabel(item.status) }}
               </span>
             </td>
-            <td data-label="创建者">{{ item.creatorUsername }}</td>
-            <td data-label="最近使用">{{ item.lastUsedAt ? formatTime(item.lastUsedAt) : '—' }}</td>
+            <td data-label="创建者">
+              <AdminEllipsisText :text="item.creatorUsername" max-width="8rem" />
+            </td>
+            <td data-label="最近使用">
+              <AdminEllipsisText
+                :text="item.lastUsedAt ? formatTime(item.lastUsedAt) : '—'"
+                max-width="9rem"
+              />
+            </td>
+            <td data-label="备注">
+              <AdminEllipsisText :text="item.note" max-width="10rem" />
+            </td>
             <td data-label="操作">
               <div class="admin-row-actions">
                 <v-btn
@@ -431,6 +485,17 @@ function copyCreatedPlainCode() {
               </div>
             </header>
             <div class="os-form-dialog__grid">
+              <v-select
+                v-model="purpose"
+                class="os-form-dialog__control os-form-dialog__control--span"
+                :items="purposeCreateOptions"
+                item-title="title"
+                item-value="value"
+                label="类型"
+                hint="决定邀请码可用于何种业务"
+                density="compact"
+                hide-details="auto"
+              />
               <v-text-field
                 v-model.number="maxUses"
                 class="os-form-dialog__control os-form-dialog__control--span"

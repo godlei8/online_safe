@@ -24,9 +24,9 @@
 2. **对用户可见**：仅 `PUBLISHED`。草稿与已下线对用户 API 不可见。
 3. **内容约束**：模板只保存字段结构（名称、类型、必填、敏感、可复制、hint、顺序、`systemKey`）；**所有字段 `value` 存库前强制清空**。不得作为真实账密示例库。
 4. **固定字段**：保存时服务端与前端均走与记录一致的凭证字段归一化思路——确保存在「账号」「密码」系统字段语义（`systemKey=account|password`）；账号类型允许 `TEXT` / `EMAIL` / `PHONE`，密码固定 `PASSWORD`。
-5. **已发布可直接编辑**：更新已发布模板**不**强制回草稿（与公告不同：模板无已读弹窗语义）。改动对后续「选用创建」立即生效；**不影响**已创建记录及其 `templateSnapshot`。
+5. **编辑需重新发布**：更新已发布/已下线模板会回到 `DRAFT` 并清空 `publishedAt`（与公告一致），用户侧立即不可见；需再次发布后才对「选用创建」生效；**不影响**已创建记录及其 `templateSnapshot`。仅调整排序不改变发布状态。
 6. **下线**：`PUBLISHED → OFFLINE`；用户侧列表消失；历史记录快照保留。
-7. **重新发布**：`DRAFT` 或 `OFFLINE` → `PUBLISHED`。
+7. **重新发布**：`DRAFT` 或 `OFFLINE` → `PUBLISHED`（写新的 `publishedAt`）。
 8. **删除**：仅允许删除 `DRAFT`；已发布/已下线只能下线，不可物理删除（避免误删运营资产）。
 9. **排序**：`sortOrder` 升序；同序按 `updatedAt` 降序。管理端支持批量或单条调整排序。
 10. **选用创建**：用户选择系统模板后，前端生成记录草稿（预填 platform/channel/channelUrl/fields，值均为空），并写入 `templateSnapshot`；用户可继续改字段后再保存。

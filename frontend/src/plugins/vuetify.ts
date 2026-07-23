@@ -42,23 +42,27 @@ export default createVuetify({
       persistentHint: true,
       hideDetails: 'auto',
     },
+    // 下拉：字段 compact；菜单项用 os-select-menu 收紧（见 main.scss / Design.md §3.4）
     VSelect: {
       variant: 'outlined',
       density: 'compact',
       color: 'primary',
       hideDetails: 'auto',
+      menuProps: { contentClass: 'os-select-menu' },
     },
     VAutocomplete: {
       variant: 'outlined',
       density: 'compact',
       color: 'primary',
       hideDetails: 'auto',
+      menuProps: { contentClass: 'os-select-menu' },
     },
     VCombobox: {
       variant: 'outlined',
       density: 'compact',
       color: 'primary',
       hideDetails: 'auto',
+      menuProps: { contentClass: 'os-select-menu' },
     },
     VAlert: { density: 'compact' },
     VPagination: { density: 'compact' },

@@ -44,6 +44,10 @@ public class RegistrationInvite {
     @Column(name = "status", nullable = false, length = 20)
     private InviteStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purpose", nullable = false, length = 32)
+    private InvitePurpose purpose;
+
     @Column(name = "created_by_admin_id", nullable = false, length = 36)
     private String createdByAdminId;
 
@@ -72,6 +76,7 @@ public class RegistrationInvite {
             String codeEncrypted,
             int maxUses,
             Instant expiresAt,
+            InvitePurpose purpose,
             String createdByAdminId,
             String note
     ) {
@@ -83,6 +88,7 @@ public class RegistrationInvite {
         this.usedCount = 0;
         this.expiresAt = expiresAt;
         this.status = InviteStatus.ACTIVE;
+        this.purpose = Objects.requireNonNull(purpose);
         this.createdByAdminId = Objects.requireNonNull(createdByAdminId);
         this.note = note;
     }
@@ -93,13 +99,23 @@ public class RegistrationInvite {
             String codeEncrypted,
             int maxUses,
             Instant expiresAt,
+            InvitePurpose purpose,
             String createdByAdminId,
             String note
     ) {
         if (maxUses < 1) {
             throw new IllegalArgumentException("maxUses must be >= 1");
         }
-        return new RegistrationInvite(codeHash, codeHint, codeEncrypted, maxUses, expiresAt, createdByAdminId, note);
+        return new RegistrationInvite(
+                codeHash,
+                codeHint,
+                codeEncrypted,
+                maxUses,
+                expiresAt,
+                purpose == null ? InvitePurpose.USER_REGISTRATION : purpose,
+                createdByAdminId,
+                note
+        );
     }
 
     public void refreshDerivedStatus(Instant now) {
@@ -188,6 +204,10 @@ public class RegistrationInvite {
 
     public InviteStatus getStatus() {
         return status;
+    }
+
+    public InvitePurpose getPurpose() {
+        return purpose;
     }
 
     public String getCreatedByAdminId() {

@@ -126,6 +126,20 @@ class SystemTemplateFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(upsert("通用登录（修订）", "ChatGPT", List.of()))))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DRAFT"))
+                .andExpect(jsonPath("$.name").value("通用登录（修订）"));
+
+        mockMvc.perform(get("/api/v1/system-templates").session(userSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(get("/api/v1/system-templates/" + id).session(userSession))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/admin/v1/system-templates/" + id + "/publish")
+                        .session(adminSession)
+                        .with(csrf()))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PUBLISHED"))
                 .andExpect(jsonPath("$.name").value("通用登录（修订）"));
 
@@ -139,7 +153,8 @@ class SystemTemplateFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"sortOrder\":10}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sortOrder").value(10));
+                .andExpect(jsonPath("$.sortOrder").value(10))
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
 
         mockMvc.perform(delete("/api/admin/v1/system-templates/" + id)
                         .session(adminSession)

@@ -8,6 +8,7 @@ import {
   type AdminAnnouncement,
   type AnnouncementStatus,
 } from '@/api/announcements'
+import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -203,6 +204,7 @@ function formatWindow(item: AdminAnnouncement) {
         <thead>
           <tr>
             <th>标题</th>
+            <th>正文</th>
             <th>状态</th>
             <th>置顶</th>
             <th>有效期</th>
@@ -213,7 +215,7 @@ function formatWindow(item: AdminAnnouncement) {
         </thead>
         <tbody>
           <tr v-if="!loading && items.length === 0">
-            <td colspan="7" class="text-medium-emphasis py-8 text-center">
+            <td colspan="8" class="text-medium-emphasis py-8 text-center">
               {{ errorMessage ? '暂时无法加载公告列表。' : '暂无公告，点击右上角新建。' }}
             </td>
           </tr>
@@ -223,10 +225,10 @@ function formatWindow(item: AdminAnnouncement) {
             :class="{ 'admin-table__row--disabled': item.status === 'OFFLINE' }"
           >
             <td data-label="标题">
-              <div class="font-weight-medium">{{ item.title }}</div>
-              <div class="text-caption text-medium-emphasis">
-                {{ item.body.slice(0, 56) }}{{ item.body.length > 56 ? '…' : '' }}
-              </div>
+              <AdminEllipsisText class="font-weight-medium" :text="item.title" max-width="10rem" />
+            </td>
+            <td data-label="正文">
+              <AdminEllipsisText :text="item.body" max-width="14rem" />
             </td>
             <td data-label="状态">
               <span class="admin-status-text" :data-tone="statusTone(item.status)">
@@ -234,9 +236,15 @@ function formatWindow(item: AdminAnnouncement) {
               </span>
             </td>
             <td data-label="置顶">{{ item.pinned ? '是' : '否' }}</td>
-            <td data-label="有效期">{{ formatWindow(item) }}</td>
-            <td data-label="发布时间">{{ formatTime(item.publishedAt) }}</td>
-            <td data-label="更新时间">{{ formatTime(item.updatedAt) }}</td>
+            <td data-label="有效期">
+              <AdminEllipsisText :text="formatWindow(item)" max-width="12rem" />
+            </td>
+            <td data-label="发布时间">
+              <AdminEllipsisText :text="formatTime(item.publishedAt)" max-width="9rem" />
+            </td>
+            <td data-label="更新时间">
+              <AdminEllipsisText :text="formatTime(item.updatedAt)" max-width="9rem" />
+            </td>
             <td data-label="操作">
               <div class="admin-row-actions">
                 <v-btn

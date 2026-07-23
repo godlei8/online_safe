@@ -51,6 +51,8 @@
   --os-control-md: 30px;
   --os-control-touch: 40px;
   --os-control-auth: 38px; /* 认证页主按钮：原 48 - 10 */
+  --os-control-field: 34px; /* 紧凑输入 / 下拉字段 */
+  --os-select-item: 32px; /* 下拉选项行高 */
   --os-duration-fast: 160ms;
   --os-duration-base: 180ms;
 
@@ -480,6 +482,50 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--os-border);
   border-radius: var(--os-radius-card);
   box-shadow: var(--os-shadow-2) !important;
+}
+
+/* 下拉选项列表：紧凑行高（默认 Vuetify 选项过高） */
+.os-select-menu {
+  border: 1px solid var(--os-border) !important;
+  border-radius: var(--os-radius-control, 6px) !important;
+  box-shadow: var(--os-shadow-2) !important;
+  overflow: hidden;
+}
+
+.os-select-menu .v-list {
+  padding: 4px 0 !important;
+}
+
+.os-select-menu .v-list-item {
+  min-height: var(--os-select-item) !important;
+  padding-block: 0 !important;
+  padding-inline: 10px !important;
+}
+
+.os-select-menu .v-list-item .v-list-item__overlay {
+  border-radius: 4px;
+}
+
+.os-select-menu .v-list-item-title {
+  font-size: 0.8125rem !important; /* 13px，与紧凑输入一致 */
+  line-height: 1.25 !important;
+  font-weight: 500;
+}
+
+.os-select-menu .v-list-item-subtitle {
+  font-size: 0.75rem !important;
+  line-height: 1.2 !important;
+  opacity: 0.72;
+}
+
+/* 选择框字段本身与紧凑输入对齐（约 34px） */
+.v-select.v-input--density-compact .v-field__input,
+.v-autocomplete.v-input--density-compact .v-field__input,
+.v-combobox.v-input--density-compact .v-field__input {
+  min-height: var(--os-control-field);
+  padding-top: 2px;
+  padding-bottom: 2px;
+  font-size: 0.8125rem;
 }
 
 /* ============================================================
@@ -2889,6 +2935,30 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 .admin-table tbody tr:hover { background: var(--os-bg); }
 .admin-table__row--disabled { background: var(--os-error-tint); }
 .admin-table td { font-variant-numeric: tabular-nums; }
+
+/* 表格长文本：单行省略，悬停由 AdminEllipsisText / title 展示全文 */
+.admin-ellipsis {
+  display: inline-block;
+  max-width: 12rem;
+  overflow: hidden;
+  color: inherit;
+  vertical-align: bottom;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-ellipsis--block {
+  display: block;
+  width: 100%;
+  max-width: 14rem;
+}
+
+.admin-table__stack {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  max-width: 14rem;
+}
 
 .admin-status-text {
   display: inline-flex;

@@ -1,6 +1,7 @@
 package com.godlei.onlinesafe.admin.application;
 
 import com.godlei.onlinesafe.admin.domain.AdminUser;
+import com.godlei.onlinesafe.admin.domain.InvitePurpose;
 import com.godlei.onlinesafe.admin.domain.InviteStatus;
 import com.godlei.onlinesafe.admin.domain.RegistrationInvite;
 import com.godlei.onlinesafe.admin.domain.RegistrationInviteRedemption;
@@ -63,6 +64,9 @@ public class InvitationService {
             throw new InvalidInvitationOperationException("INVITATION_EXPIRES_AT_INVALID", "过期时间必须晚于当前时间");
         }
 
+        InvitePurpose purpose = request.purpose() == null
+                ? InvitePurpose.USER_REGISTRATION
+                : request.purpose();
         String plainCode = codeGenerator.generate();
         RegistrationInvite invite = RegistrationInvite.create(
                 codeHasher.hash(plainCode),
@@ -70,6 +74,7 @@ public class InvitationService {
                 codeCipher.encrypt(plainCode),
                 request.maxUses(),
                 request.expiresAt(),
+                purpose,
                 adminId,
                 blankToNull(request.note())
         );
@@ -78,9 +83,21 @@ public class InvitationService {
     }
 
     @Transactional(readOnly = true)
-    public Page<InvitationResponse> list(InviteStatus status, Boolean singleUse, String query, Pageable pageable) {
+    public Page<InvitationResponse> list(
+            InviteStatus status,
+            InvitePurpose purpose,
+            Boolean singleUse,
+            String query,
+            Pageable pageable
+    ) {
         Instant now = clock.instant();
-        Page<RegistrationInvite> page = inviteRepository.search(status, singleUse, blankToNull(query), pageable);
+        Page<RegistrationInvite> page = inviteRepository.search(
+                status,
+                purpose,
+                singleUse,
+                blankToNull(query),
+                pageable
+        );
         page.forEach(invite -> invite.refreshDerivedStatus(now));
         Map<String, String> creators = loadCreatorNames(page.getContent());
         return page.map(invite -> toResponse(invite, creators.getOrDefault(invite.getCreatedByAdminId(), "未知")));
@@ -124,6 +141,9 @@ public class InvitationService {
         String hash = codeHasher.hash(rawCode);
         RegistrationInvite invite = inviteRepository.findByCodeHash(hash)
                 .orElseThrow(() -> new InvalidRegistrationException("INVITATION_CODE_INVALID", "邀请码无效"));
+        if (invite.getPurpose() != InvitePurpose.USER_REGISTRATION) {
+            throw new InvalidRegistrationException("INVITATION_CODE_INVALID", "邀请码类型不适用于用户注册");
+        }
         if (!invite.isUsable(now)) {
             throw new InvalidRegistrationException("INVITATION_CODE_INVALID", "邀请码无效");
         }
@@ -138,9 +158,13 @@ public class InvitationService {
         if (invite.isExpiringSoon(now, now.plus(Duration.ofHours(48)))) {
             displayStatus = "ACTIVE_ATTENTION";
         }
+        InvitePurpose purpose = invite.getPurpose() == null
+                ? InvitePurpose.USER_REGISTRATION
+                : invite.getPurpose();
         return new InvitationResponse(
                 invite.getId(),
                 invite.getCodeHint(),
+                purpose.name(),
                 invite.isSingleUse() ? "SINGLE" : "MULTI",
                 invite.getUsedCount(),
                 invite.getMaxUses(),

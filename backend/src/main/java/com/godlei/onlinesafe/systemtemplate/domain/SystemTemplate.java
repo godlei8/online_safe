@@ -117,7 +117,11 @@ public class SystemTemplate {
             this.sortOrder = sortOrder;
         }
         this.updatedByAdminId = Objects.requireNonNull(adminId);
-        // 已发布可直接编辑，不对用户隐藏
+        // 已发布/已下线修改后回到草稿，需重新发布才对用户可见
+        if (status != SystemTemplateStatus.DRAFT) {
+            this.status = SystemTemplateStatus.DRAFT;
+            this.publishedAt = null;
+        }
     }
 
     public void publish(Instant now) {

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { ApiRequestError } from '@/api/client'
 import { usersApi, type ManagedUser, type ManagedUserStats } from '@/api/users'
+import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
 
 type UserConfirmAction = 'disable' | 'enable' | 'revokeSessions'
@@ -92,6 +93,13 @@ function formatRelative(value: string | null) {
   const days = Math.floor(hours / 24)
   if (days < 30) return `${days} 天前`
   return formatTime(value)
+}
+
+function formatBytes(value: number | null) {
+  if (value == null) return '—'
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
 }
 
 const confirmOpen = ref(false)
@@ -258,7 +266,8 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
       <v-table class="admin-table">
         <thead>
           <tr>
-            <th>用户标识</th>
+            <th>用户名</th>
+            <th>手机号</th>
             <th>账户状态</th>
             <th>注册时间</th>
             <th>最近登录</th>
@@ -270,26 +279,38 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
         </thead>
         <tbody>
           <tr v-if="!loading && items.length === 0">
-            <td colspan="8" class="text-medium-emphasis py-8 text-center">暂无匹配的用户。</td>
+            <td colspan="9" class="text-medium-emphasis py-8 text-center">暂无匹配的用户。</td>
           </tr>
           <tr
             v-for="item in items"
             :key="item.id"
             :class="{ 'admin-table__row--disabled': item.status === 'DISABLED' }"
           >
-            <td data-label="用户标识">
-              <div class="font-weight-medium">{{ item.username }}</div>
-              <div class="text-caption text-medium-emphasis">{{ item.maskedPhone }}</div>
+            <td data-label="用户名">
+              <AdminEllipsisText
+                class="font-weight-medium"
+                :text="item.username"
+                max-width="10rem"
+              />
+            </td>
+            <td data-label="手机号">
+              <AdminEllipsisText :text="item.maskedPhone" max-width="8rem" />
             </td>
             <td data-label="账户状态">
               <span class="admin-status-text" :data-tone="statusColor(item.status)">
                 {{ statusLabel(item.status) }}
               </span>
             </td>
-            <td data-label="注册时间">{{ formatTime(item.createdAt) }}</td>
-            <td data-label="最近登录">{{ formatRelative(item.lastLoginAt) }}</td>
-            <td data-label="密文存储">—</td>
-            <td data-label="记录数">—</td>
+            <td data-label="注册时间">
+              <AdminEllipsisText :text="formatTime(item.createdAt)" max-width="9rem" />
+            </td>
+            <td data-label="最近登录">
+              <AdminEllipsisText :text="formatRelative(item.lastLoginAt)" max-width="8rem" />
+            </td>
+            <td data-label="密文存储">
+              <AdminEllipsisText :text="formatBytes(item.cipherStorageBytes)" max-width="6rem" />
+            </td>
+            <td data-label="记录数">{{ item.recordCount ?? '—' }}</td>
             <td data-label="活跃会话">{{ item.activeSessionCount }}</td>
             <td data-label="操作">
               <div class="admin-row-actions">
