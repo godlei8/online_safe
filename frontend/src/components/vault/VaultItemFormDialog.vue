@@ -45,8 +45,13 @@ function friendlyError(error: unknown, fallback: string): string {
 }
 
 watch(
-  () => [editor.visible.value, editor.editingId.value, editor.templateId.value] as const,
-  async ([visible, itemId, tmplId]) => {
+  () => [
+    editor.visible.value,
+    editor.editingId.value,
+    editor.templateId.value,
+    editor.templateSource.value,
+  ] as const,
+  async ([visible, itemId, tmplId, tmplSource]) => {
     if (!visible) return
     const token = ++loadToken.value
     errorMessage.value = ''
@@ -56,6 +61,10 @@ watch(
         const item = await vault.getItem(itemId)
         if (token !== loadToken.value) return
         form.value = cloneVaultItemPayload(item.payload)
+      } else if (tmplId && tmplSource === 'system') {
+        const payload = await vault.buildPayloadFromSystemTemplate(tmplId)
+        if (token !== loadToken.value) return
+        form.value = cloneVaultItemPayload(payload)
       } else if (tmplId) {
         const payload = await vault.buildPayloadFromTemplate(tmplId)
         if (token !== loadToken.value) return

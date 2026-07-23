@@ -93,6 +93,7 @@ $env:DB_PASSWORD = '你的本机开发密码'
 | V10 | 服务端加密改造（清空旧客户端密文，删除 key-bundle） |
 | V11 | 系统公告 |
 | V12 | 短信验证码 |
+| V13 | 系统模板 |
 
 ## 测试
 
@@ -142,6 +143,19 @@ API 对已登录用户收发明文 `payload`；库内为 AES-GCM 密文。
 | GET | `/api/v1/announcements` | 公告列表 |
 | POST | `/api/v1/announcements/{id}/read` | 标记已读 |
 
+### 系统模板（明文结构）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/v1/system-templates` | 已发布列表 |
+| GET | `/api/v1/system-templates/{id}` | 已发布详情 |
+| GET / POST | `/api/admin/v1/system-templates` | 管理端分页列表 / 创建草稿 |
+| GET / PUT | `/api/admin/v1/system-templates/{id}` | 管理端详情 / 更新 |
+| POST | `/api/admin/v1/system-templates/{id}/publish` | 发布 |
+| POST | `/api/admin/v1/system-templates/{id}/offline` | 下线 |
+| PATCH | `/api/admin/v1/system-templates/{id}/sort` | 调整排序 |
+| DELETE | `/api/admin/v1/system-templates/{id}` | 仅草稿可删 |
+
 ### 管理端
 
 | 方法 | 路径 | 说明 |
@@ -170,7 +184,8 @@ API 对已登录用户收发明文 `payload`；库内为 AES-GCM 密文。
 
 ## 当前边界
 
-- 管理员 TOTP、系统模板、安全日志业务接口未实现。
+- 管理员 TOTP、安全日志业务接口未实现。
+- 系统模板本轮未含「复制为私人模板」等增强。
 - 注册全局限流尚未完善（短信侧有发送间隔与日限额等配置）。
 - 邀请码后台仍可用，但**注册不再校验邀请码**。
 - 密保相关 HTTP 已下线；`user_security_question` 表保留不参与现行流程。

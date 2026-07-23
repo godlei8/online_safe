@@ -6,6 +6,7 @@ const quickLinks = [
   { title: '用户管理', to: '/admin/users', icon: 'mdi-account-group-outline' },
   { title: '创建邀请码', to: '/admin/invitations', icon: 'mdi-key-plus' },
   { title: '发布公告', to: '/admin/announcements', icon: 'mdi-bullhorn-outline' },
+  { title: '系统模板', to: '/admin/templates', icon: 'mdi-view-grid-plus-outline' },
 ]
 
 const userStats = ref<ManagedUserStats | null>(null)
@@ -22,7 +23,7 @@ onMounted(async () => {
 <template>
   <div class="admin-dashboard">
     <v-alert type="info" variant="tonal" class="mb-6">
-      保险箱、邀请码、用户管理与公告已开放；系统模板与安全日志将陆续接入。
+      保险箱、邀请码、用户管理、公告与系统模板已开放；安全日志将陆续接入。
     </v-alert>
 
     <div class="admin-stat-grid mb-4">

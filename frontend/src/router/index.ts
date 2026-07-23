@@ -12,6 +12,7 @@ import AdminDashboardView from '@/views/admin/AdminDashboardView.vue'
 import AdminInvitationsView from '@/views/admin/AdminInvitationsView.vue'
 import AdminAnnouncementsView from '@/views/admin/AdminAnnouncementsView.vue'
 import AdminUsersView from '@/views/admin/AdminUsersView.vue'
+import AdminTemplatesView from '@/views/admin/AdminTemplatesView.vue'
 import AdminPlaceholderView from '@/views/admin/AdminPlaceholderView.vue'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 import { useAuthStore } from '@/stores/auth'
@@ -99,8 +100,11 @@ const router = createRouter({
         {
           path: 'templates',
           name: 'admin-templates',
-          component: AdminPlaceholderView,
-          meta: { title: '系统模板', subtitle: '管理系统模板与动态字段。' },
+          component: AdminTemplatesView,
+          meta: {
+            title: '系统模板',
+            subtitle: '维护全体用户可用的字段结构模板；发布后可在保险箱选用创建。',
+          },
         },
         {
           path: 'security-logs',

@@ -20,7 +20,7 @@ const form = ref<PrivateTemplatePayload>({
 
 onMounted(async () => {
   try {
-    await vault.loadTemplates()
+    await Promise.all([vault.loadTemplates(), vault.loadSystemTemplates()])
   } finally {
     loading.value = false
   }
@@ -92,8 +92,12 @@ async function remove(id: string) {
   await vault.deleteTemplate(id)
 }
 
-function createFromTemplate(id: string) {
-  editor.openCreate({ templateId: id })
+function createFromPrivate(id: string) {
+  editor.openCreate({ templateId: id, templateSource: 'private' })
+}
+
+function createFromSystem(id: string) {
+  editor.openCreate({ templateId: id, templateSource: 'system' })
 }
 </script>
 
@@ -101,10 +105,12 @@ function createFromTemplate(id: string) {
   <section class="vault-content vault-templates-panel" aria-labelledby="templates-title">
     <div class="vault-title-row">
       <div>
-        <p class="vault-eyebrow">私人模板</p>
+        <p class="vault-eyebrow">模板中心</p>
         <div class="vault-title-row__heading">
-          <h1 id="templates-title">字段结构复用</h1>
-          <span>{{ vault.templates.length }} 个模板</span>
+          <h1 id="templates-title">系统与私人模板</h1>
+          <span>
+            {{ vault.systemTemplates.length }} 个系统 · {{ vault.templates.length }} 个私人
+          </span>
         </div>
       </div>
       <v-btn
@@ -114,40 +120,85 @@ function createFromTemplate(id: string) {
         prepend-icon="mdi-plus"
         @click="openCreate"
       >
-        新建模板
+        新建私人模板
       </v-btn>
     </div>
 
     <div class="vault-privacy-note" role="note">
       <v-icon icon="mdi-information-outline" size="16" />
-      <span>模板只保存字段名称与配置，不保存真实账密值。</span>
+      <span>模板只保存字段结构，不保存真实账密值。系统模板由管理员维护。</span>
     </div>
 
     <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
-    <div v-else-if="vault.templates.length" class="vault-template-list">
-      <div v-for="item in vault.templates" :key="item.envelope.id" class="vault-template-card">
-        <div>
-          <strong>{{ item.payload.name }}</strong>
-          <p>{{ item.payload.platform || '未指定平台' }} · {{ item.payload.fields.length }} 个字段</p>
-        </div>
-        <div class="d-flex ga-2">
-          <v-btn
-            size="small"
-            color="primary"
-            variant="tonal"
-            @click="createFromTemplate(item.envelope.id)"
+
+    <template v-else>
+      <section class="vault-templates-section">
+        <header class="vault-templates-section__head">
+          <h2>系统模板</h2>
+          <p>选用后按结构新建记录，可继续增删字段。</p>
+        </header>
+        <div v-if="vault.systemTemplates.length" class="vault-template-list">
+          <div
+            v-for="item in vault.systemTemplates"
+            :key="item.id"
+            class="vault-template-card vault-template-card--system"
           >
-            用此创建
-          </v-btn>
-          <v-btn size="small" variant="text" color="error" @click="remove(item.envelope.id)">
-            删除
-          </v-btn>
+            <div>
+              <strong>{{ item.name }}</strong>
+              <p>
+                {{ item.platform || '未指定平台' }}
+                <template v-if="item.channel"> · {{ item.channel }}</template>
+                · {{ item.fields.length }} 个字段
+              </p>
+            </div>
+            <div class="d-flex ga-2">
+              <v-btn
+                size="small"
+                color="primary"
+                variant="flat"
+                @click="createFromSystem(item.id)"
+              >
+                使用此模板
+              </v-btn>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-    <v-alert v-else type="info" variant="tonal">
-      还没有私人模板。可以先创建一个常用字段组合。
-    </v-alert>
+        <v-alert v-else type="info" variant="tonal">
+          暂无已发布的系统模板，请稍后或联系管理员。
+        </v-alert>
+      </section>
+
+      <section class="vault-templates-section">
+        <header class="vault-templates-section__head">
+          <h2>我的模板</h2>
+          <p>仅自己可见，可自由增删。</p>
+        </header>
+        <div v-if="vault.templates.length" class="vault-template-list">
+          <div v-for="item in vault.templates" :key="item.envelope.id" class="vault-template-card">
+            <div>
+              <strong>{{ item.payload.name }}</strong>
+              <p>{{ item.payload.platform || '未指定平台' }} · {{ item.payload.fields.length }} 个字段</p>
+            </div>
+            <div class="d-flex ga-2">
+              <v-btn
+                size="small"
+                color="primary"
+                variant="tonal"
+                @click="createFromPrivate(item.envelope.id)"
+              >
+                用此创建
+              </v-btn>
+              <v-btn size="small" variant="text" color="error" @click="remove(item.envelope.id)">
+                删除
+              </v-btn>
+            </div>
+          </div>
+        </div>
+        <v-alert v-else type="info" variant="tonal">
+          还没有私人模板。可以先创建一个常用字段组合。
+        </v-alert>
+      </section>
+    </template>
 
     <v-dialog v-model="dialog" max-width="640">
       <v-card class="vault-template-dialog pa-6">
@@ -189,12 +240,32 @@ function createFromTemplate(id: string) {
 </template>
 
 <style scoped>
+.vault-templates-section {
+  margin-bottom: 24px;
+}
+
+.vault-templates-section__head {
+  margin-bottom: 12px;
+}
+
+.vault-templates-section__head h2 {
+  margin: 0;
+  color: var(--os-text-title);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.vault-templates-section__head p {
+  margin: 4px 0 0;
+  color: var(--os-text-muted);
+  font-size: 0.8125rem;
+}
+
 .vault-template-list {
   display: grid;
   gap: 12px;
 }
 
-/* 模板卡：与记录卡同语言（1px 边框 + Level 1 环境阴影） */
 .vault-template-card {
   display: flex;
   justify-content: space-between;
@@ -204,6 +275,11 @@ function createFromTemplate(id: string) {
   border: 1px solid var(--os-border);
   background: var(--os-surface);
   box-shadow: var(--os-shadow-1);
+}
+
+.vault-template-card--system {
+  border-color: #d6e0ff;
+  background: linear-gradient(120deg, #f8faff, #fff);
 }
 
 .vault-template-card strong { color: var(--os-text-title); }

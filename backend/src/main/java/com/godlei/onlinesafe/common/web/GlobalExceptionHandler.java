@@ -10,6 +10,8 @@ import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
 import com.godlei.onlinesafe.auth.application.PasswordResetException;
 import com.godlei.onlinesafe.auth.application.RegistrationConflictException;
 import com.godlei.onlinesafe.auth.application.SmsException;
+import com.godlei.onlinesafe.systemtemplate.application.InvalidSystemTemplateOperationException;
+import com.godlei.onlinesafe.systemtemplate.application.SystemTemplateNotFoundException;
 import com.godlei.onlinesafe.vault.application.InvalidVaultEnvelopeException;
 import com.godlei.onlinesafe.vault.application.PrivateTemplateNotFoundException;
 import com.godlei.onlinesafe.vault.application.VaultItemNotFoundException;
@@ -116,6 +118,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidAnnouncementOperationException.class)
     ResponseEntity<ApiError> handleInvalidAnnouncement(
             InvalidAnnouncementOperationException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(SystemTemplateNotFoundException.class)
+    ResponseEntity<ApiError> handleSystemTemplateNotFound(
+            SystemTemplateNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return response(HttpStatus.NOT_FOUND, "SYSTEM_TEMPLATE_NOT_FOUND", exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidSystemTemplateOperationException.class)
+    ResponseEntity<ApiError> handleInvalidSystemTemplate(
+            InvalidSystemTemplateOperationException exception,
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);

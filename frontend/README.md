@@ -29,13 +29,14 @@ npm run dev
 | `/forgot-password` | 短信验证码重置密码 |
 | `/vault` | 保险箱首页：列表/卡片、筛选搜索、新建记录 |
 | `/vault/items/:id` | 记录详情：复制、网址跳转、手机号拨打、编辑入口 |
-| `/vault/templates` | 私人模板 CRUD，可从模板新建记录 |
+| `/vault/templates` | 系统模板（只读选用）+ 私人模板 CRUD |
 | `/admin/login` | 管理员登录（与个人入口分离） |
 | `/admin` | 管理后台总览 |
 | `/admin/invitations` | 邀请码管理（创建 / 列表 / 复制明文 / 删除） |
 | `/admin/users` | 用户管理（列表、统计、启用/禁用、吊销会话） |
 | `/admin/announcements` | 系统公告（创建 / 编辑 / 发布 / 下线） |
-| `/admin/templates`、`/admin/security-logs`、`/admin/settings` | 占位页 |
+| `/admin/templates` | 系统模板（创建 / 编辑 / 发布 / 下线 / 排序） |
+| `/admin/security-logs`、`/admin/settings` | 占位页 |
 
 历史路由 `/vault/setup`、`/vault/unlock`、`/vault/rewrap` 重定向至 `/vault`（旧客户端加密流程已废弃）。
 
@@ -55,6 +56,7 @@ npm run dev
 - 列表：卡片或列表视图；按平台 / 渠道 / 状态筛选；搜索名称、平台、渠道、账号等。
 - 交互：一键复制、密码掩码与临时明文、详情页 `tel:` / 外链跳转。
 - 私人模板：保存字段结构，一键生成新记录草稿。
+- 系统模板：浏览已发布模板并选用创建；快照 `templateSnapshot.source=SYSTEM`。
 - 布局内嵌新建 / 编辑弹窗（紧凑分区、类型色条、细滚动条）。
 
 ### 公告

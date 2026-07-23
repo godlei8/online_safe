@@ -16,6 +16,7 @@ const navItems = [
   { title: '用户管理', icon: 'mdi-account-group-outline', to: '/admin/users' },
   { title: '邀请码', icon: 'mdi-ticket-confirmation-outline', to: '/admin/invitations' },
   { title: '公告', icon: 'mdi-bullhorn-outline', to: '/admin/announcements' },
+  { title: '系统模板', icon: 'mdi-view-grid-plus-outline', to: '/admin/templates' },
 ]
 
 const pageTitle = computed(() => String(route.meta.title || '管理后台'))

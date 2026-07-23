@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { userSystemTemplatesApi, type UserSystemTemplate } from '@/api/systemTemplates'
 import { vaultApi, type VaultItemRecord, type VaultTemplateRecord } from '@/api/vault'
 import { createEntityId } from '@/domain/entityId'
 import {
@@ -51,6 +52,7 @@ export const useVaultStore = defineStore('vault', {
     ready: false,
     items: [] as DecryptedItem[],
     templates: [] as DecryptedTemplate[],
+    systemTemplates: [] as UserSystemTemplate[],
     lastError: '',
   }),
   getters: {
@@ -81,6 +83,7 @@ export const useVaultStore = defineStore('vault', {
     clearSessionData() {
       this.items = []
       this.templates = []
+      this.systemTemplates = []
       this.lastError = ''
       this.ready = false
     },
@@ -104,6 +107,10 @@ export const useVaultStore = defineStore('vault', {
       this.requireOwnerId()
       const records = await vaultApi.listTemplates()
       this.templates = records.map(toTemplate)
+    },
+    async loadSystemTemplates() {
+      this.requireOwnerId()
+      this.systemTemplates = await userSystemTemplatesApi.list()
     },
     async getItem(id: string) {
       const cached = this.items.find((item) => item.envelope.id === id)
@@ -163,9 +170,49 @@ export const useVaultStore = defineStore('vault', {
         channelUrl: template.payload.channelUrl || base.channelUrl,
         fields: fieldsFromTemplate(template.payload),
         templateSnapshot: {
+          source: 'PRIVATE',
           templateId: template.envelope.id,
           name: template.payload.name,
           fields: template.payload.fields,
+        },
+      } satisfies VaultItemPayload
+    },
+    async buildPayloadFromSystemTemplate(templateId: string) {
+      let template = this.systemTemplates.find((item) => item.id === templateId)
+      if (!template) {
+        template = await userSystemTemplatesApi.get(templateId)
+      }
+      const asPrivate: PrivateTemplatePayload = {
+        name: template.name,
+        platform: template.platform,
+        channel: template.channel,
+        channelUrl: template.channelUrl,
+        fields: template.fields.map((field) => ({
+          id: field.id,
+          name: field.name,
+          type: field.type as PrivateTemplatePayload['fields'][number]['type'],
+          required: field.required,
+          sensitive: field.sensitive,
+          copyable: field.copyable,
+          hint: field.hint,
+          order: field.order,
+          systemKey: field.systemKey,
+          value: '',
+        })),
+      }
+      const base = emptyItemPayload()
+      return {
+        ...base,
+        name: '',
+        platform: asPrivate.platform || base.platform,
+        channel: asPrivate.channel || base.channel,
+        channelUrl: asPrivate.channelUrl || base.channelUrl,
+        fields: fieldsFromTemplate(asPrivate),
+        templateSnapshot: {
+          source: 'SYSTEM',
+          templateId: template.id,
+          name: template.name,
+          fields: asPrivate.fields,
         },
       } satisfies VaultItemPayload
     },
