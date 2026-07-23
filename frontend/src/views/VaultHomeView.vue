@@ -3,7 +3,13 @@ import { computed, onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useRouter } from 'vue-router'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+import { useOsToast } from '@/composables/useOsToast'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
+import {
+  batchExportFilename,
+  exportVaultItemsAsMarkdown,
+  singleExportFilename,
+} from '@/domain/vaultMarkdownExport'
 import {
   channelExternalHref,
   cloneVaultItemPayload,
@@ -26,6 +32,7 @@ const { xs, smAndDown } = useDisplay()
 const vault = useVaultStore()
 const announcements = useAnnouncementsStore()
 const editor = useVaultItemEditor()
+const toast = useOsToast()
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -41,6 +48,10 @@ const snackbarText = ref('')
 const abnormalConfirmOpen = ref(false)
 const abnormalTargetId = ref<string | null>(null)
 const markingAbnormal = ref(false)
+const exportConfirmOpen = ref(false)
+const exporting = ref(false)
+/** null = 批量导出当前列表；有值 = 单条导出 */
+const exportTargetId = ref<string | null>(null)
 /** 列表卡片中已临时明文显示密码的记录 id */
 const revealedPasswordIds = ref<Record<string, boolean>>({})
 const templatePickerOpen = ref(false)
@@ -167,6 +178,64 @@ async function confirmMarkAbnormal() {
   }
 }
 
+function askExportCurrent() {
+  if (!filteredRecords.value.length) {
+    toast.error('当前列表没有可导出的记录')
+    return
+  }
+  exportTargetId.value = null
+  exportConfirmOpen.value = true
+}
+
+function askExportOne(id: string) {
+  exportTargetId.value = id
+  exportConfirmOpen.value = true
+}
+
+const exportConfirmTitle = computed(() => (
+  exportTargetId.value ? '确认导出此记录？' : '确认导出当前列表？'
+))
+
+const exportConfirmMessage = computed(() => (
+  exportTargetId.value
+    ? '将下载含账号与密码明文的 Markdown 文件。请妥善保管该文件，是否继续？'
+    : `将下载 ${filteredRecords.value.length} 条记录的 Markdown 文件，其中包含账号与密码明文。请妥善保管该文件，是否继续？`
+))
+
+function confirmExport() {
+  exporting.value = true
+  try {
+    if (exportTargetId.value) {
+      const item = vault.items.find((row) => row.envelope.id === exportTargetId.value)
+      if (!item) throw new Error('记录不存在或已删除')
+      exportVaultItemsAsMarkdown(
+        [{ payload: item.payload, updatedAt: item.envelope.updatedAt }],
+        singleExportFilename(item.payload.name),
+      )
+      toast.success('已导出')
+    } else {
+      const byId = new Map(vault.items.map((item) => [item.envelope.id, item]))
+      const items = filteredRecords.value
+        .map((row) => byId.get(row.id))
+        .filter((item): item is NonNullable<typeof item> => Boolean(item))
+        .map((item) => ({
+          payload: item.payload,
+          updatedAt: item.envelope.updatedAt,
+        }))
+      exportVaultItemsAsMarkdown(items, batchExportFilename())
+      toast.success(`已导出 ${items.length} 条记录`)
+    }
+    exportConfirmOpen.value = false
+    exportTargetId.value = null
+  } catch (error) {
+    toast.error(error instanceof Error && /[\u4e00-\u9fff]/.test(error.message)
+      ? error.message
+      : '导出失败，请重试')
+  } finally {
+    exporting.value = false
+  }
+}
+
 async function copyText(value: string, label: string, allowed = true) {
   if (!allowed) {
     snackbarText.value = `${label}已设置为不可复制`
@@ -273,45 +342,54 @@ onMounted(() => {
           <span>{{ filteredRecords.length }} 条记录</span>
         </div>
       </div>
+
+      <div class="vault-title-row__actions">
+        <v-btn
+          class="vault-export-current"
+          variant="tonal"
+          color="primary"
+          prepend-icon="mdi-download-outline"
+          :disabled="loading || filteredRecords.length === 0"
+          aria-label="导出当前列表为 Markdown"
+          @click="askExportCurrent"
+        >
+          导出当前
+        </v-btn>
+        <div class="vault-new-record-group">
+          <v-btn
+            color="primary"
+            class="vault-new-record"
+            prepend-icon="mdi-plus"
+            @click="editor.openCreate()"
+          >
+            新增记录
+          </v-btn>
+          <v-menu location="bottom end">
+            <template #activator="{ props: menuProps }">
+              <v-btn
+                v-bind="menuProps"
+                color="primary"
+                class="vault-new-record-group__caret"
+                aria-label="更多创建方式"
+                icon="mdi-menu-down"
+              />
+            </template>
+            <v-list density="compact" class="vault-new-record-menu" nav>
+              <v-list-item
+                prepend-icon="mdi-file-document-plus-outline"
+                title="从模板创建"
+                subtitle="选用个人或系统模板"
+                @click="openTemplatePicker"
+              />
+            </v-list>
+          </v-menu>
+        </div>
+      </div>
     </div>
 
-    <div class="vault-hint-row">
-      <div class="vault-privacy-note" role="note">
-        <v-icon icon="mdi-lock-check-outline" size="16" />
-        <span>列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常或编辑，点击卡片进入详情。</span>
-      </div>
-
-      <div class="vault-new-record-group">
-        <v-btn
-          color="primary"
-          class="vault-new-record"
-          size="small"
-          prepend-icon="mdi-plus"
-          @click="editor.openCreate()"
-        >
-          新增记录
-        </v-btn>
-        <v-menu location="bottom end">
-          <template #activator="{ props: menuProps }">
-            <v-btn
-              v-bind="menuProps"
-              color="primary"
-              class="vault-new-record-group__caret"
-              size="small"
-              aria-label="更多创建方式"
-              icon="mdi-menu-down"
-            />
-          </template>
-          <v-list density="compact" class="vault-new-record-menu" nav>
-            <v-list-item
-              prepend-icon="mdi-file-document-plus-outline"
-              title="从模板创建"
-              subtitle="选用个人或系统模板"
-              @click="openTemplatePicker"
-            />
-          </v-list>
-        </v-menu>
-      </div>
+    <div class="vault-privacy-note" role="note">
+      <v-icon icon="mdi-lock-check-outline" size="16" />
+      <span>列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常、编辑或导出，点击卡片进入详情。</span>
     </div>
 
     <aside
@@ -546,6 +624,15 @@ onMounted(() => {
             >
               <v-icon icon="mdi-pencil-outline" size="16" />
             </button>
+            <button
+              type="button"
+              class="vault-record-card__icon-btn vault-record-card__icon-btn--export"
+              aria-label="导出"
+              title="导出 Markdown"
+              @click="askExportOne(item.id)"
+            >
+              <v-icon icon="mdi-download-outline" size="16" />
+            </button>
           </div>
           <time v-if="item.有效期">有效期截至 {{ item.有效期 }}</time>
           <span v-else class="vault-record-card__expiry-empty">永久有效</span>
@@ -633,6 +720,17 @@ onMounted(() => {
       confirm-text="确认标记"
       :loading="markingAbnormal"
       @confirm="confirmMarkAbnormal"
+    />
+
+    <OsConfirmDialog
+      v-model="exportConfirmOpen"
+      variant="warning"
+      icon="mdi-download-outline"
+      :title="exportConfirmTitle"
+      :message="exportConfirmMessage"
+      confirm-text="确认导出"
+      :loading="exporting"
+      @confirm="confirmExport"
     />
 
     <v-dialog

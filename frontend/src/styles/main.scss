@@ -1429,24 +1429,41 @@ a.vault-nav__item.vault-nav__item--active { color: var(--os-primary); }
   font-variant-numeric: tabular-nums;
 }
 
-.vault-hint-row {
+.vault-title-row__actions {
   display: flex;
-  gap: 16px;
-  align-items: center;
-  margin: 16px 0 20px;
-}
-
-.vault-hint-row .vault-privacy-note {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  background: transparent;
-}
-
-.vault-hint-row .vault-new-record-group {
   flex: 0 0 auto;
-  margin-inline: 2px 8px;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.vault-export-current {
+  min-height: 36px !important;
+  height: 36px !important;
+  padding-inline: 12px 14px !important;
+  border: 1px solid var(--os-primary-border) !important;
+  border-radius: 10px !important;
+  background: var(--os-surface) !important;
+  color: var(--os-primary) !important;
+  box-shadow: none !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.vault-export-current .v-icon {
+  font-size: 18px !important;
+  opacity: 0.92;
+}
+
+.vault-export-current:hover:not(:disabled) {
+  border-color: rgb(21 94 239 / 35%) !important;
+  background: var(--os-primary-tint) !important;
+}
+
+.vault-export-current:disabled {
+  opacity: 0.45;
 }
 
 .vault-new-record-group {
@@ -1623,15 +1640,16 @@ a.vault-nav__item.vault-nav__item--active { color: var(--os-primary); }
 }
 
 .vault-privacy-note {
-  display: inline-flex;
+  display: flex;
   gap: 8px;
-  align-items: center;
-  margin: 22px 0;
-  padding: 9px 12px;
-  border-radius: var(--os-radius-card);
-  color: var(--os-text-body);
-  background: var(--os-primary-tint);
+  align-items: flex-start;
+  margin: 14px 0 18px;
+  padding: 0;
+  border-radius: 0;
+  color: var(--os-text-muted);
+  background: transparent;
   font-size: 0.75rem;
+  line-height: 1.5;
 }
 
 .vault-privacy-note .v-icon { color: var(--os-primary); }
@@ -2275,6 +2293,15 @@ a.vault-record-card__source-value:hover {
 .vault-record-card__icon-btn--edit:hover {
   color: var(--os-primary-hover);
   background: var(--os-primary-tint);
+}
+
+.vault-record-card__icon-btn--export {
+  color: var(--os-success);
+}
+
+.vault-record-card__icon-btn--export:hover {
+  color: #0d7a35;
+  background: var(--os-success-tint);
 }
 
 .vault-record-card__icon-btn:focus-visible {
@@ -3419,19 +3446,26 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
 @media (max-width: 599px) {
   .vault-content { padding-bottom: 96px; }
-  .vault-title-row { gap: 16px; align-items: flex-start; flex-direction: column; }
-  .vault-title-row h1 { font-size: 1.5rem; }
-  .vault-hint-row {
-    flex-direction: column;
+  .vault-title-row {
+    gap: 14px;
     align-items: stretch;
-    gap: 10px;
-    margin: 12px 0 20px;
+    flex-direction: column;
   }
-  .vault-hint-row .vault-new-record-group { width: 100%; }
+  .vault-title-row h1 { font-size: 1.5rem; }
+  .vault-title-row__actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .vault-title-row__actions .vault-export-current {
+    flex: 1 1 auto;
+  }
+  .vault-title-row__actions .vault-new-record-group {
+    flex: 1 1 auto;
+  }
   .vault-new-record-group .vault-new-record { flex: 1 1 auto; width: auto; }
   .vault-empty-state__actions { flex-direction: column; width: 100%; }
   .vault-empty-state__actions .vault-new-record-group { width: 100%; }
-  .vault-privacy-note { align-items: flex-start; font-size: 0.75rem; line-height: 1.5; }
+  .vault-privacy-note { margin: 4px 0 16px; }
   .vault-pinned-announcement { margin-bottom: 14px; }
   .vault-controls { gap: 10px; padding: 0 0 14px; }
   .vault-filters { grid-template-columns: 1fr 1fr; }

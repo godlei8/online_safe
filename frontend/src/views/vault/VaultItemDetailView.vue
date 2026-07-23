@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+import { useOsToast } from '@/composables/useOsToast'
+import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
+import {
+  exportVaultItemsAsMarkdown,
+  singleExportFilename,
+} from '@/domain/vaultMarkdownExport'
 import {
   channelExternalHref,
   effectiveStatus,
@@ -10,13 +17,13 @@ import {
   toPhoneHref,
   type VaultItemPayload,
 } from '@/domain/vaultPayload'
-import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import { useVaultStore } from '@/stores/vault'
 
 const route = useRoute()
 const router = useRouter()
 const vault = useVaultStore()
 const editor = useVaultItemEditor()
+const toast = useOsToast()
 
 const loading = ref(true)
 const errorMessage = ref('')
@@ -25,7 +32,8 @@ const snackbarText = ref('')
 const payload = ref<VaultItemPayload | null>(null)
 const updatedAt = ref('')
 const hiddenFields = ref<Record<string, boolean>>({})
-
+const exportConfirmOpen = ref(false)
+const exporting = ref(false)
 const sortedFields = computed(() =>
   [...(payload.value?.fields ?? [])].sort((a, b) => a.order - b.order),
 )
@@ -97,6 +105,33 @@ function openEdit() {
   editor.openEdit(String(route.params.id))
 }
 
+function askExportOne() {
+  if (!payload.value) {
+    toast.error('记录尚未加载完成')
+    return
+  }
+  exportConfirmOpen.value = true
+}
+
+function confirmExportOne() {
+  if (!payload.value) return
+  exporting.value = true
+  try {
+    exportVaultItemsAsMarkdown(
+      [{ payload: payload.value, updatedAt: updatedAt.value }],
+      singleExportFilename(payload.value.name),
+    )
+    exportConfirmOpen.value = false
+    toast.success('已导出')
+  } catch (error) {
+    toast.error(error instanceof Error && /[\u4e00-\u9fff]/.test(error.message)
+      ? error.message
+      : '导出失败，请重试')
+  } finally {
+    exporting.value = false
+  }
+}
+
 const displayStatus = computed(() => (
   payload.value ? statusLabel[effectiveStatus(payload.value)] : ''
 ))
@@ -121,7 +156,30 @@ const statusTone = computed(() => {
       <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="router.push('/vault')">
         返回列表
       </v-btn>
-      <v-btn variant="tonal" color="primary" @click="openEdit">编辑</v-btn>
+      <div class="vault-detail-panel__toolbar-actions">
+        <v-btn
+          class="vault-detail-panel__action"
+          variant="outlined"
+          color="primary"
+          size="small"
+          prepend-icon="mdi-download-outline"
+          :disabled="loading || !payload"
+          @click="askExportOne"
+        >
+          导出
+        </v-btn>
+        <v-btn
+          class="vault-detail-panel__action vault-detail-panel__action--primary"
+          variant="tonal"
+          color="primary"
+          size="small"
+          prepend-icon="mdi-pencil-outline"
+          :disabled="loading || !payload"
+          @click="openEdit"
+        >
+          编辑
+        </v-btn>
+      </div>
     </div>
 
     <v-progress-linear v-if="loading" indeterminate color="primary" />
@@ -219,6 +277,17 @@ const statusTone = computed(() => {
       </section>
     </template>
 
+    <OsConfirmDialog
+      v-model="exportConfirmOpen"
+      variant="warning"
+      icon="mdi-download-outline"
+      title="确认导出此记录？"
+      message="将下载含账号与密码明文的 Markdown 文件。请妥善保管该文件，是否继续？"
+      confirm-text="确认导出"
+      :loading="exporting"
+      @confirm="confirmExportOne"
+    />
+
     <v-snackbar v-model="snackbar" class="vault-feedback-snackbar" location="bottom" :timeout="2000">{{ snackbarText }}</v-snackbar>
   </section>
 </template>
@@ -227,7 +296,35 @@ const statusTone = computed(() => {
 .vault-detail-panel__toolbar {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
+  align-items: center;
   margin-bottom: 16px;
+}
+
+.vault-detail-panel__toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.vault-detail-panel__action {
+  min-height: 30px !important;
+  height: 30px !important;
+  padding-inline: 10px 12px !important;
+  border-radius: 8px !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.vault-detail-panel__action .v-icon {
+  font-size: 16px !important;
+  margin-inline-end: 2px;
+}
+
+.vault-detail-panel__action--primary {
+  box-shadow: none !important;
 }
 
 .vault-detail-panel__header h1 {
