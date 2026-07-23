@@ -33,7 +33,9 @@ if (-not $Password) {
 }
 
 function Invoke-Remote([string]$Command) {
-  & $Plink -ssh -batch -hostkey $HostKey "$UserName@$HostName" -pw $Password $Command
+  # Normalize to LF: PowerShell here-strings are CRLF and break remote bash.
+  $normalized = ($Command -replace "`r`n", "`n") -replace "`r", "`n"
+  & $Plink -ssh -batch -hostkey $HostKey "$UserName@$HostName" -pw $Password $normalized
   if ($LASTEXITCODE -ne 0) { throw "Remote command failed: $Command" }
 }
 
