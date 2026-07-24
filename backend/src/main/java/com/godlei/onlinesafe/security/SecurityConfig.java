@@ -16,14 +16,14 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
-import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
-import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.session.SessionInformationExpiredStrategy;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -65,11 +65,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    SessionAuthenticationStrategy sessionAuthenticationStrategy() {
-        return new ChangeSessionIdAuthenticationStrategy();
-    }
-
-    @Bean
     LogoutSuccessHandler userLogoutSuccessHandler(SecurityAuditService securityAuditService) {
         return (request, response, authentication) -> {
             securityAuditService.recordLogoutUser(authentication, request);
@@ -81,9 +76,20 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             SecurityContextRepository securityContextRepository,
+            SessionRegistry sessionRegistry,
             ObjectMapper objectMapper,
             LogoutSuccessHandler userLogoutSuccessHandler
     ) throws Exception {
+        SessionInformationExpiredStrategy expiredSessionStrategy = event ->
+                writeSecurityError(
+                        event.getResponse(),
+                        objectMapper,
+                        401,
+                        "SESSION_REPLACED",
+                        "账号已在其他地方登录，请重新登录",
+                        event.getRequest().getRequestURI()
+                );
+
         http
                 .securityContext(context -> context
                         .securityContextRepository(securityContextRepository)
@@ -115,12 +121,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/**").hasRole("USER")
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
-                        .sessionFixation(fixation -> fixation.changeSessionId()))
+                        .sessionFixation(fixation -> fixation.changeSessionId())
+                        .maximumSessions(1)
+                        .sessionRegistry(sessionRegistry)
+                        .expiredSessionStrategy(expiredSessionStrategy))
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
-                        .deleteCookies("ONLINE_SAFE_SESSION")
+                        .deleteCookies(SurfaceAwareCookieHttpSessionIdResolver.USER_COOKIE)
                         .logoutSuccessHandler(userLogoutSuccessHandler))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, exception) ->

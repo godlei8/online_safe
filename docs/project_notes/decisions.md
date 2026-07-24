@@ -61,6 +61,23 @@
 - 新按钮默认跟令牌走，不再写死 40/48。
 - 手机触控命中区仍用 `--os-control-touch`（40px）保证点按。
 
+## 2026-07-24 — 个人/管理端双 Session Cookie 与同账号挤掉
+
+### 背景
+
+同一浏览器先登个人再登管理端时，共用 `ONLINE_SAFE_SESSION` 导致个人 SecurityContext 被覆盖，个人会话失效。
+
+### 决策
+
+1. 个人端 Cookie：`ONLINE_SAFE_SESSION`；管理端：`ONLINE_SAFE_ADMIN_SESSION`（`SurfaceAwareCookieHttpSessionIdResolver` 按 `/api/admin/**` 分流）。
+2. 同一主体最多 1 个有效会话；再次登录挤掉旧会话（`SESSION_REPLACED`），个人与管理员互不影响。
+3. 管理员 Session 主体名加前缀 `admin:`，避免与个人用户同名冲突。
+
+### 后果
+
+- 同浏览器可同时保持个人保险箱与管理后台登录态。
+- 退出管理端不得清除个人 Cookie；退出个人不得清除管理端 Cookie。
+
 ## 2026-07-24 — 安全日志与白名单系统设置
 
 ### 背景

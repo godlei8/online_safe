@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { z } from 'zod'
 import AuthShell from '@/components/AuthShell.vue'
 import { ApiRequestError } from '@/api/client'
+import { useOsToast } from '@/composables/useOsToast'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 
 const router = useRouter()
+const route = useRoute()
 const adminAuth = useAdminAuthStore()
+const toast = useOsToast()
 const form = ref()
 const username = ref('')
 const password = ref('')
@@ -24,6 +27,12 @@ const schema = z.object({
 const required = (message: string) => (value: string) => Boolean(value?.trim()) || message
 
 onMounted(async () => {
+  if (route.query.reason === 'session-replaced') {
+    toast.warning('管理员账号已在其他地方登录，当前会话已失效，请重新登录。', 4200)
+    const query = { ...route.query }
+    delete query.reason
+    await router.replace({ path: '/admin/login', query })
+  }
   if (!adminAuth.ready) {
     try {
       await adminAuth.bootstrap()
@@ -70,29 +79,33 @@ async function submit() {
 </script>
 
 <template>
-  <AuthShell>
-    <div class="auth-segmented mb-7" role="tablist" aria-label="登录入口切换">
-      <router-link to="/login" class="auth-segmented__item" role="tab" aria-selected="false">个人登录</router-link>
-      <router-link to="/admin/login" class="auth-segmented__item auth-segmented__item--active" role="tab" aria-selected="true">管理员入口</router-link>
-    </div>
-
+  <AuthShell admin>
     <div class="auth-form-heading">
       <span class="auth-form-heading__eyebrow">管理后台</span>
       <h1>管理员登录</h1>
-      <p>使用系统内置管理员账号进入后台，管理邀请码与系统配置。</p>
+      <p>独立管理入口，用于用户、邀请码、公告与系统策略。</p>
     </div>
 
-    <v-alert v-if="errorMessage" type="error" variant="tonal" density="comfortable" class="auth-form-alert" role="alert">
+    <v-alert
+      v-if="errorMessage"
+      type="error"
+      variant="tonal"
+      density="compact"
+      class="auth-form-alert"
+      role="alert"
+    >
       {{ errorMessage }}
     </v-alert>
 
-    <v-form ref="form" class="auth-login-form" validate-on="blur" @submit.prevent="submit">
+    <v-form ref="form" class="auth-login-form" validate-on="submit lazy" @submit.prevent="submit">
       <v-text-field
         v-model="username"
         label="管理员用户名"
         placeholder="请输入管理员用户名"
         prepend-inner-icon="mdi-shield-account-outline"
         autocomplete="username"
+        density="comfortable"
+        hide-details="auto"
         :rules="[required('请输入管理员用户名')]"
         :error-messages="fieldErrors.username"
         @update:model-value="clearFieldError('username')"
@@ -100,11 +113,12 @@ async function submit() {
 
       <v-text-field
         v-model="password"
-        class="mt-2"
         label="登录密码"
         placeholder="请输入登录密码"
         prepend-inner-icon="mdi-lock-outline"
         autocomplete="current-password"
+        density="comfortable"
+        hide-details="auto"
         :type="showPassword ? 'text' : 'password'"
         :rules="[required('请输入登录密码')]"
         :error-messages="fieldErrors.password"
@@ -122,11 +136,16 @@ async function submit() {
         </template>
       </v-text-field>
 
-      <v-btn class="auth-submit" type="submit" color="primary" block :loading="submitting">进入管理后台</v-btn>
+      <v-btn
+        class="auth-submit"
+        type="submit"
+        color="primary"
+        block
+        :loading="submitting"
+        :disabled="submitting"
+      >
+        {{ submitting ? '正在登录…' : '进入管理后台' }}
+      </v-btn>
     </v-form>
-
-    <div class="mt-6 text-center">
-      <router-link to="/login" class="text-primary font-weight-medium">返回个人用户登录</router-link>
-    </div>
   </AuthShell>
 </template>

@@ -543,8 +543,8 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 72px;
-  padding: 0 48px;
+  min-height: 56px;
+  padding: 0 40px;
   border-bottom: 1px solid var(--os-border);
   background: rgb(255 255 255 / 92%);
 }
@@ -612,7 +612,7 @@ h1, h2, h3, h4, h5, h6 {
   display: grid;
   overflow: hidden;
   place-items: center;
-  padding: 56px clamp(32px, 4vw, 72px);
+  padding: 40px clamp(28px, 3.5vw, 56px);
   color: #fff;
   background:
     radial-gradient(640px 460px at 14% 10%, rgb(37 99 235 / 16%), transparent 62%),
@@ -623,48 +623,79 @@ h1, h2, h3, h4, h5, h6 {
 .auth-aside__inner {
   position: relative;
   z-index: 1;
-  width: min(100%, 430px);
+  width: min(100%, 480px);
 }
 
-.auth-eyebrow,
-.auth-form-heading__eyebrow {
+.auth-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  color: rgb(255 255 255 / 72%);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  line-height: 1.3;
 }
 
-.auth-eyebrow { color: rgb(255 255 255 / 72%); }
+.auth-eyebrow .v-icon {
+  color: var(--os-success);
+}
 
 .auth-aside h1 {
-  margin: 18px 0 14px;
+  margin: 8px 0 6px;
   color: #fff;
-  font-size: clamp(1.9rem, 2.8vw, 2.5rem);
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.18;
   letter-spacing: -0.02em;
 }
 
 .auth-aside > .auth-aside__inner > p {
-  max-width: 390px;
+  max-width: 400px;
   margin: 0;
   color: rgb(255 255 255 / 72%);
-  font-size: 0.9375rem;
-  line-height: 1.7;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.auth-aside__visual {
+  display: grid;
+  place-items: center;
+  margin: 18px 0 0;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  pointer-events: none;
+  user-select: none;
+}
+
+.auth-aside__illustration {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 32px rgb(0 0 0 / 40%));
 }
 
 .auth-security-list {
   display: grid;
-  gap: 18px;
-  margin: 38px 0 8px;
+  gap: 16px;
+  margin: 18px 0 0;
+}
+
+.auth-security-list--compact {
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.auth-security-list--compact .auth-security-item {
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
 }
 
 .auth-security-item {
   display: grid;
   grid-template-columns: 40px 1fr;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -680,29 +711,29 @@ h1, h2, h3, h4, h5, h6 {
 
 .auth-security-item strong {
   color: #fff;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 .auth-security-item span {
-  margin-top: 2px;
+  margin-top: 1px;
   color: rgb(255 255 255 / 64%);
-  font-size: 0.75rem;
-  line-height: 1.5;
+  font-size: 0.71875rem;
+  line-height: 1.4;
 }
 
-/* 右栏：白色表面即表单区，表单最大 420px，不再套卡片框 */
+/* 右栏：白色表面即表单区，表单最大 400px，不再套卡片框 */
 .auth-content {
   display: grid;
   min-width: 0;
   place-items: center;
-  padding: clamp(40px, 6vw, 88px) 32px;
+  padding: clamp(28px, 4.5vw, 56px) 28px;
   background: var(--os-surface);
 }
 
 .auth-card {
-  width: min(100%, 420px);
+  width: min(100%, 400px);
   padding: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -712,70 +743,72 @@ h1, h2, h3, h4, h5, h6 {
 
 .auth-card--register { width: min(100%, 448px); }
 
-/* 入口切换：语义化分段控件，选中项蓝字 + 2px 下划线 */
-.auth-segmented {
-  display: flex;
-  gap: 20px;
-  border-bottom: 1px solid var(--os-border);
-}
+.auth-form-heading { margin-bottom: 20px; }
+.auth-form-heading--register { margin-bottom: 18px; }
 
-.auth-segmented__item {
+.auth-form-heading__eyebrow {
   display: inline-flex;
-  min-height: var(--os-control-touch);
-  align-items: center;
-  padding: 6px 2px 9px;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  color: var(--os-text-muted);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.auth-segmented__item--active {
+  padding: 3px 9px;
+  border-radius: 999px;
   color: var(--os-primary);
-  border-bottom-color: var(--os-primary);
+  background: var(--os-primary-tint);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
 }
-
-.auth-form-heading { margin-bottom: 28px; }
-.auth-form-heading--register { margin-bottom: 22px; }
-.auth-form-heading__eyebrow { color: var(--os-primary); }
 
 .auth-form-heading h1 {
-  margin: 8px 0;
+  margin: 6px 0;
   color: var(--os-text-title);
-  font-size: 1.75rem;
-  font-weight: 600;
+  font-size: 1.625rem;
+  font-weight: 650;
   line-height: 1.25;
   letter-spacing: -0.02em;
 }
 
 .auth-form-heading p {
   margin: 0;
-  color: var(--os-text-body);
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-
-.auth-card .v-messages { min-height: 20px; }
-.password-toggle { min-width: 32px !important; min-height: 32px !important; color: var(--os-text-muted); }
-
-.auth-form-alert { margin: 0 0 20px; }
-
-.auth-inline-note {
-  display: flex;
-  gap: 9px;
-  align-items: flex-start;
-  margin: 8px 0 24px;
-  padding: 12px;
-  border-radius: var(--os-radius-card);
-  color: var(--os-text-body);
-  background: var(--os-primary-tint);
-  font-size: 0.75rem;
+  color: var(--os-text-muted);
+  font-size: 0.8125rem;
   line-height: 1.55;
 }
 
+.password-toggle { min-width: 32px !important; min-height: 32px !important; color: var(--os-text-muted); }
+
+.auth-form-alert { margin: 0 0 14px; }
+
+.auth-inline-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--os-text-body);
+  background: var(--os-primary-tint);
+  font-size: 0.71875rem;
+  line-height: 1.5;
+}
+
 .auth-inline-note .v-icon { flex: 0 0 auto; margin-top: 1px; color: var(--os-primary); }
+
+.auth-login-meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.auth-login-meta__link {
+  color: var(--os-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-login-meta__link:hover {
+  color: var(--os-primary);
+  text-decoration: underline;
+}
 
 /* 认证页主按钮：38px 高（相对旧 48 -10）、信任蓝、全宽 */
 .auth-submit {
@@ -791,9 +824,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .auth-alternate-action {
-  margin: 24px 0 0;
-  color: var(--os-text-body);
-  font-size: 0.875rem;
+  margin: 18px 0 0;
+  color: var(--os-text-muted);
+  font-size: 0.8125rem;
   text-align: center;
 }
 
@@ -913,13 +946,15 @@ h1, h2, h3, h4, h5, h6 {
 
 .auth-login-form {
   display: grid;
-  gap: var(--os-space-4);
+  gap: 12px;
 }
 
 .auth-login-form > .mt-2,
 .auth-login-form > .mb-2 { margin-top: 0 !important; margin-bottom: 0 !important; }
 
-.auth-login-form .auth-inline-note { margin: 0; }
+.auth-login-form .auth-submit { margin-top: 4px; }
+
+.auth-login-form .auth-inline-note { margin-top: 2px; }
 
 /* 分步表单：字段、主操作和返回路径使用统一的纵向节奏 */
 .auth-step-form,
@@ -938,16 +973,19 @@ h1, h2, h3, h4, h5, h6 {
 .auth-reset-form > .auth-form-actions { margin-top: 8px; }
 
 .auth-reset-form > .auth-submit { margin-top: 0; }
-.auth-alternate-action { margin-top: 28px; }
 
 .auth-footer {
   display: flex;
   justify-content: space-between;
-  padding: 16px 48px;
+  padding: 12px 40px;
   border-top: 1px solid var(--os-border);
   color: var(--os-text-muted);
   background: var(--os-surface);
   font-size: 0.75rem;
+}
+
+.auth-page--admin .auth-header__status .v-icon {
+  color: var(--os-primary);
 }
 
 .connection-snackbar .v-snackbar__wrapper { min-width: min(94vw, 560px); }
@@ -3418,26 +3456,36 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
 /* 认证页 */
 @media (max-width: 1279px) {
-  .auth-aside { padding: 48px clamp(28px, 4vw, 48px); }
-  .auth-aside h1 { font-size: 1.9rem; }
-  .auth-security-list { gap: 14px; margin: 30px 0 0; }
+  .auth-aside { padding: 32px clamp(28px, 4vw, 48px); }
+  .auth-aside h1 { font-size: 1.85rem; margin: 6px 0 4px; }
+  .auth-aside__inner { width: min(100%, 440px); }
+  .auth-security-list { gap: 14px; margin: 14px 0 0; }
+}
+
+@media (max-height: 820px) {
+  .auth-aside h1 { margin: 6px 0 4px; }
+  .auth-aside__visual { margin-top: 12px; max-height: 220px; }
+  .auth-security-list--compact { margin-top: 14px; gap: 12px; }
+  .auth-security-list--compact .auth-security-item span { display: none; }
 }
 
 @media (max-width: 959px) {
   .auth-main { display: block; }
   .auth-aside { display: none; }
-  .auth-content { min-height: 0; padding: 32px 24px 44px; }
+  .auth-content { min-height: 0; padding: 28px 24px 36px; }
 }
 
 @media (max-width: 599px) {
-  .auth-header { min-height: 64px; padding: 0 20px; }
+  .auth-header { min-height: 52px; padding: 0 20px; }
   .auth-header__actions { gap: 0; }
   .auth-header__status { display: none !important; }
   .auth-header__link { font-size: 0.8125rem; }
-  .auth-content { padding: 24px 20px 36px; }
+  .auth-content { padding: 20px 20px 28px; }
   .auth-card { width: 100%; }
+  .auth-form-heading { margin-bottom: 16px; }
   .auth-form-heading h1 { font-size: 1.5rem; }
-  .auth-footer { justify-content: center; padding: 14px 20px; }
+  .auth-login-form { gap: 10px; }
+  .auth-footer { justify-content: center; padding: 12px 20px; }
   .connection-snackbar .v-snackbar__wrapper { min-width: calc(100vw - 24px); }
 
   .password-toggle {

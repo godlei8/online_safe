@@ -34,25 +34,38 @@ function shouldTreatAsSessionExpiry(path: string): boolean {
   return path.startsWith('/api/')
 }
 
-async function handleSessionExpired(path: string): Promise<void> {
+async function handleSessionExpired(path: string, code?: string): Promise<void> {
   if (handlingUnauthorized) return
   handlingUnauthorized = true
   try {
-    const [{ useVaultStore }, { useAuthStore }] = await Promise.all([
-      import('@/stores/vault'),
-      import('@/stores/auth'),
-    ])
-    useVaultStore().clearSessionData()
-    useAuthStore().$patch({
-      session: { authenticated: false, userId: null, username: null, role: null, avatarUrl: null },
-      ready: true,
-    })
     const onAdminSurface = path.startsWith('/api/admin') || window.location.pathname.startsWith('/admin')
-    const loginPath = onAdminSurface ? '/admin/login' : '/login'
-    if (!window.location.pathname.startsWith(loginPath)) {
-      const redirect = encodeURIComponent(window.location.pathname + window.location.search)
-      window.location.assign(`${loginPath}?redirect=${redirect}`)
+    if (onAdminSurface) {
+      const { useAdminAuthStore } = await import('@/stores/adminAuth')
+      useAdminAuthStore().$patch({
+        session: { authenticated: false, adminId: null, username: null, role: null },
+        ready: true,
+      })
+    } else {
+      const [{ useVaultStore }, { useAuthStore }] = await Promise.all([
+        import('@/stores/vault'),
+        import('@/stores/auth'),
+      ])
+      useVaultStore().clearSessionData()
+      useAuthStore().$patch({
+        session: { authenticated: false, userId: null, username: null, role: null, avatarUrl: null },
+        ready: true,
+      })
     }
+
+    const loginPath = onAdminSurface ? '/admin/login' : '/login'
+    if (window.location.pathname.startsWith(loginPath)) return
+
+    const params = new URLSearchParams()
+    params.set('redirect', window.location.pathname + window.location.search)
+    if (code === 'SESSION_REPLACED') {
+      params.set('reason', 'session-replaced')
+    }
+    window.location.assign(`${loginPath}?${params.toString()}`)
   } finally {
     handlingUnauthorized = false
   }
@@ -82,10 +95,11 @@ export async function requestJson<T>(path: string, options: RequestInit = {}): P
 
   const response = await fetch(path, { ...options, method, headers, credentials: 'include' })
   if (!response.ok) {
+    const error = await toApiError(response)
     if (response.status === 401 && shouldTreatAsSessionExpiry(path)) {
-      void handleSessionExpired(path)
+      void handleSessionExpired(path, error.code)
     }
-    throw await toApiError(response)
+    throw error
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
@@ -102,10 +116,11 @@ export async function requestForm<T>(path: string, form: FormData, method = 'POS
 
   const response = await fetch(path, { method: verb, headers, body: form, credentials: 'include' })
   if (!response.ok) {
+    const error = await toApiError(response)
     if (response.status === 401 && shouldTreatAsSessionExpiry(path)) {
-      void handleSessionExpired(path)
+      void handleSessionExpired(path, error.code)
     }
-    throw await toApiError(response)
+    throw error
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>

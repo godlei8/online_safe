@@ -106,7 +106,9 @@ Set-Location D:\Ai\online-word\backend
 
 ## 当前接口
 
-写请求需先 `GET /api/csrf`，并按响应要求回传 CSRF Token。Session Cookie：`ONLINE_SAFE_SESSION`（空闲约 1 小时）。  
+写请求需先 `GET /api/csrf`，并按响应要求回传 CSRF Token。  
+Session Cookie（空闲约 1 小时）：个人端 `ONLINE_SAFE_SESSION`，管理端 `ONLINE_SAFE_ADMIN_SESSION`（同一浏览器可并存）。  
+同一账号再次登录会挤掉该账号旧会话；个人与管理员互不影响。  
 `/api/v1/**` → `ROLE_USER`；`/api/admin/**` → `ROLE_ADMIN`。
 
 ### 认证与安全

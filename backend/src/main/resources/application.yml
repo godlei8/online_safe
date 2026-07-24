@@ -34,6 +34,7 @@ server:
     session:
       timeout: 1h
       cookie:
+        # 个人端 Cookie 名；管理端为 ONLINE_SAFE_ADMIN_SESSION（见 SurfaceAwareCookieHttpSessionIdResolver）
         name: ONLINE_SAFE_SESSION
         http-only: true
         secure: ${SESSION_COOKIE_SECURE:true}

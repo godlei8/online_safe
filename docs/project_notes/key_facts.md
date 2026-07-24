@@ -49,6 +49,14 @@
 - 样式：`frontend/src/styles/main.scss`（搜索 `os-confirm-dialog`）
 - 已接入：保险箱删除模板、标记异常；管理端邀请码删除、用户禁用/启用/使会话失效
 
+## 会话 Cookie（2026-07-24）
+
+| 面 | Cookie | 说明 |
+| --- | --- | --- |
+| 个人 | `ONLINE_SAFE_SESSION` | `/api/auth/**`、`/api/v1/**` |
+| 管理 | `ONLINE_SAFE_ADMIN_SESSION` | `/api/admin/**` |
+| 并发 | 同账号最多 1 会话 | 多地登录挤掉旧会话；跨账号/跨面不挤 |
+
 ## 安全日志与系统设置（2026-07-24）
 
 | 项 | 约定 |

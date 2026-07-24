@@ -2,6 +2,7 @@ package com.godlei.onlinesafe.admin.web;
 
 import com.godlei.onlinesafe.audit.application.SecurityAuditService;
 import com.godlei.onlinesafe.security.AdminUserPrincipal;
+import com.godlei.onlinesafe.security.SurfaceAwareCookieHttpSessionIdResolver;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -90,7 +91,8 @@ public class AdminAuthController {
         if (session != null) {
             session.invalidate();
         }
-        Cookie cookie = new Cookie("ONLINE_SAFE_SESSION", "");
+        // 仅清除管理端 Cookie，不影响个人端 ONLINE_SAFE_SESSION
+        Cookie cookie = new Cookie(SurfaceAwareCookieHttpSessionIdResolver.ADMIN_COOKIE, "");
         cookie.setPath("/");
         cookie.setMaxAge(0);
         cookie.setHttpOnly(true);
