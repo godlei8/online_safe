@@ -7,6 +7,7 @@ import com.godlei.onlinesafe.security.AppUserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -31,9 +32,12 @@ import java.util.Locale;
 public class UserProfileController {
 
     private final UserProfileService userProfileService;
-    private final LocalAvatarStorage localAvatarStorage;
+    private final ObjectProvider<LocalAvatarStorage> localAvatarStorage;
 
-    public UserProfileController(UserProfileService userProfileService, LocalAvatarStorage localAvatarStorage) {
+    public UserProfileController(
+            UserProfileService userProfileService,
+            ObjectProvider<LocalAvatarStorage> localAvatarStorage
+    ) {
         this.userProfileService = userProfileService;
         this.localAvatarStorage = localAvatarStorage;
     }
@@ -69,8 +73,12 @@ public class UserProfileController {
     /** 本地 provider 下的头像文件；objectKey 形如 avatars/{userId}/{file} */
     @GetMapping("/avatar-file/{*objectKey}")
     public ResponseEntity<Resource> localAvatar(@PathVariable("objectKey") String objectKey) {
+        LocalAvatarStorage storage = localAvatarStorage.getIfAvailable();
+        if (storage == null) {
+            return ResponseEntity.notFound().build();
+        }
         String key = objectKey.startsWith("/") ? objectKey.substring(1) : objectKey;
-        Path path = localAvatarStorage.resolve(key);
+        Path path = storage.resolve(key);
         if (path == null) {
             return ResponseEntity.notFound().build();
         }
