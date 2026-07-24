@@ -10,6 +10,7 @@ import {
 import { systemSettingsApi } from '@/api/systemSettings'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+import OsHintBar from '@/components/OsHintBar.vue'
 import { useOsToast } from '@/composables/useOsToast'
 
 const loading = ref(false)
@@ -273,12 +274,8 @@ function copyCreatedPlainCode() {
 </script>
 
 <template>
-  <div>
-    <div class="d-flex flex-wrap align-center justify-space-between ga-3 mb-6">
-      <div />
-      <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">创建邀请码</v-btn>
-    </div>
-
+  <div class="admin-invitations admin-page">
+    <div class="admin-page__chrome">
     <div class="admin-stat-grid mb-4">
       <v-card class="admin-stat-card admin-stat-card--primary" elevation="0">
         <div class="admin-stat-card__head">
@@ -319,17 +316,17 @@ function copyCreatedPlainCode() {
       </v-card>
     </div>
 
-    <v-alert type="info" variant="tonal" class="mb-4">
+    <OsHintBar class="mb-4">
       列表仅显示掩码；点击「复制」可将完整邀请码写入剪贴板，页面不会展示明文。
-    </v-alert>
+    </OsHintBar>
 
     <v-card class="admin-panel mb-4" elevation="0">
       <div class="admin-filter-row">
         <v-text-field
           v-model="query"
           class="admin-filter-field"
+          density="compact"
           hide-details
-          label="搜索"
           placeholder="按邀请码备注或创建者搜索"
           prepend-inner-icon="mdi-magnify"
           @keyup.enter="search"
@@ -337,6 +334,7 @@ function copyCreatedPlainCode() {
         <v-select
           v-model="statusFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="statusOptions"
           item-title="title"
@@ -345,6 +343,7 @@ function copyCreatedPlainCode() {
         <v-select
           v-model="purposeFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="purposeOptions"
           item-title="title"
@@ -353,18 +352,25 @@ function copyCreatedPlainCode() {
         <v-select
           v-model="usageFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="usageOptions"
           item-title="title"
           item-value="value"
         />
         <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" @click="search">查询</v-btn>
+        <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
+          创建邀请码
+        </v-btn>
       </div>
     </v-card>
 
     <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">{{ errorMessage }}</v-alert>
+    </div>
 
-    <v-card class="admin-panel" elevation="0">
+    <div class="admin-page__table">
+    <v-card class="admin-panel admin-page__table-panel" elevation="0">
+      <div class="admin-page__scroll">
       <v-table class="admin-table">
         <thead>
           <tr>
@@ -382,7 +388,7 @@ function copyCreatedPlainCode() {
         </thead>
         <tbody>
           <tr v-if="!loading && items.length === 0">
-            <td colspan="10" class="text-medium-emphasis py-8 text-center">暂无邀请码，点击右上角创建。</td>
+            <td colspan="10" class="text-medium-emphasis py-8 text-center">暂无邀请码，点击筛选栏「创建邀请码」开始。</td>
           </tr>
           <tr
             v-for="item in items"
@@ -458,14 +464,16 @@ function copyCreatedPlainCode() {
           </tr>
         </tbody>
       </v-table>
+      </div>
 
-      <div class="admin-pagination-row mt-4">
+      <div class="admin-pagination-row admin-page__pager">
         <div class="text-caption text-medium-emphasis">
           共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
         </div>
         <v-pagination v-model="page" :length="totalPages" total-visible="5" />
       </div>
     </v-card>
+    </div>
 
     <v-dialog v-model="createDialog" max-width="480" persistent>
       <v-card class="os-form-dialog">

@@ -106,7 +106,9 @@ async function logout() {
       </header>
 
       <main class="admin-content">
-        <router-view />
+        <div class="admin-content__body">
+          <router-view />
+        </div>
         <p class="admin-boundary">保险箱账密由服务端加密存储，管理员无法查看用户明文内容。</p>
       </main>
     </div>

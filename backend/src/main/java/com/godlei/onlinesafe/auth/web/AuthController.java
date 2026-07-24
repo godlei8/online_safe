@@ -3,9 +3,12 @@ package com.godlei.onlinesafe.auth.web;
 import com.godlei.onlinesafe.audit.application.SecurityAuditService;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
 import com.godlei.onlinesafe.security.AppUserPrincipal;
+import com.godlei.onlinesafe.session.application.SessionMetadataService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -28,25 +31,28 @@ import java.time.Clock;
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
-    private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
+    private final SessionAuthenticationStrategy userSessionAuthenticationStrategy;
     private final SecurityContextRepository securityContextRepository;
     private final AppUserRepository appUserRepository;
     private final SecurityAuditService securityAuditService;
+    private final SessionMetadataService sessionMetadataService;
     private final Clock clock;
 
     public AuthController(
             AuthenticationManager authenticationManager,
-            SessionAuthenticationStrategy sessionAuthenticationStrategy,
+            @Qualifier("userSessionAuthenticationStrategy") SessionAuthenticationStrategy userSessionAuthenticationStrategy,
             SecurityContextRepository securityContextRepository,
             AppUserRepository appUserRepository,
             SecurityAuditService securityAuditService,
+            SessionMetadataService sessionMetadataService,
             Clock clock
     ) {
         this.authenticationManager = authenticationManager;
-        this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
+        this.userSessionAuthenticationStrategy = userSessionAuthenticationStrategy;
         this.securityContextRepository = securityContextRepository;
         this.appUserRepository = appUserRepository;
         this.securityAuditService = securityAuditService;
+        this.sessionMetadataService = sessionMetadataService;
         this.clock = clock;
     }
 
@@ -67,11 +73,14 @@ public class AuthController {
             throw exception;
         }
 
-        sessionAuthenticationStrategy.onAuthentication(authentication, servletRequest, servletResponse);
+        userSessionAuthenticationStrategy.onAuthentication(authentication, servletRequest, servletResponse);
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
         securityContextRepository.saveContext(context, servletRequest, servletResponse);
+
+        HttpSession session = servletRequest.getSession(false);
+        sessionMetadataService.writeOnLogin(servletRequest, session);
 
         if (authentication.getPrincipal() instanceof AppUserPrincipal principal) {
             return appUserRepository.findById(principal.userId()).map(user -> {

@@ -63,7 +63,7 @@ async function saveUsername() {
     profile.value = await profileApi.changeUsername(next)
     username.value = profile.value.username
     auth.patchProfile({ username: profile.value.username })
-    toast.success('用户名已更新')
+    toast.success('用户名已更新，其他设备已退出')
   } catch (error) {
     toast.error(error instanceof ApiRequestError ? error.message : '用户名更新失败')
   } finally {
@@ -100,7 +100,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="vault-content vault-profile">
+  <section class="vault-content vault-profile vault-page--scroll">
     <div class="vault-title-row">
       <div class="vault-title-row__heading">
         <h1>个人中心</h1>

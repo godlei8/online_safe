@@ -4,17 +4,19 @@ import tools.jackson.databind.ObjectMapper;
 import com.godlei.onlinesafe.admin.domain.AdminUser;
 import com.godlei.onlinesafe.admin.infrastructure.AdminUserRepository;
 import com.godlei.onlinesafe.admin.infrastructure.RegistrationInviteRepository;
-import com.godlei.onlinesafe.admin.infrastructure.UserSessionRepository;
 import com.godlei.onlinesafe.auth.domain.AppUser;
 import com.godlei.onlinesafe.auth.domain.AppUserStatus;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
+import com.godlei.onlinesafe.security.SurfaceAwareCookieHttpSessionIdResolver;
+import com.godlei.onlinesafe.session.application.UserSessionService;
+import jakarta.servlet.Filter;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,7 +25,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -58,10 +59,11 @@ class UserManagementFlowIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private UserSessionService userSessionService;
 
     @Autowired
-    private UserSessionRepository userSessionRepository;
+    @Qualifier("springSessionRepositoryFilter")
+    private Filter springSessionRepositoryFilter;
 
     private MockMvc mockMvc;
 
@@ -71,8 +73,8 @@ class UserManagementFlowIntegrationTest {
         userRepository.deleteAll();
         adminUserRepository.deleteAll();
         adminUserRepository.save(AdminUser.createActive("admin", passwordEncoder.encode(TEST_ADMIN_PASSWORD)));
-        ensureSessionTable();
         mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext)
+                .addFilters(springSessionRepositoryFilter)
                 .apply(springSecurity())
                 .build();
     }
@@ -86,31 +88,21 @@ class UserManagementFlowIntegrationTest {
                 passwordEncoder.encode("correct-password-123")
         ));
 
-        mockMvc.perform(post("/api/auth/login")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "identifier", "alice",
-                                "password", "correct-password-123"
-                        ))))
-                .andExpect(status().isOk());
-
+        Cookie userCookie = loginUser("alice");
         AppUser afterLogin = userRepository.findById(user.getId()).orElseThrow();
         assertThat(afterLogin.getLastLoginAt()).isNotNull();
+        assertThat(userSessionService.countActiveByPrincipal("alice")).isEqualTo(1);
 
-        insertSession("alice");
-        assertThat(userSessionRepository.countByPrincipalName("alice")).isEqualTo(1);
+        Cookie adminCookie = loginAdmin();
 
-        MockHttpSession adminSession = adminLogin();
-
-        mockMvc.perform(get("/api/admin/v1/users/stats").session(adminSession))
+        mockMvc.perform(get("/api/admin/v1/users/stats").cookie(adminCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.active").value(1))
                 .andExpect(jsonPath("$.disabled").value(0))
                 .andExpect(jsonPath("$.activeLast7Days").value(1));
 
-        mockMvc.perform(get("/api/admin/v1/users").session(adminSession).param("q", "alice"))
+        mockMvc.perform(get("/api/admin/v1/users").cookie(adminCookie).param("q", "alice"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].username").value("alice"))
                 .andExpect(jsonPath("$.content[0].maskedPhone").value("138****8088"))
@@ -118,15 +110,16 @@ class UserManagementFlowIntegrationTest {
                 .andExpect(jsonPath("$.content[0].activeSessionCount").value(1));
 
         mockMvc.perform(post("/api/admin/v1/users/" + user.getId() + "/revoke-sessions")
-                        .session(adminSession)
+                        .cookie(adminCookie)
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.activeSessionCount").value(0));
 
-        assertThat(userSessionRepository.countByPrincipalName("alice")).isZero();
+        assertThat(userSessionService.countActiveByPrincipal("alice")).isZero();
+        mockMvc.perform(get("/api/v1/ping").cookie(userCookie)).andExpect(status().isUnauthorized());
 
         mockMvc.perform(post("/api/admin/v1/users/" + user.getId() + "/disable")
-                        .session(adminSession)
+                        .cookie(adminCookie)
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DISABLED"));
@@ -143,51 +136,39 @@ class UserManagementFlowIntegrationTest {
                 .andExpect(status().isUnauthorized());
 
         mockMvc.perform(post("/api/admin/v1/users/" + user.getId() + "/enable")
-                        .session(adminSession)
+                        .cookie(adminCookie)
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
 
-    private void ensureSessionTable() {
-        jdbcTemplate.execute("""
-                CREATE TABLE IF NOT EXISTS spring_session (
-                    primary_id CHAR(36) NOT NULL PRIMARY KEY,
-                    session_id CHAR(36) NOT NULL,
-                    creation_time BIGINT NOT NULL,
-                    last_access_time BIGINT NOT NULL,
-                    max_inactive_interval INT NOT NULL,
-                    expiry_time BIGINT NOT NULL,
-                    principal_name VARCHAR(100)
-                )
-                """);
-        jdbcTemplate.execute("DELETE FROM spring_session");
+    private Cookie loginUser(String username) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "identifier", username,
+                                "password", "correct-password-123"
+                        ))))
+                .andExpect(status().isOk())
+                .andReturn();
+        Cookie cookie = result.getResponse().getCookie(SurfaceAwareCookieHttpSessionIdResolver.USER_COOKIE);
+        assertThat(cookie).isNotNull();
+        return cookie;
     }
 
-    private void insertSession(String principalName) {
-        String id = UUID.randomUUID().toString();
-        long now = System.currentTimeMillis();
-        jdbcTemplate.update(
-                """
-                INSERT INTO spring_session (
-                    primary_id, session_id, creation_time, last_access_time,
-                    max_inactive_interval, expiry_time, principal_name
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                id, id, now, now, 3600, now + 3_600_000L, principalName
-        );
-    }
-
-    private MockHttpSession adminLogin() throws Exception {
+    private Cookie loginAdmin() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/auth/login")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "username", "admin",
-                        "password", TEST_ADMIN_PASSWORD
+                                "password", TEST_ADMIN_PASSWORD
                         ))))
                 .andExpect(status().isOk())
                 .andReturn();
-        return (MockHttpSession) result.getRequest().getSession(false);
+        Cookie cookie = result.getResponse().getCookie(SurfaceAwareCookieHttpSessionIdResolver.ADMIN_COOKIE);
+        assertThat(cookie).isNotNull();
+        return cookie;
     }
 }

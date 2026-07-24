@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+import OsHintBar from '@/components/OsHintBar.vue'
 import { useOsToast } from '@/composables/useOsToast'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import {
@@ -151,7 +152,7 @@ const statusTone = computed(() => {
 </script>
 
 <template>
-  <section class="vault-content vault-detail-panel">
+  <section class="vault-content vault-detail-panel vault-page--scroll">
     <div class="vault-detail-panel__toolbar">
       <v-btn variant="text" prepend-icon="mdi-arrow-left" @click="router.push('/vault')">
         返回列表
@@ -218,9 +219,9 @@ const statusTone = computed(() => {
         </p>
       </header>
 
-      <v-alert type="info" variant="tonal" class="mb-4">
+      <OsHintBar class="mb-4">
         敏感字段默认暗文显示；网址可跳转，手机号可拨打，并支持一键复制。
-      </v-alert>
+      </OsHintBar>
 
       <div class="vault-field-list">
         <div v-for="field in sortedFields" :key="field.id" class="vault-field-row">

@@ -1,11 +1,11 @@
 package com.godlei.onlinesafe.auth.application;
 
-import com.godlei.onlinesafe.admin.infrastructure.UserSessionRepository;
 import com.godlei.onlinesafe.audit.application.SecurityAuditService;
 import com.godlei.onlinesafe.auth.domain.AppUser;
 import com.godlei.onlinesafe.auth.domain.SmsPurpose;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
 import com.godlei.onlinesafe.auth.web.PasswordResetConfirmRequest;
+import com.godlei.onlinesafe.session.application.UserSessionService;
 import com.godlei.onlinesafe.settings.application.SystemSettingService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,7 +23,7 @@ public class PasswordResetService {
     private final SmsVerificationService smsVerificationService;
     private final PasswordEncoder passwordEncoder;
     private final PhoneNormalizer phoneNormalizer;
-    private final UserSessionRepository userSessionRepository;
+    private final UserSessionService userSessionService;
     private final PasswordResetRateLimiter rateLimiter;
     private final SecurityAuditService securityAuditService;
     private final SystemSettingService systemSettingService;
@@ -33,7 +33,7 @@ public class PasswordResetService {
             SmsVerificationService smsVerificationService,
             PasswordEncoder passwordEncoder,
             PhoneNormalizer phoneNormalizer,
-            UserSessionRepository userSessionRepository,
+            UserSessionService userSessionService,
             PasswordResetRateLimiter rateLimiter,
             SecurityAuditService securityAuditService,
             SystemSettingService systemSettingService
@@ -42,7 +42,7 @@ public class PasswordResetService {
         this.smsVerificationService = smsVerificationService;
         this.passwordEncoder = passwordEncoder;
         this.phoneNormalizer = phoneNormalizer;
-        this.userSessionRepository = userSessionRepository;
+        this.userSessionService = userSessionService;
         this.rateLimiter = rateLimiter;
         this.securityAuditService = securityAuditService;
         this.systemSettingService = systemSettingService;
@@ -87,7 +87,7 @@ public class PasswordResetService {
         user.changePassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
         // 登录密码与保险箱加解密无关：仅吊销会话，保留账密记录
-        userSessionRepository.deleteByPrincipalName(user.getUsername());
+        userSessionService.deleteAllByPrincipal(user.getUsername());
         rateLimiter.clear("confirm:" + clientKey + ":" + phone);
         securityAuditService.recordPasswordResetSuccess(user.getId(), user.getUsername());
     }

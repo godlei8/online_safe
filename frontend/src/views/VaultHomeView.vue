@@ -73,6 +73,7 @@ const records = computed(() => vault.items.map(({ envelope, payload }) => {
     渠道网址: payload.channelUrl?.trim() || '',
     状态: statusLabel[status],
     状态码: status,
+    置顶: Boolean(payload.pinned),
     有效期: payload.expiresAt ? payload.expiresAt.slice(0, 10) : '',
     更新时间: envelope.updatedAt ? new Date(envelope.updatedAt).toLocaleString('zh-CN') : '',
     更新时间戳: envelope.updatedAt ? Date.parse(envelope.updatedAt) : 0,
@@ -109,6 +110,7 @@ const filteredRecords = computed(() => {
   })
 
   return [...result].sort((left, right) => {
+    if (left.置顶 !== right.置顶) return left.置顶 ? -1 : 1
     if (sortBy.value === '最早创建') return left.更新时间戳 - right.更新时间戳
     if (sortBy.value === '名称') return left.名称.localeCompare(right.名称, 'zh-CN')
     return right.更新时间戳 - left.更新时间戳
@@ -153,6 +155,27 @@ function statusTone(status: string) {
 function askMarkAbnormal(id: string) {
   abnormalTargetId.value = id
   abnormalConfirmOpen.value = true
+}
+
+const pinningId = ref<string | null>(null)
+
+async function togglePin(id: string) {
+  if (pinningId.value) return
+  pinningId.value = id
+  try {
+    const item = await vault.getItem(id)
+    const nextPinned = !Boolean(item.payload.pinned)
+    await vault.setItemPinned(id, nextPinned)
+    snackbarText.value = nextPinned ? '已置顶' : '已取消置顶'
+    snackbar.value = true
+  } catch (error) {
+    snackbarText.value = error instanceof Error && /[\u4e00-\u9fff]/.test(error.message)
+      ? error.message
+      : '置顶失败，请重试'
+    snackbar.value = true
+  } finally {
+    pinningId.value = null
+  }
 }
 
 async function confirmMarkAbnormal() {
@@ -333,7 +356,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="vault-content" aria-labelledby="vault-title">
+  <section class="vault-content vault-page" aria-labelledby="vault-title">
+    <div class="vault-page__chrome">
     <div class="vault-title-row">
       <div>
         <p class="vault-eyebrow">你的私人空间</p>
@@ -465,6 +489,7 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    </div>
 
     <v-dialog
       v-model="mobileFiltersOpen"
@@ -499,6 +524,7 @@ onMounted(() => {
       </v-card>
     </v-dialog>
 
+    <div class="vault-page__body">
     <div
       v-if="!loading && !errorMessage && filteredRecords.length"
       class="vault-records"
@@ -523,7 +549,20 @@ onMounted(() => {
             <strong>{{ item.名称 }}</strong>
             <span class="vault-record-card__platform">{{ item.平台 }}</span>
           </div>
-          <span class="vault-record-card__status" :data-tone="statusTone(item.状态)">{{ item.状态 }}</span>
+          <div class="vault-record-card__meta">
+            <button
+              type="button"
+              class="vault-record-card__pin"
+              :class="{ 'vault-record-card__pin--active': item.置顶 }"
+              :aria-label="item.置顶 ? '取消置顶' : '置顶'"
+              :aria-pressed="item.置顶"
+              :disabled="pinningId === item.id"
+              @click.stop="togglePin(item.id)"
+            >
+              <v-icon :icon="item.置顶 ? 'mdi-pin' : 'mdi-pin-outline'" size="16" />
+            </button>
+            <span class="vault-record-card__status" :data-tone="statusTone(item.状态)">{{ item.状态 }}</span>
+          </div>
         </div>
 
         <div
@@ -710,6 +749,7 @@ onMounted(() => {
         清除筛选
       </v-btn>
     </section>
+    </div>
 
     <OsConfirmDialog
       v-model="abnormalConfirmOpen"

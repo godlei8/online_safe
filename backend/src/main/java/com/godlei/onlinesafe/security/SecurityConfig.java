@@ -122,7 +122,9 @@ public class SecurityConfig {
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionFixation(fixation -> fixation.changeSessionId())
-                        .maximumSessions(1)
+                        // 上限由 user/admin 各自的 SessionAuthenticationStrategy 在登录时执行；
+                        // 这里 -1 仅保留 ConcurrentSessionFilter，用于检测已被标记失效的会话。
+                        .maximumSessions(-1)
                         .sessionRegistry(sessionRegistry)
                         .expiredSessionStrategy(expiredSessionStrategy))
                 .logout(logout -> logout

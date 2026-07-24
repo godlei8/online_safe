@@ -66,6 +66,43 @@
 
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 
+/* 工作区壳层自管滚动时，禁止整页跟着滚，避免顶栏被顶走 */
+body:has(.admin-shell),
+body:has(.vault-shell) {
+  overflow: hidden;
+  height: 100%;
+}
+
+.v-application:has(.admin-shell),
+.v-application:has(.vault-shell) {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.v-application:has(.admin-shell) .v-main,
+.v-application:has(.vault-shell) .v-main {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.v-application:has(.admin-shell) .v-main__wrap,
+.v-application:has(.vault-shell) .v-main__wrap {
+  display: flex;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.v-application:has(.admin-shell) .v-main__wrap > *,
+.v-application:has(.vault-shell) .v-main__wrap > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+}
+
 /* 全局细滚动条：与信任蓝体系一致，弹窗 / 列表同步生效 */
 * {
   scrollbar-width: thin;
@@ -119,7 +156,128 @@ h1, h2, h3, h4, h5, h6 {
 /* 控件圆角 6px（圆形图标按钮除外） */
 .v-btn:not(.v-btn--icon) { border-radius: var(--os-radius-control); letter-spacing: 0; }
 .v-field { border-radius: var(--os-radius-control); }
-.v-alert { border-radius: var(--os-radius-card); }
+/* 轻量提示条：高度贴文字，不走 Vuetify v-alert 布局 */
+.os-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 20px !important;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.os-hint__icon {
+  flex: 0 0 auto;
+  opacity: 0.92;
+}
+
+.os-hint__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.os-hint--info {
+  color: var(--os-primary);
+  background: var(--os-primary-tint);
+  border-color: color-mix(in srgb, var(--os-primary) 16%, transparent);
+}
+
+.os-hint--success {
+  color: var(--os-success);
+  background: var(--os-success-tint);
+  border-color: color-mix(in srgb, var(--os-success) 16%, transparent);
+}
+
+.os-hint--warning {
+  color: var(--os-warning);
+  background: var(--os-warning-tint);
+  border-color: color-mix(in srgb, var(--os-warning) 18%, transparent);
+}
+
+.os-hint--error {
+  color: var(--os-error);
+  background: var(--os-error-tint);
+  border-color: var(--os-error-border);
+}
+
+/* 提示条：强制横向单行高度，避免被 Vuetify 纵向撑开 */
+.v-alert {
+  --v-alert-padding: 2px 8px;
+  position: relative;
+  display: flex !important;
+  flex: 0 0 auto !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  align-self: stretch;
+  gap: 6px;
+  width: 100%;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  border-radius: 4px;
+  padding: 2px 8px !important;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.v-alert .v-alert__underlay {
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.v-alert .v-alert__content {
+  position: relative;
+  flex: 1 1 auto !important;
+  align-self: center !important;
+  min-width: 0;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.v-alert .v-alert__prepend {
+  position: relative;
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center;
+  align-self: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.v-alert .v-alert__prepend .v-icon {
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.v-alert .v-alert__append,
+.v-alert .v-alert__close {
+  position: relative;
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  margin: 0 !important;
+}
+
+.v-alert .v-alert__close .v-btn {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+}
 
 /* 主按钮 hover 加深为 --os-primary-hover */
 .v-btn.bg-primary:hover { background-color: var(--os-primary-hover) !important; }
@@ -606,10 +764,14 @@ h1, h2, h3, h4, h5, h6 {
   grid-template-columns: minmax(380px, 44fr) minmax(0, 56fr);
 }
 
-/* 左栏：深海军蓝品牌区 + 极低饱和的蓝色径向光斑 */
+/* 左栏：深海军蓝品牌区；sticky 避免长表单滚动时品牌区被顶出视口 */
 .auth-aside {
-  position: relative;
+  position: sticky;
+  top: 0;
+  align-self: start;
   display: grid;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   place-items: center;
   padding: 40px clamp(28px, 3.5vw, 56px);
@@ -1272,8 +1434,11 @@ h1, h2, h3, h4, h5, h6 {
    保险箱工作区
    ============================================================ */
 .vault-shell {
-  display: flex;
-  min-height: 100dvh;
+  display: block;
+  height: 100dvh;
+  max-height: 100dvh;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--os-text-body);
   background: var(--os-bg);
 }
@@ -1315,7 +1480,13 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--os-primary);
 }
 
-.vault-nav { display: grid; gap: 4px; }
+.vault-nav {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  flex: 1 1 auto;
+  min-height: 0;
+}
 
 .vault-nav__item {
   display: flex;
@@ -1332,6 +1503,14 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.875rem;
   text-align: left;
   cursor: pointer;
+}
+
+.vault-nav__item > .v-icon {
+  flex: 0 0 19px;
+  width: 19px;
+  height: 19px;
+  font-size: 19px;
+  opacity: 1;
 }
 
 .vault-nav__item:hover { color: var(--os-text-title); background: var(--os-bg); }
@@ -1371,27 +1550,43 @@ a.vault-nav__item.vault-nav__item--active { color: var(--os-primary); }
 
 .vault-main {
   display: flex;
-  width: 100%;
+  box-sizing: border-box;
+  width: auto;
+  max-width: 100%;
   min-width: 0;
   margin-left: 0;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
 }
 
 .vault-panel {
+  display: flex;
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.vault-panel > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
 }
 
 .vault-topbar {
+  position: relative;
+  z-index: 3;
   display: flex;
+  flex: 0 0 auto;
   min-height: 64px;
   align-items: center;
   gap: 16px;
   padding: 0 24px;
   border-bottom: 1px solid var(--os-border);
-  background: rgb(255 255 255 / 88%);
+  background: rgb(255 255 255 / 96%);
   backdrop-filter: blur(8px);
 }
 
@@ -1428,19 +1623,56 @@ a.vault-nav__item.vault-nav__item--active { color: var(--os-primary); }
 .vault-lock-status .v-icon { color: var(--os-success); }
 
 .vault-content {
+  box-sizing: border-box;
   width: 100%;
   max-width: none;
-  min-height: calc(100dvh - 64px);
+  min-height: 0;
   margin: 0;
-  /* 桌面收窄左右留白，充分利用横向空间 */
-  padding: 28px 24px 48px;
+  padding: 20px 24px 16px;
+}
+
+/* 列表页：上方标题/筛选固定，仅账号/卡片区滚动 */
+.vault-content.vault-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.vault-page__chrome {
+  flex: 0 0 auto;
+}
+
+.vault-page__body {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(36rem, calc(100dvh - 18rem));
+  margin-top: 4px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.vault-page__body .vault-records {
+  margin-top: 12px;
+}
+
+/* 个人中心 / 详情等：整页内容区滚动 */
+.vault-content.vault-page--scroll {
+  display: block;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 32px;
 }
 
 .vault-title-row {
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 16px 24px;
   align-items: flex-end;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .vault-eyebrow {
@@ -1451,7 +1683,14 @@ a.vault-nav__item.vault-nav__item--active { color: var(--os-primary); }
   letter-spacing: 0.02em;
 }
 
-.vault-title-row__heading { display: flex; gap: 12px; align-items: baseline; }
+.vault-title-row__heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  min-width: 0;
+  flex: 1 1 220px;
+}
 
 .vault-title-row h1 {
   margin: 0;
@@ -2280,10 +2519,46 @@ a.vault-record-card__source-value:hover {
   gap: 2px;
 }
 
-/* 右上仅保留状态文字 */
-.vault-record-card__status {
+/* 右上：置顶 + 状态 */
+.vault-record-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   align-self: start;
-  padding-top: 2px;
+  padding-top: 1px;
+}
+
+.vault-record-card__pin {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--os-text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.vault-record-card__pin:hover {
+  color: var(--os-primary);
+  background: var(--os-primary-tint);
+}
+
+.vault-record-card__pin--active,
+.vault-record-card__pin--active:hover {
+  color: var(--os-primary);
+}
+
+.vault-record-card__pin:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.vault-record-card__status {
   font-size: 0.75rem;
   line-height: 1.3;
   font-weight: 600;
@@ -2855,22 +3130,33 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 }
 
 /* ============================================================
-   管理后台：与保险箱同构（白色侧栏 + 顶栏 + 内容区）
+   管理后台：与保险箱同构（白色固定侧栏 + 顶栏 + 内容区）
    ============================================================ */
 .admin-shell {
-  display: grid;
-  min-height: 100dvh;
-  grid-template-columns: 1fr;
+  display: block;
+  height: 100dvh;
+  max-height: 100dvh;
+  max-width: 100%;
+  overflow: hidden;
   background: var(--os-bg);
 }
 
 .admin-sidebar {
+  position: fixed;
+  z-index: 2;
+  top: 0;
+  left: 0;
   display: flex;
+  width: 248px;
+  height: 100dvh;
+  max-height: 100dvh;
   flex-direction: column;
   padding: 24px 12px 16px;
   border-right: 1px solid var(--os-border);
   color: var(--os-text-body);
   background: var(--os-surface);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .admin-sidebar__brand {
@@ -2958,18 +3244,30 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
 .admin-sidebar__footer { margin-top: auto; padding-top: 10px; }
 
-.admin-main { min-width: 0; }
+.admin-main {
+  display: flex;
+  box-sizing: border-box;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  margin-left: 0;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
 
 .admin-topbar {
-  position: sticky;
-  z-index: 1;
-  top: 0;
+  position: relative;
+  z-index: 3;
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 28px 32px 8px;
-  background: rgb(246 249 252 / 92%);
+  padding: 20px 32px 12px;
+  border-bottom: 1px solid var(--os-border);
+  background: rgb(246 249 252 / 96%);
   backdrop-filter: blur(12px);
 }
 
@@ -3005,12 +3303,109 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   font-weight: 600;
 }
 
-.admin-content { padding: 16px 32px 40px; }
+.admin-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  padding: 16px 32px 0;
+  overflow: hidden;
+}
+
+.admin-content__body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.admin-content__body > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
 
 .admin-boundary {
-  margin: 24px 0 0;
+  flex: 0 0 auto;
+  margin: 12px 0 16px;
   color: var(--os-text-muted);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* 管理端列表页：上方统计/筛选固定；表格按内容增高，超出最大高度后滚动 */
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.admin-page__chrome {
+  flex: 0 0 auto;
+}
+
+.admin-page__table {
+  display: flex;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  flex-direction: column;
+}
+
+.admin-page__table-panel {
+  display: flex;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.admin-page__table-panel.admin-panel {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.admin-page__scroll {
+  flex: 0 1 auto;
+  min-height: 0;
+  /* 按内容增高；上限兼顾视口，避免把顶栏/筛选顶出 */
+  max-height: min(32rem, calc(100dvh - 20rem));
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.admin-page__scroll .admin-table {
+  background: transparent;
+}
+
+.admin-page__scroll .admin-table .v-table__wrapper {
+  overflow: visible;
+}
+
+.admin-page__scroll .admin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--os-surface);
+  box-shadow: inset 0 -1px 0 var(--os-border);
+}
+
+.admin-page__pager {
+  flex: 0 0 auto;
+  margin-top: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--os-border);
+}
+
+/* 无表格页：整页内容区滚动 */
+.admin-page--scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .admin-stat-grid {
@@ -3124,13 +3519,13 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   transform: translateY(-1px);
 }
 
-.admin-filter-field { flex: 1 1 220px; max-width: 320px; }
-.admin-filter-select { flex: 0 1 150px; max-width: 180px; }
+.admin-filter-field { flex: 1 1 180px; max-width: 260px; }
+.admin-filter-select { flex: 0 1 128px; max-width: 156px; }
 
 .admin-filter-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--os-space-2);
+  gap: 6px;
   align-items: center;
 }
 
@@ -3141,9 +3536,59 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   gap: var(--os-space-4);
 }
 
-/* 筛选工具栏：搜索/下拉/查询按钮统一更矮更紧凑 */
-.admin-panel .admin-filter-field,
-.admin-panel .admin-filter-select,
+/* 筛选栏面板：比普通面板更薄 */
+.admin-panel:has(> .admin-filter-row) {
+  padding: 10px 12px;
+}
+
+/* 筛选工具栏：字段 / 下拉 / 按钮再收一档（约 30px） */
+.admin-filter-row .admin-filter-field,
+.admin-filter-row .admin-filter-select {
+  .v-input__control {
+    min-height: var(--os-control-md);
+  }
+
+  .v-field {
+    --v-field-padding-start: 8px;
+    --v-field-padding-end: 8px;
+    --v-field-input-padding-top: 0;
+    --v-field-input-padding-bottom: 0;
+    font-size: 0.75rem;
+  }
+
+  .v-field__input {
+    min-height: var(--os-control-md) !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    font-size: 0.75rem;
+    letter-spacing: 0;
+  }
+
+  .v-field__prepend-inner,
+  .v-field__append-inner {
+    padding-top: 0;
+    align-self: center;
+  }
+
+  .v-field__prepend-inner .v-icon,
+  .v-field__append-inner .v-icon {
+    font-size: 16px;
+    opacity: 0.72;
+  }
+
+  .v-label {
+    font-size: 0.6875rem;
+  }
+
+  /* 有浮动标签时也压到筛选栏高度 */
+  &.v-input--density-default .v-field,
+  &.v-input--density-comfortable .v-field,
+  &.v-input--density-compact .v-field {
+    --v-input-control-height: var(--os-control-md);
+  }
+}
+
+/* 保险箱工具区：搜索/筛选控件紧凑字号 */
 .vault-controls .v-input {
   .v-field {
     --v-field-padding-start: 10px;
@@ -3154,6 +3599,16 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   .v-label {
     font-size: 0.75rem;
   }
+}
+
+.admin-filter-row .admin-toolbar-btn,
+.admin-panel:has(> .admin-filter-row) .admin-toolbar-btn {
+  --v-btn-height: var(--os-control-md);
+  min-height: var(--os-control-md) !important;
+  height: var(--os-control-md) !important;
+  padding-inline: 10px !important;
+  font-size: 0.75rem;
+  letter-spacing: 0;
 }
 
 .admin-panel .v-btn.v-btn--density-default,
@@ -3515,16 +3970,24 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   .vault-gate .auth-form-heading h1 { font-size: 1.4rem; }
 }
 
-/* 保险箱工作区：电脑端隐藏底部四格，改用左侧栏 */
+/* 保险箱工作区：电脑端隐藏底部导航，改用左侧栏 */
 @media (min-width: 960px) {
-  .vault-sidebar { display: flex !important; }
+  .vault-sidebar {
+    display: flex !important;
+    flex-direction: column;
+  }
   .vault-mobile-nav { display: none !important; }
-  .vault-main { margin-left: 224px; }
+  /* 固定侧栏占位：勿再写 width:100% + margin，否则横向撑出视口 */
+  .vault-main {
+    margin-left: 224px;
+    width: calc(100% - 224px);
+    max-width: calc(100% - 224px);
+  }
   .vault-topbar__mobile-brand { display: none; }
   .vault-topbar__spacer { display: block; }
   .vault-lock-status { display: inline-flex; }
   .vault-topbar { padding: 0 20px 0 24px; }
-  .vault-content { padding: 24px 20px 40px; }
+  .vault-content { padding: 20px 20px 16px; }
 }
 
 @media (min-width: 600px) and (max-width: 959px) {
@@ -3549,7 +4012,10 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
 @media (min-width: 1280px) {
   .vault-topbar { padding: 0 24px; }
-  .vault-content { padding: 28px 24px 48px; }
+  .vault-content { padding: 22px 24px 16px; }
+  .vault-page__body {
+    max-height: min(40rem, calc(100dvh - 17rem));
+  }
 }
 
 @media (max-width: 1279px) {
@@ -3560,14 +4026,21 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 @media (max-width: 959px) {
   .vault-topbar { min-height: 58px; padding: 0 16px; }
   .vault-topbar__page { display: none; }
-  .vault-content { min-height: calc(100dvh - 58px); padding: 24px 16px 40px; }
+  .vault-content { padding: 18px 16px 16px; }
+  .vault-page__body {
+    max-height: min(34rem, calc(100dvh - 16rem));
+  }
   .vault-controls { display: flex; flex-direction: column; align-items: stretch; }
   .vault-filters { display: grid; grid-template-columns: repeat(3, 1fr); }
   .vault-view-controls { justify-content: space-between; }
 }
 
 @media (max-width: 599px) {
-  .vault-content { padding-bottom: 96px; }
+  .vault-content.vault-page,
+  .vault-content.vault-page--scroll { padding-bottom: 88px; }
+  .vault-page__body {
+    max-height: min(30rem, calc(100dvh - 20rem));
+  }
   .vault-title-row {
     gap: 14px;
     align-items: stretch;
@@ -3620,9 +4093,13 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   .admin-topbar__user { display: none; }
 }
 
-/* 管理后台：≥960px 显示左侧栏（与模板中的 mdAndUp 一致） */
+/* 管理后台：≥960px 固定左侧栏（与保险箱同构，避免长列表把侧栏顶出视口） */
 @media (min-width: 960px) {
-  .admin-shell { grid-template-columns: 248px minmax(0, 1fr); }
+  .admin-main {
+    margin-left: 248px;
+    width: calc(100% - 248px);
+    max-width: calc(100% - 248px);
+  }
 }
 
 @media (max-width: 1279px) {

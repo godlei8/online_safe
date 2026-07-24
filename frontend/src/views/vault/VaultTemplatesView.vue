@@ -233,7 +233,8 @@ function fieldFlags(field: { required: boolean; sensitive: boolean; copyable: bo
 </script>
 
 <template>
-  <section class="vault-content vault-templates-panel" aria-labelledby="templates-title">
+  <section class="vault-content vault-templates-panel vault-page" aria-labelledby="templates-title">
+    <div class="vault-page__chrome">
     <div class="vault-title-row">
       <div>
         <p class="vault-eyebrow">模板中心</p>
@@ -285,8 +286,10 @@ function fieldFlags(field: { required: boolean; sensitive: boolean; copyable: bo
     </div>
 
     <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" height="2" />
+    </div>
 
-    <template v-else-if="activeTab === 'system'">
+    <div class="vault-page__body">
+    <template v-if="!loading && activeTab === 'system'">
       <div v-if="vault.systemTemplates.length" class="vault-template-grid">
         <article
           v-for="item in vault.systemTemplates"
@@ -350,7 +353,7 @@ function fieldFlags(field: { required: boolean; sensitive: boolean; copyable: bo
       </v-alert>
     </template>
 
-    <template v-else>
+    <template v-if="!loading && activeTab === 'private'">
       <div v-if="vault.templates.length" class="vault-template-grid">
         <article
           v-for="item in vault.templates"
@@ -445,6 +448,7 @@ function fieldFlags(field: { required: boolean; sensitive: boolean; copyable: bo
         </v-btn>
       </v-alert>
     </template>
+    </div>
 
     <OsConfirmDialog
       v-model="deleteConfirmOpen"

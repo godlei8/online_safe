@@ -189,6 +189,55 @@ public class SecurityAuditService {
         );
     }
 
+    /** 退出全部设备后会话已失效，使用独立事务写审计。 */
+    public void recordSessionRevokeAllIndependent(String userId, String username, int sessionsRevoked) {
+        try {
+            SecurityAuditEvent event = build(
+                    AuditEventType.USER_ALL_SESSIONS_REVOKED,
+                    AuditResult.SUCCESS,
+                    AuditActorType.USER,
+                    userId,
+                    username,
+                    null,
+                    null,
+                    "USER",
+                    userId,
+                    username,
+                    null,
+                    Map.of("sessionsRevoked", Math.max(sessionsRevoked, 0)),
+                    1,
+                    currentRequest()
+            );
+            recorder.recordIndependent(event);
+        } catch (RuntimeException exception) {
+            log.error("退出全部设备审计失败");
+        }
+    }
+
+    public void recordSessionLimitReplaced(String userId, String username, int maxSessions, HttpServletRequest request) {
+        try {
+            SecurityAuditEvent event = build(
+                    AuditEventType.USER_SESSION_LIMIT_REPLACED,
+                    AuditResult.SUCCESS,
+                    AuditActorType.USER,
+                    userId,
+                    username,
+                    null,
+                    null,
+                    "USER",
+                    userId,
+                    username,
+                    null,
+                    Map.of("maxSessions", maxSessions),
+                    1,
+                    request
+            );
+            recorder.recordIndependent(event);
+        } catch (RuntimeException exception) {
+            log.error("会话上限替换审计失败");
+        }
+    }
+
     public void recordPasswordResetFailed(String phoneHint, String errorCode) {
         try {
             String hint = identifierMasker.maskLoginIdentifier(phoneHint);

@@ -200,6 +200,19 @@ public class SystemSettingService {
         return toInt(effectiveValue(SystemSettingRegistry.USERNAME_COOLDOWN_DAYS));
     }
 
+    /** 个人用户最大活跃会话数，非法值回退默认 2。 */
+    public int maxActiveUserSessions() {
+        try {
+            int value = toInt(effectiveValue(SystemSettingRegistry.MAX_ACTIVE_USER_SESSIONS));
+            if (value < 1 || value > 10) {
+                return 2;
+            }
+            return value;
+        } catch (RuntimeException exception) {
+            return 2;
+        }
+    }
+
     public int invitationDefaultValidDays() {
         return toInt(effectiveValue(SystemSettingRegistry.INVITATION_DEFAULT_VALID_DAYS));
     }

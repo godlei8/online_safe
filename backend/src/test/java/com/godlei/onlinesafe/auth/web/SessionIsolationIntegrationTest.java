@@ -128,19 +128,22 @@ class SessionIsolationIntegrationTest {
     }
 
     @Test
-    void samePersonalAccountSecondLoginExpiresPreviousSession() throws Exception {
+    void samePersonalAccountAllowsTwoSessionsAndThirdExpiresOldest() throws Exception {
         registerUser("13800138003", "carol");
 
         Cookie first = loginUser("carol");
         Cookie second = loginUser("carol");
         assertThat(second.getValue()).isNotEqualTo(first.getValue());
 
-        mockMvc.perform(get("/api/v1/ping").cookie(second))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/ping").cookie(first)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/ping").cookie(second)).andExpect(status().isOk());
 
+        Cookie third = loginUser("carol");
+        mockMvc.perform(get("/api/v1/ping").cookie(third)).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/ping").cookie(first))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("SESSION_REPLACED"));
+        mockMvc.perform(get("/api/v1/ping").cookie(second)).andExpect(status().isOk());
     }
 
     private void registerUser(String phone, String username) throws Exception {

@@ -25,12 +25,14 @@ const avatarSrc = computed(() => auth.session.avatarUrl || '')
 const activeNav = computed(() => {
   if (route.name === 'vault-templates') return 'templates'
   if (route.name === 'vault-profile') return 'profile'
+  if (route.name === 'vault-security') return 'security'
   return 'vault'
 })
 
 const pageTitle = computed(() => {
   if (activeNav.value === 'templates') return '模板'
   if (activeNav.value === 'profile') return '个人中心'
+  if (activeNav.value === 'security') return '安全中心'
   return '保险箱'
 })
 
@@ -43,6 +45,8 @@ async function logout() {
   signingOut.value = true
   try {
     await auth.logout()
+    const { publishAuthBroadcast } = await import('@/composables/useAuthBroadcast')
+    publishAuthBroadcast({ type: 'LOGOUT' })
     await router.replace('/login')
   } finally {
     signingOut.value = false
@@ -149,13 +153,19 @@ watch(
           <v-icon icon="mdi-view-grid-plus-outline" size="19" />
           <span>模板</span>
         </router-link>
+        <router-link
+          class="vault-nav__item"
+          :class="{ 'vault-nav__item--active': activeNav === 'security' }"
+          to="/vault/security"
+          active-class=""
+          exact-active-class=""
+        >
+          <v-icon icon="mdi-shield-key-outline" size="19" />
+          <span>安全设置</span>
+        </router-link>
         <button class="vault-nav__item" type="button" disabled aria-label="标签，即将开放">
           <v-icon icon="mdi-tag-outline" size="19" />
           <span>标签<small>即将开放</small></span>
-        </button>
-        <button class="vault-nav__item" type="button" disabled aria-label="安全设置，即将开放">
-          <v-icon icon="mdi-shield-cog-outline" size="19" />
-          <span>安全设置<small>即将开放</small></span>
         </button>
       </nav>
 
@@ -232,6 +242,11 @@ watch(
                 to="/vault/profile"
               />
               <v-list-item
+                prepend-icon="mdi-shield-key-outline"
+                title="安全中心"
+                to="/vault/security"
+              />
+              <v-list-item
                 prepend-icon="mdi-logout"
                 title="退出登录"
                 :disabled="signingOut"
@@ -268,6 +283,16 @@ watch(
           <v-icon icon="mdi-view-grid-plus-outline" size="21" />
           <span>模板</span>
         </router-link>
+        <router-link
+          class="vault-mobile-nav__item"
+          :class="{ 'vault-mobile-nav__item--active': activeNav === 'security' }"
+          to="/vault/security"
+          active-class=""
+          exact-active-class=""
+        >
+          <v-icon icon="mdi-shield-key-outline" size="21" />
+          <span>安全设置</span>
+        </router-link>
       </nav>
     </main>
 
@@ -279,8 +304,14 @@ watch(
       <v-list nav bg-color="transparent">
         <v-list-item to="/vault" prepend-icon="mdi-safe-square-outline" title="保险箱" color="primary" @click="navigationDrawer = false" />
         <v-list-item to="/vault/templates" prepend-icon="mdi-view-grid-plus-outline" title="模板" color="primary" @click="navigationDrawer = false" />
+        <v-list-item
+          to="/vault/security"
+          prepend-icon="mdi-shield-key-outline"
+          title="安全设置"
+          color="primary"
+          @click="navigationDrawer = false"
+        />
         <v-list-item prepend-icon="mdi-tag-outline" title="标签" subtitle="即将开放" disabled />
-        <v-list-item prepend-icon="mdi-shield-cog-outline" title="安全设置" subtitle="即将开放" disabled />
       </v-list>
     </v-navigation-drawer>
 

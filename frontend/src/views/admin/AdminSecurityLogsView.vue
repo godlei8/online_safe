@@ -30,7 +30,7 @@ const stats = ref<SecurityLogStats>({
   blockedLast24Hours: 0,
 })
 const page = ref(1)
-const pageSize = 20
+const pageSize = 10
 const totalElements = ref(0)
 
 const timePreset = ref<TimePreset>('7d')
@@ -343,19 +343,8 @@ const metadataEntries = computed(() => {
 </script>
 
 <template>
-  <div class="admin-security-logs">
-    <div class="d-flex justify-end mb-4">
-      <v-btn
-        class="admin-toolbar-btn"
-        color="primary"
-        prepend-icon="mdi-refresh"
-        :loading="loading"
-        @click="loadData"
-      >
-        刷新
-      </v-btn>
-    </div>
-
+  <div class="admin-security-logs admin-page">
+    <div class="admin-page__chrome">
     <div class="admin-stat-grid mb-4">
       <v-card class="admin-stat-card admin-stat-card--warning" elevation="0">
         <div class="admin-stat-card__head">
@@ -400,6 +389,7 @@ const metadataEntries = computed(() => {
         <v-select
           v-model="timePreset"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="timeOptions"
           item-title="title"
@@ -408,6 +398,7 @@ const metadataEntries = computed(() => {
         <v-select
           v-model="categoryFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="categoryOptions"
           item-title="title"
@@ -416,6 +407,7 @@ const metadataEntries = computed(() => {
         <v-select
           v-model="resultFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="resultOptions"
           item-title="title"
@@ -424,6 +416,7 @@ const metadataEntries = computed(() => {
         <v-select
           v-model="riskFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="riskOptions"
           item-title="title"
@@ -432,6 +425,7 @@ const metadataEntries = computed(() => {
         <v-select
           v-model="actorTypeFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="actorTypeOptions"
           item-title="title"
@@ -440,9 +434,9 @@ const metadataEntries = computed(() => {
         <v-text-field
           v-model="query"
           class="admin-filter-field"
+          density="compact"
           hide-details
-          label="搜索"
-          placeholder="事件编号、用户名或目标标识"
+          placeholder="搜索事件编号、用户名或目标"
           prepend-inner-icon="mdi-magnify"
           @keyup.enter="search"
         />
@@ -450,19 +444,31 @@ const metadataEntries = computed(() => {
           <v-text-field
             v-model="customFromLocal"
             class="admin-filter-field"
+            density="compact"
             hide-details
-            label="开始时间"
+            placeholder="开始时间"
             type="datetime-local"
           />
           <v-text-field
             v-model="customToLocal"
             class="admin-filter-field"
+            density="compact"
             hide-details
-            label="结束时间"
+            placeholder="结束时间"
             type="datetime-local"
           />
         </template>
         <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" @click="search">查询</v-btn>
+        <v-btn
+          class="admin-toolbar-btn"
+          variant="outlined"
+          color="primary"
+          prepend-icon="mdi-refresh"
+          :loading="loading"
+          @click="loadData"
+        >
+          刷新
+        </v-btn>
       </div>
     </v-card>
 
@@ -477,124 +483,129 @@ const metadataEntries = computed(() => {
         <v-btn class="admin-toolbar-btn" size="small" variant="text" color="error" @click="loadData">重新加载</v-btn>
       </div>
     </v-alert>
+    </div>
 
-    <v-card class="admin-panel" elevation="0">
+    <div class="admin-page__table">
+    <v-card class="admin-panel admin-page__table-panel" elevation="0">
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-2" />
 
-      <div v-if="smAndDown" class="admin-security-log-cards">
-        <div v-if="!loading && items.length === 0" class="admin-security-log-empty">
-          <v-icon icon="mdi-shield-search" size="28" color="primary" />
-          <strong>{{ hasActiveFilters ? '筛选无结果' : '暂无日志' }}</strong>
-          <p>{{ emptyMessage }}</p>
-        </div>
+      <div class="admin-page__scroll">
+        <div v-if="smAndDown" class="admin-security-log-cards">
+          <div v-if="!loading && items.length === 0" class="admin-security-log-empty">
+            <v-icon icon="mdi-shield-search" size="28" color="primary" />
+            <strong>{{ hasActiveFilters ? '筛选无结果' : '暂无日志' }}</strong>
+            <p>{{ emptyMessage }}</p>
+          </div>
 
-        <v-card
-          v-for="item in items"
-          :key="item.id"
-          class="admin-security-log-card"
-          elevation="0"
-          @click="openDetail(item.id)"
-        >
-          <div class="admin-security-log-card__head">
-            <time>{{ formatTime(item.occurredAt) }}</time>
-            <span class="admin-status-text" :data-tone="riskTone(item.riskLevel)">
-              {{ riskLabel(item.riskLevel) }}
-            </span>
-          </div>
-          <div class="admin-security-log-card__title">
-            {{ item.eventLabelZh }}
-            <span v-if="item.occurrenceCount > 1" class="admin-security-log-card__badge">
-              ×{{ item.occurrenceCount }}
-            </span>
-          </div>
-          <div class="admin-security-log-card__meta">
-            <span>主体：{{ item.actorLabel }}</span>
-            <span>目标：{{ item.targetLabel }}</span>
-          </div>
-          <div class="admin-security-log-card__foot">
-            <span class="admin-status-text" :data-tone="resultTone(item.result)">
-              {{ resultLabel(item.result) }}
-            </span>
-            <span class="text-caption text-medium-emphasis">{{ item.sourceSummary }}</span>
-          </div>
-        </v-card>
-      </div>
-
-      <v-table v-else class="admin-table">
-        <thead>
-          <tr>
-            <th>时间</th>
-            <th>风险</th>
-            <th>事件</th>
-            <th>操作主体</th>
-            <th>操作目标</th>
-            <th>结果</th>
-            <th>来源摘要</th>
-            <th>详情</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="!loading && items.length === 0">
-            <td colspan="8" class="admin-security-log-empty admin-security-log-empty--table">
-              <v-icon icon="mdi-shield-search" size="28" color="primary" />
-              <strong>{{ hasActiveFilters ? '筛选无结果' : '暂无日志' }}</strong>
-              <p>{{ emptyMessage }}</p>
-            </td>
-          </tr>
-          <tr v-for="item in items" :key="item.id">
-            <td data-label="时间">
-              <AdminEllipsisText :text="formatTime(item.occurredAt)" max-width="9rem" />
-            </td>
-            <td data-label="风险">
+          <v-card
+            v-for="item in items"
+            :key="item.id"
+            class="admin-security-log-card"
+            elevation="0"
+            @click="openDetail(item.id)"
+          >
+            <div class="admin-security-log-card__head">
+              <time>{{ formatTime(item.occurredAt) }}</time>
               <span class="admin-status-text" :data-tone="riskTone(item.riskLevel)">
                 {{ riskLabel(item.riskLevel) }}
               </span>
-            </td>
-            <td data-label="事件">
-              <div class="admin-table__stack">
-                <AdminEllipsisText class="font-weight-medium" :text="item.eventLabelZh" max-width="12rem" />
-                <span v-if="item.occurrenceCount > 1" class="text-caption text-medium-emphasis">
-                  聚合 {{ item.occurrenceCount }} 次
-                </span>
-              </div>
-            </td>
-            <td data-label="操作主体">
-              <AdminEllipsisText :text="item.actorLabel" max-width="10rem" />
-            </td>
-            <td data-label="操作目标">
-              <AdminEllipsisText :text="item.targetLabel" max-width="10rem" />
-            </td>
-            <td data-label="结果">
+            </div>
+            <div class="admin-security-log-card__title">
+              {{ item.eventLabelZh }}
+              <span v-if="item.occurrenceCount > 1" class="admin-security-log-card__badge">
+                ×{{ item.occurrenceCount }}
+              </span>
+            </div>
+            <div class="admin-security-log-card__meta">
+              <span>主体：{{ item.actorLabel }}</span>
+              <span>目标：{{ item.targetLabel }}</span>
+            </div>
+            <div class="admin-security-log-card__foot">
               <span class="admin-status-text" :data-tone="resultTone(item.result)">
                 {{ resultLabel(item.result) }}
               </span>
-            </td>
-            <td data-label="来源摘要">
-              <AdminEllipsisText :text="item.sourceSummary" max-width="11rem" />
-            </td>
-            <td data-label="详情">
-              <v-btn
-                class="admin-row-actions__btn"
-                size="x-small"
-                variant="text"
-                color="primary"
-                prepend-icon="mdi-text-box-search-outline"
-                @click="openDetail(item.id)"
-              >
-                详情
-              </v-btn>
-            </td>
-          </tr>
-        </tbody>
-      </v-table>
-
-      <div class="admin-pagination-row mt-4">
-        <div class="text-caption text-medium-emphasis">
-          共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
+              <span class="text-caption text-medium-emphasis">{{ item.sourceSummary }}</span>
+            </div>
+          </v-card>
         </div>
-        <v-pagination v-model="page" :length="totalPages" total-visible="5" />
+
+        <v-table v-else class="admin-table">
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>风险</th>
+              <th>事件</th>
+              <th>操作主体</th>
+              <th>操作目标</th>
+              <th>结果</th>
+              <th>来源摘要</th>
+              <th>详情</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="!loading && items.length === 0">
+              <td colspan="8" class="admin-security-log-empty admin-security-log-empty--table">
+                <v-icon icon="mdi-shield-search" size="28" color="primary" />
+                <strong>{{ hasActiveFilters ? '筛选无结果' : '暂无日志' }}</strong>
+                <p>{{ emptyMessage }}</p>
+              </td>
+            </tr>
+            <tr v-for="item in items" :key="item.id">
+              <td data-label="时间">
+                <AdminEllipsisText :text="formatTime(item.occurredAt)" max-width="9rem" />
+              </td>
+              <td data-label="风险">
+                <span class="admin-status-text" :data-tone="riskTone(item.riskLevel)">
+                  {{ riskLabel(item.riskLevel) }}
+                </span>
+              </td>
+              <td data-label="事件">
+                <div class="admin-table__stack">
+                  <AdminEllipsisText class="font-weight-medium" :text="item.eventLabelZh" max-width="12rem" />
+                  <span v-if="item.occurrenceCount > 1" class="text-caption text-medium-emphasis">
+                    聚合 {{ item.occurrenceCount }} 次
+                  </span>
+                </div>
+              </td>
+              <td data-label="操作主体">
+                <AdminEllipsisText :text="item.actorLabel" max-width="10rem" />
+              </td>
+              <td data-label="操作目标">
+                <AdminEllipsisText :text="item.targetLabel" max-width="10rem" />
+              </td>
+              <td data-label="结果">
+                <span class="admin-status-text" :data-tone="resultTone(item.result)">
+                  {{ resultLabel(item.result) }}
+                </span>
+              </td>
+              <td data-label="来源摘要">
+                <AdminEllipsisText :text="item.sourceSummary" max-width="11rem" />
+              </td>
+              <td data-label="详情">
+                <v-btn
+                  class="admin-row-actions__btn"
+                  size="x-small"
+                  variant="text"
+                  color="primary"
+                  prepend-icon="mdi-text-box-search-outline"
+                  @click="openDetail(item.id)"
+                >
+                  详情
+                </v-btn>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </div>
+
+      <div class="admin-pagination-row admin-page__pager">
+        <div class="text-caption text-medium-emphasis">
+          共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页，每页 {{ pageSize }} 条
+        </div>
+        <v-pagination v-model="page" :length="totalPages" density="comfortable" total-visible="5" />
       </div>
     </v-card>
+    </div>
 
     <v-navigation-drawer
       v-model="detailOpen"
@@ -674,6 +685,7 @@ const metadataEntries = computed(() => {
 .admin-security-log-cards {
   display: grid;
   gap: 12px;
+  padding: 12px;
 }
 
 .admin-security-log-card {

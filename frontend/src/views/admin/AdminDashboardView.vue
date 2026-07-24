@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { usersApi, type ManagedUserStats } from '@/api/users'
+import OsHintBar from '@/components/OsHintBar.vue'
 
 const quickLinks = [
   { title: '用户管理', to: '/admin/users', icon: 'mdi-account-group-outline' },
@@ -23,10 +24,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="admin-dashboard">
-    <v-alert type="info" variant="tonal" class="mb-6">
-      用户管理、邀请码、公告、系统模板、安全日志与系统设置均已开放。管理员仅可见元数据，不可查看用户保险箱明文。
-    </v-alert>
+  <div class="admin-dashboard admin-page admin-page--scroll">
+    <OsHintBar class="mb-4">
+      个人端可在「安全中心」管理自己的登录设备；管理端在「系统设置 → 登录会话」配置个人会话上限，在「用户管理」查看活跃会话数并整户失效。管理员账号仍固定单会话。
+    </OsHintBar>
 
     <div class="admin-stat-grid mb-4">
       <v-card class="admin-stat-card admin-stat-card--primary" elevation="0">

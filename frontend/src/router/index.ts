@@ -7,6 +7,7 @@ import VaultHomeView from '@/views/VaultHomeView.vue'
 import VaultItemDetailView from '@/views/vault/VaultItemDetailView.vue'
 import VaultTemplatesView from '@/views/vault/VaultTemplatesView.vue'
 import VaultProfileView from '@/views/vault/VaultProfileView.vue'
+import VaultSecurityView from '@/views/vault/VaultSecurityView.vue'
 import AdminLoginView from '@/views/AdminLoginView.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import AdminDashboardView from '@/views/admin/AdminDashboardView.vue'
@@ -38,6 +39,7 @@ const router = createRouter({
         { path: '', name: 'vault', component: VaultHomeView },
         { path: 'templates', name: 'vault-templates', component: VaultTemplatesView },
         { path: 'profile', name: 'vault-profile', component: VaultProfileView },
+        { path: 'security', name: 'vault-security', component: VaultSecurityView },
         { path: 'items/:id', name: 'vault-item', component: VaultItemDetailView },
       ],
     },
@@ -119,7 +121,7 @@ const router = createRouter({
           path: 'settings',
           name: 'admin-settings',
           component: AdminSettingsView,
-          meta: { title: '系统设置', subtitle: '注册策略、邀请码默认值与安全日志保留期限。' },
+          meta: { title: '系统设置', subtitle: '注册策略、个人登录会话上限、邀请码默认值与安全日志保留期限。' },
         },
       ],
     },

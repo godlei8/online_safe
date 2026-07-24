@@ -11,6 +11,7 @@ import com.godlei.onlinesafe.auth.web.ProfileResponse;
 import com.godlei.onlinesafe.cos.AvatarObjectStorage;
 import com.godlei.onlinesafe.cos.CosProperties;
 import com.godlei.onlinesafe.security.AppUserPrincipal;
+import com.godlei.onlinesafe.session.application.UserSessionService;
 import com.godlei.onlinesafe.settings.application.SystemSettingService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -50,6 +51,7 @@ public class UserProfileService {
     private final SecurityContextRepository securityContextRepository;
     private final SystemSettingService systemSettingService;
     private final SecurityAuditService securityAuditService;
+    private final UserSessionService userSessionService;
     private final IdentifierMasker identifierMasker;
     private final Clock clock;
 
@@ -61,6 +63,7 @@ public class UserProfileService {
             SecurityContextRepository securityContextRepository,
             SystemSettingService systemSettingService,
             SecurityAuditService securityAuditService,
+            UserSessionService userSessionService,
             IdentifierMasker identifierMasker,
             Clock clock
     ) {
@@ -71,6 +74,7 @@ public class UserProfileService {
         this.securityContextRepository = securityContextRepository;
         this.systemSettingService = systemSettingService;
         this.securityAuditService = securityAuditService;
+        this.userSessionService = userSessionService;
         this.identifierMasker = identifierMasker;
         this.clock = clock;
     }
@@ -107,10 +111,17 @@ public class UserProfileService {
             throw new ProfileException("USERNAME_ALREADY_EXISTS", "该用户名已被占用");
         }
 
-        String previousHint = identifierMasker.maskUsername(user.getUsername());
+        String previousUsername = user.getUsername();
+        String previousHint = identifierMasker.maskUsername(previousUsername);
         String newHint = identifierMasker.maskUsername(username.display());
+        String currentSessionId = request.getSession(false) == null ? null : request.getSession(false).getId();
         user.changeUsername(username.display(), username.normalized(), now);
         userRepository.save(user);
+        int revoked = userSessionService.revokeOthers(previousUsername, currentSessionId);
+        refreshPrincipal(user, request, response);
+        if (currentSessionId != null) {
+            userSessionService.rebindPrincipal(currentSessionId, user.getUsername());
+        }
         securityAuditService.recordInTx(
                 AuditEventType.USERNAME_CHANGED,
                 AuditResult.SUCCESS,
@@ -123,7 +134,20 @@ public class UserProfileService {
                 null,
                 Map.of("previousUsernameHint", previousHint, "newUsernameHint", newHint)
         );
-        refreshPrincipal(user, request, response);
+        if (revoked > 0) {
+            securityAuditService.recordInTx(
+                    AuditEventType.USER_OTHER_SESSIONS_REVOKED,
+                    AuditResult.SUCCESS,
+                    AuditActorType.USER,
+                    user.getId(),
+                    user.getUsername(),
+                    "USER",
+                    user.getId(),
+                    user.getUsername(),
+                    null,
+                    Map.of("sessionsRevoked", revoked, "reason", "USERNAME_CHANGED")
+            );
+        }
         return toResponse(user);
     }
 

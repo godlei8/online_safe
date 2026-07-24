@@ -70,13 +70,33 @@
 ### 决策
 
 1. 个人端 Cookie：`ONLINE_SAFE_SESSION`；管理端：`ONLINE_SAFE_ADMIN_SESSION`（`SurfaceAwareCookieHttpSessionIdResolver` 按 `/api/admin/**` 分流）。
-2. 同一主体最多 1 个有效会话；再次登录挤掉旧会话（`SESSION_REPLACED`），个人与管理员互不影响。
-3. 管理员 Session 主体名加前缀 `admin:`，避免与个人用户同名冲突。
+2. 管理员固定最多 1 个有效会话；再次登录挤掉旧会话（`SESSION_REPLACED`）。
+3. 个人用户默认最多 2 个活跃会话（系统设置 `security.max_active_user_sessions`，范围 1–10）；达上限时允许新登录并挤掉最久未用会话。
+4. 管理员 Session 主体名加前缀 `admin:`，避免与个人用户同名冲突。
 
 ### 后果
 
 - 同浏览器可同时保持个人保险箱与管理后台登录态。
 - 退出管理端不得清除个人 Cookie；退出个人不得清除管理端 Cookie。
+
+## 2026-07-24 — 登录设备与安全中心
+
+### 背景
+
+个人端需可见、可撤销的有限多设备访问；管理员仍保持单会话。
+
+### 决策
+
+1. 不新增业务表；设备摘要写入 Spring Session 属性（publicId、浏览器/系统/设备类型、脱敏 IP、登录时间）。
+2. 统一 `UserSessionService` 供用户安全中心、密码重置、管理端吊销/统计复用。
+3. API：`GET/DELETE /api/v1/security/sessions*`、`POST .../revoke-others`、`POST .../revoke-all`；对外仅暴露 publicId。
+4. 前端 `/vault/security`；危险操作使用 `OsConfirmDialog`；跨标签用 `BroadcastChannel`（`online-safe-auth`）同步退出。
+5. 修改用户名：保留当前会话、踢其他设备，并刷新当前 principal 索引。
+
+### 后果
+
+- 降低个人并发上限不会立即踢现有会话，仅影响后续登录。
+- 管理端活跃会话计数与用户端同源（未过期活跃）。
 
 ## 2026-07-24 — 安全日志与白名单系统设置
 

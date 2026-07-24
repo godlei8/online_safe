@@ -4,6 +4,7 @@ import { ApiRequestError } from '@/api/client'
 import { usersApi, type ManagedUser, type ManagedUserStats } from '@/api/users'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+import OsHintBar from '@/components/OsHintBar.vue'
 
 type UserConfirmAction = 'disable' | 'enable' | 'revokeSessions'
 
@@ -181,11 +182,8 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
 </script>
 
 <template>
-  <div class="admin-users">
-    <div class="d-flex justify-end mb-4">
-      <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-refresh" :loading="loading" @click="loadData">刷新</v-btn>
-    </div>
-
+  <div class="admin-users admin-page">
+    <div class="admin-page__chrome">
     <div class="admin-stat-grid mb-4">
       <v-card class="admin-stat-card admin-stat-card--primary" elevation="0">
         <div class="admin-stat-card__head">
@@ -225,17 +223,17 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
       </v-card>
     </div>
 
-    <v-alert type="info" variant="tonal" class="mb-4">
-      用户数据在客户端加密；管理员仅可见账户元数据。密文存储与记录数将在保险箱模块接入后显示。
-    </v-alert>
+    <OsHintBar class="mb-4">
+      管理员仅可见账户元数据，不可查看用户设备详情或保险箱明文。可通过「活跃会话」列查看数量，并用「使会话失效」踢掉该用户全部登录。个人会话上限在「系统设置 → 登录会话」配置。
+    </OsHintBar>
 
     <v-card class="admin-panel mb-4" elevation="0">
       <div class="admin-filter-row">
         <v-text-field
           v-model="query"
           class="admin-filter-field"
+          density="compact"
           hide-details
-          label="搜索"
           placeholder="按手机号或用户名搜索"
           prepend-inner-icon="mdi-magnify"
           @keyup.enter="search"
@@ -243,6 +241,7 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
         <v-select
           v-model="statusFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="statusOptions"
           item-title="title"
@@ -251,18 +250,32 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
         <v-select
           v-model="registeredWithin"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="registeredOptions"
           item-title="title"
           item-value="value"
         />
         <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" @click="search">查询</v-btn>
+        <v-btn
+          class="admin-toolbar-btn"
+          variant="outlined"
+          color="primary"
+          prepend-icon="mdi-refresh"
+          :loading="loading"
+          @click="loadData"
+        >
+          刷新
+        </v-btn>
       </div>
     </v-card>
 
     <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">{{ errorMessage }}</v-alert>
+    </div>
 
-    <v-card class="admin-panel" elevation="0">
+    <div class="admin-page__table">
+    <v-card class="admin-panel admin-page__table-panel" elevation="0">
+      <div class="admin-page__scroll">
       <v-table class="admin-table">
         <thead>
           <tr>
@@ -354,14 +367,16 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
           </tr>
         </tbody>
       </v-table>
+      </div>
 
-      <div class="admin-pagination-row mt-4">
+      <div class="admin-pagination-row admin-page__pager">
         <div class="text-caption text-medium-emphasis">
           共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
         </div>
         <v-pagination v-model="page" :length="totalPages" total-visible="5" />
       </div>
     </v-card>
+    </div>
 
     <OsConfirmDialog
       v-model="confirmOpen"

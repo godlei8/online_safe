@@ -254,40 +254,35 @@ function fieldTone(type: string): string {
 </script>
 
 <template>
-  <div>
-    <div class="d-flex flex-wrap align-center justify-space-between ga-3 mb-6">
-      <p class="text-body-2 text-medium-emphasis mb-0">
-        系统模板只保存字段结构；发布后全体用户可选用创建记录。编辑已发布/已下线模板会回到草稿，需重新发布后用户端才更新；不影响已创建记录。
-      </p>
-      <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
-        新建模板
-      </v-btn>
-    </div>
-
+  <div class="admin-templates admin-page">
+    <div class="admin-page__chrome">
     <v-card class="admin-panel mb-4" elevation="0">
       <div class="admin-filter-row">
         <v-select
           v-model="statusFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="statusOptions"
           item-title="title"
           item-value="value"
-          label="状态"
+          placeholder="状态"
         />
         <v-text-field
           v-model="platformFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
-          label="平台"
+          placeholder="平台"
           clearable
           @keyup.enter="loadData"
         />
         <v-text-field
           v-model="keyword"
           class="admin-filter-select"
+          density="compact"
           hide-details
-          label="名称关键词"
+          placeholder="名称关键词"
           clearable
           @keyup.enter="loadData"
         />
@@ -295,14 +290,20 @@ function fieldTone(type: string): string {
         <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" :loading="loading" @click="loadData">
           刷新
         </v-btn>
+        <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
+          新建模板
+        </v-btn>
       </div>
     </v-card>
 
     <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4" closable @click:close="errorMessage = ''">
       {{ errorMessage }}
     </v-alert>
+    </div>
 
-    <v-card class="admin-panel" elevation="0">
+    <div class="admin-page__table">
+    <v-card class="admin-panel admin-page__table-panel" elevation="0">
+      <div class="admin-page__scroll">
       <v-table class="admin-table">
         <thead>
           <tr>
@@ -403,11 +404,16 @@ function fieldTone(type: string): string {
           </tr>
         </tbody>
       </v-table>
+      </div>
 
-      <div v-if="totalElements > pageSize" class="d-flex justify-center pa-4">
-        <v-pagination v-model="page" :length="totalPages" density="compact" />
+      <div v-if="totalElements > pageSize" class="admin-pagination-row admin-page__pager">
+        <div class="text-caption text-medium-emphasis">
+          共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
+        </div>
+        <v-pagination v-model="page" :length="totalPages" density="compact" total-visible="5" />
       </div>
     </v-card>
+    </div>
 
     <v-dialog v-model="editorOpen" max-width="720" scrollable persistent>
       <v-card class="os-form-dialog">

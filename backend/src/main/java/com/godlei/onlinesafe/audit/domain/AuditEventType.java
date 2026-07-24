@@ -22,6 +22,10 @@ public enum AuditEventType {
     USER_DISABLED_BY_ADMIN("管理员禁用用户", AuditCategory.ACCOUNT, AuditRiskLevel.HIGH, Set.of("previousStatus", "newStatus")),
     USER_ENABLED_BY_ADMIN("管理员启用用户", AuditCategory.ACCOUNT, AuditRiskLevel.WARNING, Set.of("previousStatus", "newStatus")),
     USER_SESSIONS_REVOKED_BY_ADMIN("管理员使用户会话失效", AuditCategory.SESSION, AuditRiskLevel.WARNING, Set.of("sessionsRevoked")),
+    USER_SESSION_REVOKED("用户退出指定设备", AuditCategory.SESSION, AuditRiskLevel.WARNING, Set.of("sessionsRevoked")),
+    USER_OTHER_SESSIONS_REVOKED("用户退出其他设备", AuditCategory.SESSION, AuditRiskLevel.WARNING, Set.of("sessionsRevoked", "reason")),
+    USER_ALL_SESSIONS_REVOKED("用户退出全部设备", AuditCategory.SESSION, AuditRiskLevel.HIGH, Set.of("sessionsRevoked")),
+    USER_SESSION_LIMIT_REPLACED("达到会话上限替换旧会话", AuditCategory.SESSION, AuditRiskLevel.WARNING, Set.of("maxSessions")),
     USERNAME_CHANGED("用户修改用户名", AuditCategory.ACCOUNT, AuditRiskLevel.INFO, Set.of("previousUsernameHint", "newUsernameHint")),
     USER_AVATAR_CHANGED("用户修改头像", AuditCategory.ACCOUNT, AuditRiskLevel.INFO, Set.of()),
 

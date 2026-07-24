@@ -31,18 +31,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminAuthController {
 
     private final AuthenticationManager adminAuthenticationManager;
-    private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
+    private final SessionAuthenticationStrategy adminSessionAuthenticationStrategy;
     private final SecurityContextRepository securityContextRepository;
     private final SecurityAuditService securityAuditService;
 
     public AdminAuthController(
             @Qualifier("adminAuthenticationManager") AuthenticationManager adminAuthenticationManager,
-            SessionAuthenticationStrategy sessionAuthenticationStrategy,
+            @Qualifier("adminSessionAuthenticationStrategy") SessionAuthenticationStrategy adminSessionAuthenticationStrategy,
             SecurityContextRepository securityContextRepository,
             SecurityAuditService securityAuditService
     ) {
         this.adminAuthenticationManager = adminAuthenticationManager;
-        this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
+        this.adminSessionAuthenticationStrategy = adminSessionAuthenticationStrategy;
         this.securityContextRepository = securityContextRepository;
         this.securityAuditService = securityAuditService;
     }
@@ -64,7 +64,7 @@ public class AdminAuthController {
             throw exception;
         }
 
-        sessionAuthenticationStrategy.onAuthentication(authentication, servletRequest, servletResponse);
+        adminSessionAuthenticationStrategy.onAuthentication(authentication, servletRequest, servletResponse);
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);

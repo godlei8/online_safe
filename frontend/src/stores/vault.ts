@@ -134,6 +134,34 @@ export const useVaultStore = defineStore('vault', {
       await this.loadItems()
       return record.id
     },
+    /** 仅切换置顶：写回服务端，但本地保留原 updatedAt，避免取消置顶后仍因「最近更新」排在最前 */
+    async setItemPinned(id: string, pinned: boolean) {
+      this.requireOwnerId()
+      const existing = this.items.find((item) => item.envelope.id === id)
+      if (!existing) throw new Error('记录不存在')
+      const parsed = vaultItemPayloadSchema.parse({
+        ...existing.payload,
+        pinned: Boolean(pinned),
+      })
+      const record = await vaultApi.updateItem(id, {
+        id,
+        payload: parsed,
+        revision: existing.envelope.revision,
+      })
+      const index = this.items.findIndex((item) => item.envelope.id === id)
+      if (index >= 0) {
+        const prev = this.items[index]
+        this.items.splice(index, 1, {
+          envelope: {
+            ...prev.envelope,
+            revision: record.revision,
+            // 有意不覆盖 updatedAt：置顶与否不应改变「最近更新」次序
+          },
+          payload: parsed,
+        })
+      }
+      return id
+    },
     async deleteItem(id: string) {
       await vaultApi.deleteItem(id)
       this.items = this.items.filter((item) => item.envelope.id !== id)

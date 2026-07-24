@@ -164,30 +164,26 @@ function formatWindow(item: AdminAnnouncement) {
 </script>
 
 <template>
-  <div>
-    <div class="d-flex flex-wrap align-center justify-space-between ga-3 mb-6">
-      <p class="text-body-2 text-medium-emphasis mb-0">
-        草稿可反复编辑；发布后用户端可见，未读最新一条会强制确认。
-      </p>
-      <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
-        新建公告
-      </v-btn>
-    </div>
-
+  <div class="admin-announcements admin-page">
+    <div class="admin-page__chrome">
     <v-card class="admin-panel mb-4" elevation="0">
       <div class="admin-filter-row">
         <v-select
           v-model="statusFilter"
           class="admin-filter-select"
+          density="compact"
           hide-details
           :items="statusOptions"
           item-title="title"
           item-value="value"
-          label="状态"
+          placeholder="状态"
         />
         <v-spacer />
         <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" :loading="loading" @click="loadData">
           刷新
+        </v-btn>
+        <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
+          新建公告
         </v-btn>
       </div>
     </v-card>
@@ -195,9 +191,12 @@ function formatWindow(item: AdminAnnouncement) {
     <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4" closable @click:close="errorMessage = ''">
       {{ errorMessage }}
     </v-alert>
+    </div>
 
-    <v-card class="admin-panel" elevation="0">
+    <div class="admin-page__table">
+    <v-card class="admin-panel admin-page__table-panel" elevation="0">
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-2" />
+      <div class="admin-page__scroll">
       <v-table class="admin-table">
         <thead>
           <tr>
@@ -214,7 +213,7 @@ function formatWindow(item: AdminAnnouncement) {
         <tbody>
           <tr v-if="!loading && items.length === 0">
             <td colspan="8" class="text-medium-emphasis py-8 text-center">
-              {{ errorMessage ? '暂时无法加载公告列表。' : '暂无公告，点击右上角新建。' }}
+              {{ errorMessage ? '暂时无法加载公告列表。' : '暂无公告，点击筛选栏「新建公告」开始。' }}
             </td>
           </tr>
           <tr
@@ -282,14 +281,16 @@ function formatWindow(item: AdminAnnouncement) {
           </tr>
         </tbody>
       </v-table>
+      </div>
 
-      <div class="admin-pagination-row mt-4">
+      <div class="admin-pagination-row admin-page__pager">
         <div class="text-caption text-medium-emphasis">
           共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
         </div>
         <v-pagination v-model="page" :length="totalPages" total-visible="5" />
       </div>
     </v-card>
+    </div>
 
     <v-dialog
       v-model="editorOpen"

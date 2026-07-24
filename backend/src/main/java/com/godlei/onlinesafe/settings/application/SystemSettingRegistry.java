@@ -20,10 +20,12 @@ public class SystemSettingRegistry {
     public static final String INVITATION_DEFAULT_VALID_DAYS = "invitation.default_valid_days";
     public static final String INVITATION_DEFAULT_MAX_USES = "invitation.default_max_uses";
     public static final String AUDIT_RETENTION_DAYS = "security.audit_retention_days";
+    public static final String MAX_ACTIVE_USER_SESSIONS = "security.max_active_user_sessions";
 
     public static final String GROUP_ACCOUNT = "ACCOUNT";
     public static final String GROUP_INVITATION = "INVITATION";
     public static final String GROUP_SECURITY_LOG = "SECURITY_LOG";
+    public static final String GROUP_SESSION = "SESSION";
 
     private final Map<String, SystemSettingDefinition> definitions;
 
@@ -57,6 +59,15 @@ public class SystemSettingRegistry {
                 30,
                 7,
                 180,
+                AuditRiskLevel.WARNING
+        ));
+        put(map, SystemSettingDefinition.intSetting(
+                MAX_ACTIVE_USER_SESSIONS,
+                GROUP_SESSION,
+                "个人最大活跃会话数",
+                2,
+                1,
+                10,
                 AuditRiskLevel.WARNING
         ));
         put(map, SystemSettingDefinition.intSetting(

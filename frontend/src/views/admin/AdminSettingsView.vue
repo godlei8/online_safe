@@ -12,10 +12,14 @@ import {
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
 import { useOsToast } from '@/composables/useOsToast'
 
-type SettingGroup = 'ACCOUNT' | 'INVITATION' | 'SECURITY_LOG'
+type SettingGroup = 'ACCOUNT' | 'SESSION' | 'INVITATION' | 'SECURITY_LOG'
 
 const GROUP_META: Record<SettingGroup, { title: string; subtitle: string }> = {
   ACCOUNT: { title: '注册与账号', subtitle: '注册模式、密码规则与用户名冷却期' },
+  SESSION: {
+    title: '登录会话',
+    subtitle: '个人用户可同时保持的登录设备数；管理员账号固定单会话，不可在此修改',
+  },
   INVITATION: { title: '邀请码默认值', subtitle: '仅影响新建邀请码表单' },
   SECURITY_LOG: { title: '安全日志', subtitle: '下次清理任务时生效' },
 }
@@ -161,11 +165,18 @@ function capabilityColor(status: string) {
   return 'info'
 }
 
-const editableGroups: SettingGroup[] = ['ACCOUNT', 'INVITATION', 'SECURITY_LOG']
+const editableGroups: SettingGroup[] = ['ACCOUNT', 'SESSION', 'INVITATION', 'SECURITY_LOG']
 
 function rangeHint(item: SystemSettingItem) {
   if (item.min == null || item.max == null) return undefined
   return `${item.min}–${item.max}`
+}
+
+function fieldHint(item: SystemSettingItem) {
+  if (item.key === 'security.max_active_user_sessions') {
+    return '仅约束个人保险箱登录；达上限时挤掉最久未用设备。降低上限不会立刻踢出现有会话。'
+  }
+  return ''
 }
 
 function buildGroupChanges(group: SettingGroup): SettingChange[] {
@@ -280,11 +291,9 @@ const saveConfirmVariant = computed(() => (
 </script>
 
 <template>
-  <div class="admin-settings">
-    <div class="admin-settings__toolbar">
-      <p class="admin-settings__hint text-medium-emphasis mb-0">
-        各分组独立保存；高风险变更需二次确认。
-      </p>
+  <div class="admin-settings admin-page admin-page--scroll">
+    <div v-if="loading && !settings" class="admin-settings__loading-bar">
+      <v-skeleton-loader type="article@2" class="flex-grow-1" />
       <v-btn
         class="admin-toolbar-btn admin-settings__refresh"
         variant="tonal"
@@ -297,17 +306,25 @@ const saveConfirmVariant = computed(() => (
       </v-btn>
     </div>
 
-    <v-skeleton-loader v-if="loading && !settings" type="article@2" />
-
     <template v-else-if="settings">
       <v-card class="admin-panel admin-settings__capabilities" elevation="0">
         <div class="admin-settings__cap-head">
-          <div>
+          <div class="admin-settings__cap-head-text">
             <h2 class="admin-settings__section-title">运行能力</h2>
             <p class="admin-settings__section-subtitle text-medium-emphasis mb-0">
               只读状态总览，由部署配置决定，不可在线修改
             </p>
           </div>
+          <v-btn
+            class="admin-toolbar-btn admin-settings__refresh"
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-refresh"
+            :loading="loading"
+            @click="loadSettings"
+          >
+            刷新
+          </v-btn>
         </div>
         <div class="admin-settings__cap-grid">
           <div
@@ -317,7 +334,7 @@ const saveConfirmVariant = computed(() => (
             :data-tone="capabilityColor(item.status)"
           >
             <div class="admin-settings__cap-icon" aria-hidden="true">
-              <v-icon :icon="item.icon" size="20" />
+              <v-icon :icon="item.icon" size="22" />
             </div>
             <div class="admin-settings__cap-body">
               <div class="admin-settings__cap-label">{{ item.label }}</div>
@@ -326,6 +343,12 @@ const saveConfirmVariant = computed(() => (
           </div>
         </div>
       </v-card>
+
+      <div class="admin-settings__groups-head">
+        <p class="admin-settings__hint text-medium-emphasis mb-0">
+          各分组独立保存；高风险变更需二次确认。
+        </p>
+      </div>
 
       <div class="admin-settings__groups">
         <v-card
@@ -357,43 +380,46 @@ const saveConfirmVariant = computed(() => (
 
           <div class="admin-settings__fields">
             <template v-for="item in groupItems(group)" :key="item.key">
-              <v-select
-                v-if="item.key === 'registration.mode'"
-                v-model="drafts[item.key]"
-                class="admin-settings__field"
-                :items="modeOptions(item)"
-                item-title="title"
-                item-value="value"
-                :label="item.labelZh"
-                :disabled="!item.editable || savingGroup !== null"
-                density="compact"
-                hide-details
-              />
-              <v-select
-                v-else-if="item.key === 'security.audit_retention_days'"
-                v-model="drafts[item.key]"
-                class="admin-settings__field"
-                :items="retentionOptions(item)"
-                item-title="title"
-                item-value="value"
-                :label="item.labelZh"
-                :disabled="!item.editable || savingGroup !== null"
-                density="compact"
-                hide-details
-              />
-              <v-text-field
-                v-else
-                v-model.number="drafts[item.key]"
-                class="admin-settings__field"
-                type="number"
-                :label="item.labelZh"
-                :min="item.min ?? undefined"
-                :max="item.max ?? undefined"
-                :suffix="rangeHint(item)"
-                :disabled="!item.editable || savingGroup !== null"
-                density="compact"
-                hide-details
-              />
+              <div class="admin-settings__field-wrap">
+                <v-select
+                  v-if="item.key === 'registration.mode'"
+                  v-model="drafts[item.key]"
+                  class="admin-settings__field"
+                  :items="modeOptions(item)"
+                  item-title="title"
+                  item-value="value"
+                  :label="item.labelZh"
+                  :disabled="!item.editable || savingGroup !== null"
+                  density="compact"
+                  hide-details
+                />
+                <v-select
+                  v-else-if="item.key === 'security.audit_retention_days'"
+                  v-model="drafts[item.key]"
+                  class="admin-settings__field"
+                  :items="retentionOptions(item)"
+                  item-title="title"
+                  item-value="value"
+                  :label="item.labelZh"
+                  :disabled="!item.editable || savingGroup !== null"
+                  density="compact"
+                  hide-details
+                />
+                <v-text-field
+                  v-else
+                  v-model.number="drafts[item.key]"
+                  class="admin-settings__field"
+                  type="number"
+                  :label="item.labelZh"
+                  :min="item.min ?? undefined"
+                  :max="item.max ?? undefined"
+                  :suffix="rangeHint(item)"
+                  :disabled="!item.editable || savingGroup !== null"
+                  density="compact"
+                  hide-details
+                />
+                <p v-if="fieldHint(item)" class="admin-settings__field-hint">{{ fieldHint(item) }}</p>
+              </div>
             </template>
           </div>
         </v-card>
@@ -426,21 +452,20 @@ const saveConfirmVariant = computed(() => (
 
 <style scoped>
 .admin-settings {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
 }
 
-.admin-settings__toolbar {
+.admin-settings__loading-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 30px;
-  margin-bottom: 2px;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .admin-settings__hint {
-  font-size: 0.71875rem;
+  font-size: 0.75rem;
   line-height: 1.35;
 }
 
@@ -448,39 +473,48 @@ const saveConfirmVariant = computed(() => (
 .admin-settings__group-title {
   margin: 0;
   color: var(--os-text-title);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 650;
   line-height: 1.25;
 }
 
 .admin-settings__section-subtitle,
 .admin-settings__group-subtitle {
-  margin-top: 1px;
-  font-size: 0.71875rem;
-  line-height: 1.3;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  line-height: 1.35;
 }
 
 .admin-settings__capabilities {
-  padding: 14px 16px !important;
+  flex: 0 0 auto;
+  padding: 16px 18px 18px !important;
 }
 
 .admin-settings__cap-head {
-  margin-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-settings__cap-head-text {
+  min-width: 0;
 }
 
 .admin-settings__cap-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .admin-settings__cap-card {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  column-gap: 12px;
+  grid-template-columns: 48px minmax(0, 1fr);
+  column-gap: 14px;
   align-items: center;
-  min-height: 78px;
-  padding: 14px 16px;
+  min-height: 108px;
+  padding: 18px 16px;
   border: 1px solid var(--os-border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--os-surface) 94%, var(--os-bg));
@@ -488,10 +522,10 @@ const saveConfirmVariant = computed(() => (
 
 .admin-settings__cap-icon {
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--os-primary);
   background: var(--os-primary-tint);
 }
@@ -517,23 +551,30 @@ const saveConfirmVariant = computed(() => (
 
 .admin-settings__cap-label {
   color: var(--os-text-muted);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.3;
 }
 
 .admin-settings__cap-status {
-  margin-top: 4px;
+  margin-top: 6px;
   color: var(--os-text-title);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 650;
   line-height: 1.35;
   word-break: break-word;
 }
 
+.admin-settings__groups-head {
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  margin: 2px 0 -2px;
+}
+
 .admin-settings__groups {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   align-items: stretch;
 }
 
@@ -541,15 +582,15 @@ const saveConfirmVariant = computed(() => (
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 12px 14px !important;
+  padding: 14px 16px !important;
 }
 
 .admin-settings__group-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .admin-settings__group-meta {
@@ -571,12 +612,26 @@ const saveConfirmVariant = computed(() => (
 .admin-settings__fields {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: 12px;
   align-content: start;
+}
+
+.admin-settings__field-wrap {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
 }
 
 .admin-settings__field {
   max-width: none;
+}
+
+.admin-settings__field-hint {
+  margin: 0;
+  padding: 0 2px;
+  color: var(--os-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
 }
 
 .admin-settings__field :deep(.v-field) {
@@ -595,16 +650,23 @@ const saveConfirmVariant = computed(() => (
   padding-inline-start: 4px;
 }
 
-@media (max-width: 1100px) {
+@media (min-width: 1280px) {
+  .admin-settings__cap-card {
+    min-height: 118px;
+    padding: 20px 18px;
+  }
+}
+
+@media (max-width: 960px) {
   .admin-settings__cap-grid,
   .admin-settings__groups {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 700px) {
-  .admin-settings__toolbar {
-    align-items: flex-start;
+@media (max-width: 640px) {
+  .admin-settings__cap-head {
+    flex-wrap: wrap;
   }
 
   .admin-settings__cap-grid,
@@ -613,7 +675,7 @@ const saveConfirmVariant = computed(() => (
   }
 
   .admin-settings__cap-card {
-    min-height: 70px;
+    min-height: 88px;
   }
 }
 </style>

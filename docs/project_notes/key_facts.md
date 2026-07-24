@@ -55,7 +55,20 @@
 | --- | --- | --- |
 | 个人 | `ONLINE_SAFE_SESSION` | `/api/auth/**`、`/api/v1/**` |
 | 管理 | `ONLINE_SAFE_ADMIN_SESSION` | `/api/admin/**` |
-| 并发 | 同账号最多 1 会话 | 多地登录挤掉旧会话；跨账号/跨面不挤 |
+| 个人并发 | 默认最多 2 会话（可配 1–10） | 键 `security.max_active_user_sessions`；超限挤最久未用 |
+| 管理并发 | 固定 1 会话 | 不可配置；跨面互不影响 |
+
+## 登录设备 / 安全中心（2026-07-24）
+
+| 项 | 约定 |
+| --- | --- |
+| 页面 | `/vault/security`（侧栏「安全设置」、头像「安全中心」） |
+| API | `/api/v1/security/sessions`（列表 / 踢单台 / 踢其他 / 踢全部） |
+| 对外 ID | Session 属性 `os.session.publicId`（UUID），不暴露内部 Session ID |
+| 跨标签 | `BroadcastChannel` 频道 `online-safe-auth`：`LOGOUT` / `SESSION_REVOKED` |
+| 周期校验 | 页面可见时 + 每 5 分钟请求 `/api/auth/session` |
+| 设置键 | `security.max_active_user_sessions`（系统设置 →「登录会话」分组） |
+| 管理端 | 只看活跃会话数 +「使会话失效」；不提供用户设备详情列表；管理员自身固定 1 会话 |
 
 ## 安全日志与系统设置（2026-07-24）
 

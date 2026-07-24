@@ -1,6 +1,5 @@
 package com.godlei.onlinesafe.admin.application;
 
-import com.godlei.onlinesafe.admin.infrastructure.UserSessionRepository;
 import com.godlei.onlinesafe.admin.web.ManagedUserResponse;
 import com.godlei.onlinesafe.admin.web.ManagedUserStatsResponse;
 import com.godlei.onlinesafe.audit.application.SecurityAuditService;
@@ -9,6 +8,7 @@ import com.godlei.onlinesafe.audit.domain.AuditResult;
 import com.godlei.onlinesafe.auth.domain.AppUser;
 import com.godlei.onlinesafe.auth.domain.AppUserStatus;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
+import com.godlei.onlinesafe.session.application.UserSessionService;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,20 +29,20 @@ import java.util.stream.Collectors;
 public class UserManagementService {
 
     private final AppUserRepository appUserRepository;
-    private final UserSessionRepository userSessionRepository;
+    private final UserSessionService userSessionService;
     private final PhoneMasker phoneMasker;
     private final SecurityAuditService securityAuditService;
     private final Clock clock;
 
     public UserManagementService(
             AppUserRepository appUserRepository,
-            UserSessionRepository userSessionRepository,
+            UserSessionService userSessionService,
             PhoneMasker phoneMasker,
             SecurityAuditService securityAuditService,
             Clock clock
     ) {
         this.appUserRepository = appUserRepository;
-        this.userSessionRepository = userSessionRepository;
+        this.userSessionService = userSessionService;
         this.phoneMasker = phoneMasker;
         this.securityAuditService = securityAuditService;
         this.clock = clock;
@@ -64,9 +64,12 @@ public class UserManagementService {
         Instant createdAfter = resolveCreatedAfter(registeredWithin);
         Specification<AppUser> spec = buildSpec(q, status, createdAfter);
         Page<AppUser> page = appUserRepository.findAll(spec, pageable);
-        Map<String, Integer> sessionCounts = userSessionRepository.countByPrincipalNames(
-                page.getContent().stream().map(AppUser::getUsername).collect(Collectors.toSet())
-        );
+        Map<String, Integer> sessionCounts = page.getContent().stream()
+                .collect(Collectors.toMap(
+                        AppUser::getUsername,
+                        user -> userSessionService.countActiveByPrincipal(user.getUsername()),
+                        (a, b) -> a
+                ));
         return page.map(user -> toResponse(user, sessionCounts.getOrDefault(user.getUsername(), 0)));
     }
 
@@ -76,7 +79,7 @@ public class UserManagementService {
         AppUserStatus previous = user.getStatus();
         user.disable();
         appUserRepository.save(user);
-        userSessionRepository.deleteByPrincipalName(user.getUsername());
+        userSessionService.deleteAllByPrincipal(user.getUsername());
         SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
         securityAuditService.recordInTx(
                 AuditEventType.USER_DISABLED_BY_ADMIN,
@@ -99,7 +102,7 @@ public class UserManagementService {
         AppUserStatus previous = user.getStatus();
         user.enable();
         appUserRepository.save(user);
-        int sessions = userSessionRepository.countByPrincipalName(user.getUsername());
+        int sessions = userSessionService.countActiveByPrincipal(user.getUsername());
         SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
         securityAuditService.recordInTx(
                 AuditEventType.USER_ENABLED_BY_ADMIN,
@@ -119,8 +122,8 @@ public class UserManagementService {
     @Transactional
     public ManagedUserResponse revokeSessions(String userId) {
         AppUser user = requireUser(userId);
-        int revoked = userSessionRepository.countByPrincipalName(user.getUsername());
-        userSessionRepository.deleteByPrincipalName(user.getUsername());
+        int revoked = userSessionService.countActiveByPrincipal(user.getUsername());
+        userSessionService.deleteAllByPrincipal(user.getUsername());
         SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
         securityAuditService.recordInTx(
                 AuditEventType.USER_SESSIONS_REVOKED_BY_ADMIN,

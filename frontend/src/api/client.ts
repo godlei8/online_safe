@@ -46,14 +46,18 @@ async function handleSessionExpired(path: string, code?: string): Promise<void> 
         ready: true,
       })
     } else {
-      const [{ useVaultStore }, { useAuthStore }] = await Promise.all([
+      const [{ useVaultStore }, { useAuthStore }, { publishAuthBroadcast }] = await Promise.all([
         import('@/stores/vault'),
         import('@/stores/auth'),
+        import('@/composables/useAuthBroadcast'),
       ])
       useVaultStore().clearSessionData()
       useAuthStore().$patch({
         session: { authenticated: false, userId: null, username: null, role: null, avatarUrl: null },
         ready: true,
+      })
+      publishAuthBroadcast({
+        type: code === 'SESSION_REPLACED' ? 'SESSION_REVOKED' : 'LOGOUT',
       })
     }
 

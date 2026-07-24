@@ -88,6 +88,8 @@ export const vaultItemPayloadSchema = z.object({
   /** YYYY-MM-DD；空表示不过期 */
   expiresAt: z.string().nullable().optional().transform((value) => value ?? null),
   tags: z.array(z.string()).optional().transform((value) => value ?? []),
+  /** 列表置顶；旧数据无此字段视为 false */
+  pinned: z.boolean().optional().transform((value) => value ?? false),
   fields: z.array(vaultFieldSchema),
   templateSnapshot: z.unknown().nullable(),
   notes: z.string(),
@@ -237,6 +239,7 @@ export function emptyItemPayload(): VaultItemPayload {
     status: 'NORMAL',
     expiresAt: null,
     tags: [],
+    pinned: false,
     fields: [createAccountField(), createPasswordField()],
     templateSnapshot: null,
     notes: '',

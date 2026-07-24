@@ -1,5 +1,8 @@
 package com.godlei.onlinesafe.security;
 
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
+import com.godlei.onlinesafe.session.application.SessionLimitService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,13 +43,37 @@ public class SessionConfig {
     }
 
     /**
-     * 登录时：同账号仅保留 1 个有效会话（多地登录挤掉旧会话）→ 换 SessionId → 登记新会话。
+     * 个人用户：动态上限（默认 2）→ 换 SessionId → 登记新会话。
      */
     @Bean
-    SessionAuthenticationStrategy sessionAuthenticationStrategy(SessionRegistry sessionRegistry) {
+    @Qualifier("userSessionAuthenticationStrategy")
+    SessionAuthenticationStrategy userSessionAuthenticationStrategy(
+            SessionRegistry sessionRegistry,
+            SessionLimitService sessionLimitService,
+            SecurityAuditService securityAuditService
+    ) {
+        UserConcurrentSessionControlAuthenticationStrategy concurrent =
+                new UserConcurrentSessionControlAuthenticationStrategy(
+                        sessionRegistry,
+                        sessionLimitService,
+                        securityAuditService
+                );
+        return new CompositeSessionAuthenticationStrategy(List.of(
+                concurrent,
+                new ChangeSessionIdAuthenticationStrategy(),
+                new RegisterSessionAuthenticationStrategy(sessionRegistry)
+        ));
+    }
+
+    /**
+     * 管理员：固定最多 1 个会话。
+     */
+    @Bean
+    @Qualifier("adminSessionAuthenticationStrategy")
+    SessionAuthenticationStrategy adminSessionAuthenticationStrategy(SessionRegistry sessionRegistry) {
         ConcurrentSessionControlAuthenticationStrategy concurrent =
                 new ConcurrentSessionControlAuthenticationStrategy(sessionRegistry);
-        concurrent.setMaximumSessions(1);
+        concurrent.setMaximumSessions(SessionLimitService.ADMIN_MAX_SESSIONS);
         concurrent.setExceptionIfMaximumExceeded(false);
         return new CompositeSessionAuthenticationStrategy(List.of(
                 concurrent,
