@@ -35,7 +35,7 @@ online-word/
 ├─ CURSOR.md                          # 本文件
 ├─ README.md
 ├─ docs/
-│  ├─ Design.md                       # UI/交互规范（含统一二次确认弹窗）
+│  ├─ Design.md                       # UI/交互规范（含 §7.1 手机 Web 布局通则）
 │  ├─ project_notes/                  # 决策与关键事实（decisions / key_facts）
 │  ├─ 在线账密保险箱-产品需求文档-v1.0.md
 │  ├─ 在线账密保险箱-技术选型与架构设计-v1.0.md
@@ -93,6 +93,10 @@ online-word/
 11. **按钮高度**：相对旧规范整体 −10px——工作区默认 **30px**、认证主按钮 **38px**、确认弹窗按钮 **28px**；令牌见 `--os-control-*` / `docs/Design.md` §3.3。禁止再使用偏高的 40/48 默认。
 12. **下拉框**：字段约 **34px**、选项行高 **32px**（`os-select-menu` / `--os-select-item`）；`vuetify.ts` 已默认挂 `menuProps.contentClass`。禁止偏高默认列表项。见 `docs/Design.md` §3.4。
 13. **表单校验提示**：弹窗内校验/保存失败用 `useOsToast().error(...)` 独立弹出；禁止弹窗顶部红色 `v-alert` 横幅。
+14. **手机 Web 布局（≤599px）**：遵循 `docs/Design.md` §7.1 与 `AGENTS.md`。速记——
+    - 第 1 行：搜索（勿挤没）+ `admin-filter-actions--tools`（筛选/刷新）；第 2 行：`admin-filter-actions--primary`（创建/新建全宽）。
+    - 次级筛选 → `AdminFilterSheet`；列表 → `useMobileInfiniteScroll` + 单行弱提示底栏。
+    - 标题与小动作同行；藏副标题、收起 `OsHintBar`、统计卡压扁、`data-mobile-hide`；详情用全屏 `v-dialog`。
 
 ## 6. 关键 API（现状）
 
