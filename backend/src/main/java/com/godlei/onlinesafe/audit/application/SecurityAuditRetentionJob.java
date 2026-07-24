@@ -4,6 +4,7 @@ import com.godlei.onlinesafe.audit.domain.AuditEventType;
 import com.godlei.onlinesafe.audit.domain.AuditResult;
 import com.godlei.onlinesafe.audit.domain.AuditRiskLevel;
 import com.godlei.onlinesafe.audit.domain.SecurityAuditEvent;
+import com.godlei.onlinesafe.settings.application.SystemSettingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,28 +19,41 @@ import java.util.Map;
 public class SecurityAuditRetentionJob {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityAuditRetentionJob.class);
-    private static final int DEFAULT_RETENTION_DAYS = 180;
 
     private final SecurityAuditPurgeService purgeService;
     private final SecurityAuditRecorder recorder;
     private final SecurityAuditService auditService;
+    private final SystemSettingService systemSettingService;
     private final Clock clock;
 
     public SecurityAuditRetentionJob(
             SecurityAuditPurgeService purgeService,
             SecurityAuditRecorder recorder,
             SecurityAuditService auditService,
+            SystemSettingService systemSettingService,
             Clock clock
     ) {
         this.purgeService = purgeService;
         this.recorder = recorder;
         this.auditService = auditService;
+        this.systemSettingService = systemSettingService;
         this.clock = clock;
     }
 
     @Scheduled(cron = "0 30 3 * * *")
     public void purge() {
-        Instant cutoff = clock.instant().minus(DEFAULT_RETENTION_DAYS, ChronoUnit.DAYS);
+        Integer retentionDays;
+        try {
+            retentionDays = systemSettingService.auditRetentionDaysOrNull();
+        } catch (RuntimeException exception) {
+            log.error("读取安全日志保留期限失败，跳过清理");
+            return;
+        }
+        if (retentionDays == null) {
+            log.error("安全日志保留期限不可用，跳过清理");
+            return;
+        }
+        Instant cutoff = clock.instant().minus(retentionDays, ChronoUnit.DAYS);
         int totalDeleted = 0;
         try {
             while (true) {

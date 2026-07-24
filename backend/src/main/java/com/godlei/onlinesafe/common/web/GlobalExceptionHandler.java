@@ -8,6 +8,7 @@ import com.godlei.onlinesafe.announcement.application.AnnouncementNotFoundExcept
 import com.godlei.onlinesafe.announcement.application.InvalidAnnouncementOperationException;
 import com.godlei.onlinesafe.audit.application.AuditQueryException;
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
+import com.godlei.onlinesafe.settings.application.SystemSettingException;
 import com.godlei.onlinesafe.auth.application.PasswordResetException;
 import com.godlei.onlinesafe.auth.application.ProfileException;
 import com.godlei.onlinesafe.auth.application.RegistrationConflictException;
@@ -186,6 +187,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuditQueryException.class)
     ResponseEntity<ApiError> handleAuditQuery(AuditQueryException exception, HttpServletRequest request) {
+        return response(exception.getStatus(), exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(SystemSettingException.class)
+    ResponseEntity<ApiError> handleSystemSetting(SystemSettingException exception, HttpServletRequest request) {
         return response(exception.getStatus(), exception.getCode(), exception.getMessage(), request, null);
     }
 

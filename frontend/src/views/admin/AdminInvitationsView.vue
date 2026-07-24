@@ -7,6 +7,7 @@ import {
   type InvitationStats,
   type InvitePurpose,
 } from '@/api/invitations'
+import { systemSettingsApi } from '@/api/systemSettings'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
 import { useOsToast } from '@/composables/useOsToast'
@@ -142,11 +143,31 @@ function formatTime(value: string | null) {
   return new Date(value).toLocaleString('zh-CN', { hour12: false })
 }
 
-function openCreate() {
+function toLocalDatetime(value: Date) {
+  const pad = (num: number) => String(num).padStart(2, '0')
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`
+}
+
+async function openCreate() {
   purpose.value = 'USER_REGISTRATION'
   maxUses.value = 1
   note.value = ''
   expiresAtLocal.value = ''
+  try {
+    const settings = await systemSettingsApi.get()
+    const invitationGroup = settings.groups.INVITATION ?? []
+    const maxUsesSetting = invitationGroup.find((item) => item.key === 'invitation.default_max_uses')
+    const validDaysSetting = invitationGroup.find((item) => item.key === 'invitation.default_valid_days')
+    if (maxUsesSetting) maxUses.value = Number(maxUsesSetting.value)
+    if (validDaysSetting) {
+      const days = Number(validDaysSetting.value)
+      if (Number.isFinite(days) && days > 0) {
+        expiresAtLocal.value = toLocalDatetime(new Date(Date.now() + days * 24 * 60 * 60 * 1000))
+      }
+    }
+  } catch {
+    // 保留本地默认值
+  }
   createDialog.value = true
 }
 

@@ -11,6 +11,7 @@ import com.godlei.onlinesafe.auth.web.ProfileResponse;
 import com.godlei.onlinesafe.cos.AvatarObjectStorage;
 import com.godlei.onlinesafe.cos.CosProperties;
 import com.godlei.onlinesafe.security.AppUserPrincipal;
+import com.godlei.onlinesafe.settings.application.SystemSettingService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -35,7 +36,6 @@ import java.util.UUID;
 @Service
 public class UserProfileService {
 
-    private static final Duration USERNAME_COOLDOWN = Duration.ofDays(30);
     private static final long MAX_AVATAR_BYTES = 2L * 1024 * 1024;
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "image/jpeg",
@@ -48,6 +48,7 @@ public class UserProfileService {
     private final AvatarObjectStorage avatarObjectStorage;
     private final CosProperties cosProperties;
     private final SecurityContextRepository securityContextRepository;
+    private final SystemSettingService systemSettingService;
     private final SecurityAuditService securityAuditService;
     private final IdentifierMasker identifierMasker;
     private final Clock clock;
@@ -58,6 +59,7 @@ public class UserProfileService {
             AvatarObjectStorage avatarObjectStorage,
             CosProperties cosProperties,
             SecurityContextRepository securityContextRepository,
+            SystemSettingService systemSettingService,
             SecurityAuditService securityAuditService,
             IdentifierMasker identifierMasker,
             Clock clock
@@ -67,6 +69,7 @@ public class UserProfileService {
         this.avatarObjectStorage = avatarObjectStorage;
         this.cosProperties = cosProperties;
         this.securityContextRepository = securityContextRepository;
+        this.systemSettingService = systemSettingService;
         this.securityAuditService = securityAuditService;
         this.identifierMasker = identifierMasker;
         this.clock = clock;
@@ -92,9 +95,13 @@ public class UserProfileService {
         }
 
         Instant now = clock.instant();
+        Duration cooldown = Duration.ofDays(systemSettingService.usernameCooldownDays());
         if (user.getUsernameChangedAt() != null
-                && user.getUsernameChangedAt().plus(USERNAME_COOLDOWN).isAfter(now)) {
-            throw new ProfileException("USERNAME_CHANGE_COOLDOWN", "30 天内仅可修改一次用户名");
+                && user.getUsernameChangedAt().plus(cooldown).isAfter(now)) {
+            throw new ProfileException(
+                    "USERNAME_CHANGE_COOLDOWN",
+                    systemSettingService.usernameCooldownDays() + " 天内仅可修改一次用户名"
+            );
         }
         if (userRepository.existsByNormalizedUsernameAndIdNot(username.normalized(), userId)) {
             throw new ProfileException("USERNAME_ALREADY_EXISTS", "该用户名已被占用");
@@ -194,7 +201,8 @@ public class UserProfileService {
         Instant nextChangeAt = null;
         boolean canChangeUsername = true;
         if (user.getUsernameChangedAt() != null) {
-            Instant cooldownEnd = user.getUsernameChangedAt().plus(USERNAME_COOLDOWN);
+            Instant cooldownEnd = user.getUsernameChangedAt()
+                    .plus(Duration.ofDays(systemSettingService.usernameCooldownDays()));
             if (cooldownEnd.isAfter(now)) {
                 canChangeUsername = false;
                 nextChangeAt = cooldownEnd;

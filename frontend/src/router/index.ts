@@ -15,7 +15,7 @@ import AdminAnnouncementsView from '@/views/admin/AdminAnnouncementsView.vue'
 import AdminUsersView from '@/views/admin/AdminUsersView.vue'
 import AdminTemplatesView from '@/views/admin/AdminTemplatesView.vue'
 import AdminSecurityLogsView from '@/views/admin/AdminSecurityLogsView.vue'
-import AdminPlaceholderView from '@/views/admin/AdminPlaceholderView.vue'
+import AdminSettingsView from '@/views/admin/AdminSettingsView.vue'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 import { useAuthStore } from '@/stores/auth'
 import { useVaultStore } from '@/stores/vault'
@@ -118,8 +118,8 @@ const router = createRouter({
         {
           path: 'settings',
           name: 'admin-settings',
-          component: AdminPlaceholderView,
-          meta: { title: '系统设置', subtitle: '注册策略、公告与安全策略。' },
+          component: AdminSettingsView,
+          meta: { title: '系统设置', subtitle: '注册策略、邀请码默认值与安全日志保留期限。' },
         },
       ],
     },

@@ -6,6 +6,7 @@ import com.godlei.onlinesafe.auth.domain.AppUser;
 import com.godlei.onlinesafe.auth.domain.SmsPurpose;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
 import com.godlei.onlinesafe.auth.web.PasswordResetConfirmRequest;
+import com.godlei.onlinesafe.settings.application.SystemSettingService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class PasswordResetService {
     private final UserSessionRepository userSessionRepository;
     private final PasswordResetRateLimiter rateLimiter;
     private final SecurityAuditService securityAuditService;
+    private final SystemSettingService systemSettingService;
 
     public PasswordResetService(
             AppUserRepository userRepository,
@@ -33,7 +35,8 @@ public class PasswordResetService {
             PhoneNormalizer phoneNormalizer,
             UserSessionRepository userSessionRepository,
             PasswordResetRateLimiter rateLimiter,
-            SecurityAuditService securityAuditService
+            SecurityAuditService securityAuditService,
+            SystemSettingService systemSettingService
     ) {
         this.userRepository = userRepository;
         this.smsVerificationService = smsVerificationService;
@@ -42,6 +45,7 @@ public class PasswordResetService {
         this.userSessionRepository = userSessionRepository;
         this.rateLimiter = rateLimiter;
         this.securityAuditService = securityAuditService;
+        this.systemSettingService = systemSettingService;
     }
 
     @Transactional
@@ -61,6 +65,10 @@ public class PasswordResetService {
         }
         if (request.newPassword().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_PASSWORD_BYTES) {
             throw new PasswordResetException("PASSWORD_TOO_LONG", "密码内容过长");
+        }
+        int minLength = systemSettingService.passwordMinLengthSafe();
+        if (request.newPassword().length() < minLength) {
+            throw new PasswordResetException("PASSWORD_TOO_SHORT", "新密码至少 " + minLength + " 位");
         }
 
         AppUser user = userRepository.findByPhone(phone).orElse(null);

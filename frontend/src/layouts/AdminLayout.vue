@@ -18,6 +18,7 @@ const navItems = [
   { title: '公告', icon: 'mdi-bullhorn-outline', to: '/admin/announcements' },
   { title: '系统模板', icon: 'mdi-view-grid-plus-outline', to: '/admin/templates' },
   { title: '安全日志', icon: 'mdi-shield-search', to: '/admin/security-logs' },
+  { title: '系统设置', icon: 'mdi-cog-outline', to: '/admin/settings' },
 ]
 
 const pageTitle = computed(() => String(route.meta.title || '管理后台'))

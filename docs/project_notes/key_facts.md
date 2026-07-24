@@ -49,12 +49,15 @@
 - 样式：`frontend/src/styles/main.scss`（搜索 `os-confirm-dialog`）
 - 已接入：保险箱删除模板、标记异常；管理端邀请码删除、用户禁用/启用/使会话失效
 
-## 安全日志（2026-07-24）
+## 安全日志与系统设置（2026-07-24）
 
 | 项 | 约定 |
 | --- | --- |
-| 路由 | `/admin/security-logs` |
+| 路由 | `/admin/security-logs`、`/admin/settings` |
 | 审计表 | `security_audit_event`（Flyway V16） |
-| 日志保留 | 默认 180 天；每天 03:30 清理 |
+| 设置表 | `system_setting`（Flyway V17，仅覆盖值；默认在代码注册表） |
+| 公开策略 | `GET /api/auth/registration-policy`（匿名） |
+| 注册模式 | `CLOSED` / `SMS_VERIFIED` / `INVITE_AND_SMS` |
+| 日志保留 | 90 / 180 / 365 天，默认 180；每天 03:30 清理 |
 | 指纹密钥 | 环境变量 `AUDIT_FINGERPRINT_KEY` |
 | 禁止 | 日志导出、单条删除、保险箱明文、完整 IP/UA/邀请码明文入日志 |

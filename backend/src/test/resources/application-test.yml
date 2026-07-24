@@ -36,3 +36,6 @@ app:
     code-length: 6
     send-interval-seconds: 1
     send-daily-limit: 100
+  cos:
+    provider: local
+    local-dir: ./build/test-avatars

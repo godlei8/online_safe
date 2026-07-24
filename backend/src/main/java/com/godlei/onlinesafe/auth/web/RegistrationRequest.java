@@ -22,6 +22,10 @@ public record RegistrationRequest(
 
         @NotBlank(message = "确认密码不能为空")
         @Size(min = 8, max = 72, message = "确认密码长度必须为8至72位")
-        String confirmPassword
+        String confirmPassword,
+
+        /** 邀请码；仅 INVITE_AND_SMS 模式必填，由服务端策略校验 */
+        @Size(max = 64, message = "邀请码格式不正确")
+        String inviteCode
 ) {
 }

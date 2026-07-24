@@ -98,6 +98,7 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/api/csrf",
                                 "/api/auth/session",
+                                "/api/auth/registration-policy",
                                 "/api/admin/auth/session",
                                 "/actuator/health"
                         ).permitAll()

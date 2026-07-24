@@ -5,6 +5,8 @@ import com.godlei.onlinesafe.auth.domain.SmsPurpose;
 import com.godlei.onlinesafe.auth.domain.SmsVerification;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
 import com.godlei.onlinesafe.auth.infrastructure.SmsVerificationRepository;
+import com.godlei.onlinesafe.settings.application.SystemSettingService;
+import com.godlei.onlinesafe.settings.domain.RegistrationMode;
 import com.godlei.onlinesafe.sms.SmsProperties;
 import com.godlei.onlinesafe.sms.SmsSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +28,7 @@ public class SmsVerificationService {
     private final SmsProperties properties;
     private final PasswordEncoder passwordEncoder;
     private final PhoneNormalizer phoneNormalizer;
+    private final SystemSettingService systemSettingService;
     private final SecurityAuditService securityAuditService;
     private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -37,6 +40,7 @@ public class SmsVerificationService {
             SmsProperties properties,
             PasswordEncoder passwordEncoder,
             PhoneNormalizer phoneNormalizer,
+            SystemSettingService systemSettingService,
             SecurityAuditService securityAuditService,
             Clock clock
     ) {
@@ -46,6 +50,7 @@ public class SmsVerificationService {
         this.properties = properties;
         this.passwordEncoder = passwordEncoder;
         this.phoneNormalizer = phoneNormalizer;
+        this.systemSettingService = systemSettingService;
         this.securityAuditService = securityAuditService;
         this.clock = clock;
     }
@@ -57,6 +62,10 @@ public class SmsVerificationService {
 
         switch (purpose) {
             case REGISTER -> {
+                if (systemSettingService.registrationModeSafe() == RegistrationMode.CLOSED) {
+                    securityAuditService.recordSmsBlocked(phone, purpose.name(), "REGISTRATION_CLOSED");
+                    throw new SmsException("REGISTRATION_CLOSED", "当前已关闭新用户注册");
+                }
                 if (userRepository.existsByPhone(phone)) {
                     throw new SmsException("PHONE_ALREADY_REGISTERED", "该手机号已注册");
                 }

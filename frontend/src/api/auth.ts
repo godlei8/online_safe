@@ -10,15 +10,25 @@ export type Session = {
 export type RegistrationResponse = { id: string; username: string; maskedPhone: string; phoneVerified: boolean; createdAt: string }
 export type LoginPayload = { identifier: string; password: string }
 export type SmsPurpose = 'REGISTER' | 'RESET_PASSWORD'
+export type RegistrationPolicy = {
+  registrationEnabled: boolean
+  mode: string
+  smsRequired: boolean
+  inviteRequired: boolean
+  passwordMinLength: number
+}
+
 export type RegistrationPayload = {
   phone: string
   smsCode: string
   username: string
   password: string
   confirmPassword: string
+  inviteCode?: string
 }
 
 export const authApi = {
+  registrationPolicy: () => requestJson<RegistrationPolicy>('/api/auth/registration-policy'),
   currentSession: () => requestJson<Session>('/api/auth/session'),
   login: (payload: LoginPayload) => requestJson<Session>('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   register: (payload: RegistrationPayload) => requestJson<RegistrationResponse>('/api/auth/register', { method: 'POST', body: JSON.stringify(payload) }),

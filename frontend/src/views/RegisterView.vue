@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { z } from 'zod'
 import AuthShell from '@/components/AuthShell.vue'
 import { ApiRequestError } from '@/api/client'
-import { authApi } from '@/api/auth'
+import { authApi, type RegistrationPolicy } from '@/api/auth'
 import { useOsToast } from '@/composables/useOsToast'
 import { useAuthStore } from '@/stores/auth'
 
@@ -15,6 +15,7 @@ const currentStep = ref(1)
 const phone = ref('')
 const username = ref('')
 const smsCode = ref('')
+const inviteCode = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const agreedToTerms = ref(false)
@@ -22,6 +23,8 @@ const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const submitting = ref(false)
 const sendingSms = ref(false)
+const policyLoading = ref(true)
+const registrationPolicy = ref<RegistrationPolicy | null>(null)
 const countdown = ref(0)
 const errorMessage = ref('')
 const accountErrors = ref<Record<string, string>>({})
@@ -30,23 +33,35 @@ const serverErrors = ref<Record<string, string>>({})
 
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 
-const accountSchema = z.object({
-  phone: z.string().trim().regex(/^(?:\+86|86)?1[3-9]\d{9}$/, '请输入有效的中国大陆手机号'),
-  username: z.string().trim().regex(/^[\p{L}\p{N}_-]{3,32}$/u, '用户名为 3–32 位字母、数字、下划线或连字符'),
-  smsCode: z.string().trim().regex(/^\d{4,8}$/, '请输入短信验证码'),
+const registrationEnabled = computed(() => registrationPolicy.value?.registrationEnabled ?? true)
+const inviteRequired = computed(() => registrationPolicy.value?.inviteRequired ?? false)
+const passwordMinLength = computed(() => registrationPolicy.value?.passwordMinLength ?? 8)
+
+const accountSchema = computed(() => {
+  const base = z.object({
+    phone: z.string().trim().regex(/^(?:\+86|86)?1[3-9]\d{9}$/, '请输入有效的中国大陆手机号'),
+    username: z.string().trim().regex(/^[\p{L}\p{N}_-]{3,32}$/u, '用户名为 3–32 位字母、数字、下划线或连字符'),
+    smsCode: z.string().trim().regex(/^\d{4,8}$/, '请输入短信验证码'),
+  })
+  if (!inviteRequired.value) return base
+  return base.extend({
+    inviteCode: z.string().trim().min(1, '请输入邀请码'),
+  })
 })
 
-const passwordSchema = z.object({
-  password: z.string().min(8, '登录密码至少 8 位').max(72, '登录密码不能超过 72 位'),
+const passwordSchema = computed(() => z.object({
+  password: z.string()
+    .min(passwordMinLength.value, `登录密码至少 ${passwordMinLength.value} 位`)
+    .max(72, '登录密码不能超过 72 位'),
   confirmPassword: z.string().min(1, '请再次输入登录密码'),
   agreedToTerms: z.literal(true, { error: '请阅读并同意相关条款' }),
 }).refine((value) => value.password === value.confirmPassword, {
   path: ['confirmPassword'],
   message: '两次输入的密码不一致',
-})
+}))
 
 const passwordRules = computed(() => [
-  { label: '至少 8 位', passed: password.value.length >= 8 },
+  { label: `至少 ${passwordMinLength.value} 位`, passed: password.value.length >= passwordMinLength.value },
   { label: '两次输入一致', passed: confirmPassword.value.length > 0 && password.value === confirmPassword.value },
 ])
 
@@ -58,14 +73,24 @@ const sendButtonLabel = computed(() => {
   return '获取验证码'
 })
 
+onMounted(async () => {
+  try {
+    registrationPolicy.value = await authApi.registrationPolicy()
+  } catch (error) {
+    toast.error(error instanceof ApiRequestError ? error.message : '无法加载注册策略，请稍后再试')
+  } finally {
+    policyLoading.value = false
+  }
+})
+
 onBeforeUnmount(() => {
   if (countdownTimer) clearInterval(countdownTimer)
 })
 
-function collectErrors(result: ReturnType<typeof accountSchema.safeParse> | ReturnType<typeof passwordSchema.safeParse>, target: Record<string, string>, fields: string[]) {
+function collectErrors(result: { success: boolean; error?: z.ZodError }, target: Record<string, string>, fields: string[]) {
   for (const field of fields) delete target[field]
   let fieldsOk = true
-  if (!result.success) {
+  if (!result.success && result.error) {
     for (const issue of result.error.issues) {
       const field = String(issue.path[0] ?? '')
       if (fields.includes(field) && !target[field]) {
@@ -78,13 +103,21 @@ function collectErrors(result: ReturnType<typeof accountSchema.safeParse> | Retu
   return fieldsOk
 }
 
-function validateAccount(fields = ['phone', 'username', 'smsCode']) {
+function accountFields() {
+  const fields = ['phone', 'username', 'smsCode']
+  if (inviteRequired.value) fields.push('inviteCode')
+  return fields
+}
+
+function validateAccount(fields = accountFields()) {
+  const payload: Record<string, unknown> = {
+    phone: phone.value,
+    username: username.value,
+    smsCode: smsCode.value,
+  }
+  if (inviteRequired.value) payload.inviteCode = inviteCode.value
   return collectErrors(
-    accountSchema.safeParse({
-      phone: phone.value,
-      username: username.value,
-      smsCode: smsCode.value,
-    }),
+    accountSchema.value.safeParse(payload),
     accountErrors.value,
     fields,
   )
@@ -92,7 +125,7 @@ function validateAccount(fields = ['phone', 'username', 'smsCode']) {
 
 function validatePassword(fields = ['password', 'confirmPassword', 'agreedToTerms']) {
   return collectErrors(
-    passwordSchema.safeParse({
+    passwordSchema.value.safeParse({
       password: password.value,
       confirmPassword: confirmPassword.value,
       agreedToTerms: agreedToTerms.value,
@@ -124,11 +157,15 @@ function startCountdown(seconds = 60) {
 
 async function sendSms() {
   errorMessage.value = ''
+  if (!registrationEnabled.value) {
+    toast.error('当前已关闭新用户注册')
+    return
+  }
   if (!validateAccount(['phone'])) {
     toast.error(accountErrors.value.phone || '请先填写有效手机号')
     return
   }
-  if (countdown.value > 0 || sendingSms.value) return
+  if (countdown.value > 0 || sendingSms.value || !registrationEnabled.value) return
 
   sendingSms.value = true
   try {
@@ -155,6 +192,10 @@ function continueToPassword() {
 async function submit() {
   errorMessage.value = ''
   serverErrors.value = {}
+  if (!registrationEnabled.value) {
+    toast.error('当前已关闭新用户注册')
+    return
+  }
   if (!validatePassword()) return
 
   submitting.value = true
@@ -165,6 +206,7 @@ async function submit() {
       username: username.value.trim(),
       password: password.value,
       confirmPassword: confirmPassword.value,
+      ...(inviteRequired.value ? { inviteCode: inviteCode.value.trim() } : {}),
     })
     await auth.login({ identifier: username.value.trim(), password: password.value })
     await router.replace('/vault')
@@ -210,6 +252,17 @@ async function submit() {
       {{ errorMessage }}
     </v-alert>
 
+    <v-alert
+      v-if="!policyLoading && !registrationEnabled"
+      type="warning"
+      variant="tonal"
+      density="comfortable"
+      class="auth-form-alert"
+      role="status"
+    >
+      当前已关闭新用户注册，暂无法创建账号。如有疑问请联系管理员。
+    </v-alert>
+
     <form v-if="currentStep === 1" class="auth-step-form" @submit.prevent="continueToPassword">
       <v-text-field
         v-model="phone"
@@ -219,6 +272,7 @@ async function submit() {
         autocomplete="tel"
         inputmode="numeric"
         hint="将向该手机号发送短信验证码。"
+        :disabled="!registrationEnabled || policyLoading"
         :error-messages="fieldMessages('phone')"
         @blur="validateAccount(['phone'])"
         @update:model-value="clearServerError('phone')"
@@ -231,9 +285,24 @@ async function submit() {
         prepend-inner-icon="mdi-account-outline"
         autocomplete="username"
         hint="3–32 位，可使用字母、数字、下划线和连字符。"
+        :disabled="!registrationEnabled || policyLoading"
         :error-messages="fieldMessages('username')"
         @blur="validateAccount(['username'])"
         @update:model-value="clearServerError('username')"
+      />
+      <v-text-field
+        v-if="inviteRequired"
+        v-model="inviteCode"
+        class="mt-2"
+        label="邀请码"
+        placeholder="请输入有效邀请码"
+        prepend-inner-icon="mdi-ticket-confirmation-outline"
+        autocomplete="off"
+        hint="注册需同时验证短信与邀请码。"
+        :disabled="!registrationEnabled || policyLoading"
+        :error-messages="fieldMessages('inviteCode')"
+        @blur="validateAccount(['inviteCode'])"
+        @update:model-value="clearServerError('inviteCode')"
       />
       <div class="auth-sms-row mt-2">
         <v-text-field
@@ -243,6 +312,7 @@ async function submit() {
           prepend-inner-icon="mdi-message-text-outline"
           autocomplete="one-time-code"
           inputmode="numeric"
+          :disabled="!registrationEnabled || policyLoading"
           :error-messages="fieldMessages('smsCode')"
           @blur="validateAccount(['smsCode'])"
           @update:model-value="clearServerError('smsCode')"
@@ -253,20 +323,28 @@ async function submit() {
           variant="tonal"
           class="auth-sms-row__btn"
           :loading="sendingSms"
-          :disabled="sendingSms || countdown > 0"
+          :disabled="!registrationEnabled || policyLoading || sendingSms || countdown > 0"
           @click="sendSms"
         >
           {{ sendButtonLabel }}
         </v-btn>
       </div>
-      <v-btn type="submit" color="primary" block class="auth-submit">继续</v-btn>
+      <v-btn
+        type="submit"
+        color="primary"
+        block
+        class="auth-submit"
+        :disabled="!registrationEnabled || policyLoading"
+      >
+        继续
+      </v-btn>
     </form>
 
     <form v-else class="auth-step-form" @submit.prevent="submit">
       <v-text-field
         v-model="password"
         label="登录密码"
-        placeholder="请输入至少 8 位密码"
+        :placeholder="`请输入至少 ${passwordMinLength} 位密码`"
         prepend-inner-icon="mdi-lock-outline"
         autocomplete="new-password"
         :type="showPassword ? 'text' : 'password'"
@@ -323,8 +401,8 @@ async function submit() {
         <p v-if="fieldMessages('agreedToTerms').length" class="auth-field-error">{{ fieldMessages('agreedToTerms')[0] }}</p>
       </div>
       <div class="auth-form-actions">
-        <v-btn variant="text" color="primary" :disabled="submitting" @click="currentStep = 1">上一步</v-btn>
-        <v-btn type="submit" color="primary" :loading="submitting" :disabled="submitting">
+        <v-btn variant="text" color="primary" :disabled="submitting || !registrationEnabled" @click="currentStep = 1">上一步</v-btn>
+        <v-btn type="submit" color="primary" :loading="submitting" :disabled="submitting || !registrationEnabled || policyLoading">
           {{ submitting ? '正在创建…' : '创建账号' }}
         </v-btn>
       </div>

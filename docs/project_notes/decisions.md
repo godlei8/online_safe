@@ -61,19 +61,21 @@
 - 新按钮默认跟令牌走，不再写死 40/48。
 - 手机触控命中区仍用 `--os-control-touch`（40px）保证点按。
 
-## 2026-07-24 — 管理端安全日志
+## 2026-07-24 — 安全日志与白名单系统设置
 
 ### 背景
 
-管理端「安全日志」长期为占位页；需要可追溯登录与高权限管理操作，且不得泄露保险箱明文。
+管理端「安全日志」「系统设置」长期为占位页；需要可追溯高权限操作，且禁止在线改密钥/数据库等部署配置。
 
 ### 决策
 
-1. 新增 `security_audit_event` 与统一 `SecurityAuditRecorder`。
+1. 先审计后设置：Phase A–B 打通事件模型与埋点，再开放 `system_setting` 白名单策略。
 2. 管理写操作与审计同事务；认证失败用独立事务，不把 401 变成 500。
-3. 第一版不做日志导出与单条删除。
-4. 规格：`docs/superpowers/specs/2026-07-24-security-logs-system-settings-design.md`。
+3. 注册模式三档；密码最小长度仅可提高到 8–32；用户名冷却 7–180 天（默认 30）。
+4. 第一版不做日志导出；清理任务读不到保留期限时跳过删除。
+5. 规格：`docs/superpowers/specs/2026-07-24-security-logs-system-settings-design.md`。
 
 ### 后果
 
 - 新高权限写操作必须接入 `SecurityAuditService` / `SecurityAuditRecorder`。
+- 新可运营策略必须进 `SystemSettingRegistry`，禁止通用键值配置页。
