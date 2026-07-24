@@ -2742,6 +2742,80 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   white-space: nowrap;
 }
 
+/* 顶栏账户下拉：窄宽、紧凑行高 */
+.vault-account-menu {
+  width: 148px;
+  min-width: 148px !important;
+  max-width: 148px;
+  padding: 6px !important;
+  border: 1px solid var(--os-border) !important;
+  border-radius: 10px !important;
+  background: var(--os-surface) !important;
+  box-shadow: var(--os-shadow-2) !important;
+}
+
+.vault-account-menu__head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 4px 6px 8px;
+}
+
+.vault-account-menu__meta {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.vault-account-menu__meta strong {
+  overflow: hidden;
+  color: var(--os-text-title);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-account-menu__meta span {
+  color: var(--os-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.2;
+}
+
+.vault-account-menu__divider {
+  margin: 0 0 4px !important;
+  opacity: 0.7;
+}
+
+.vault-account-menu .v-list-item {
+  min-height: 32px !important;
+  margin-bottom: 2px;
+  padding-inline: 8px !important;
+  border-radius: 6px !important;
+}
+
+.vault-account-menu .v-list-item:last-child {
+  margin-bottom: 0;
+}
+
+.vault-account-menu .v-list-item__prepend {
+  margin-inline-end: 8px !important;
+}
+
+.vault-account-menu .v-list-item__prepend .v-icon {
+  font-size: 16px !important;
+  opacity: 0.88;
+}
+
+.vault-account-menu .v-list-item-title {
+  font-size: 0.8125rem !important;
+  font-weight: 550;
+  line-height: 1.2 !important;
+  letter-spacing: 0;
+}
+
 /* ============================================================
    管理后台：与保险箱同构（白色侧栏 + 顶栏 + 内容区）
    ============================================================ */

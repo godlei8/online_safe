@@ -8,6 +8,7 @@ import com.godlei.onlinesafe.announcement.application.AnnouncementNotFoundExcept
 import com.godlei.onlinesafe.announcement.application.InvalidAnnouncementOperationException;
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
 import com.godlei.onlinesafe.auth.application.PasswordResetException;
+import com.godlei.onlinesafe.auth.application.ProfileException;
 import com.godlei.onlinesafe.auth.application.RegistrationConflictException;
 import com.godlei.onlinesafe.auth.application.SmsException;
 import com.godlei.onlinesafe.systemtemplate.application.InvalidSystemTemplateOperationException;
@@ -73,6 +74,17 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiError> handleSms(SmsException exception, HttpServletRequest request) {
         HttpStatus status = switch (exception.getCode()) {
             case "SMS_SEND_TOO_FREQUENT", "SMS_SEND_DAILY_LIMIT" -> HttpStatus.TOO_MANY_REQUESTS;
+            default -> HttpStatus.BAD_REQUEST;
+        };
+        return response(status, exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(ProfileException.class)
+    ResponseEntity<ApiError> handleProfile(ProfileException exception, HttpServletRequest request) {
+        HttpStatus status = switch (exception.getCode()) {
+            case "USERNAME_ALREADY_EXISTS" -> HttpStatus.CONFLICT;
+            case "USER_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            case "UNAUTHENTICATED" -> HttpStatus.UNAUTHORIZED;
             default -> HttpStatus.BAD_REQUEST;
         };
         return response(status, exception.getCode(), exception.getMessage(), request, null);

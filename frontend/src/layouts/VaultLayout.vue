@@ -21,9 +21,17 @@ const navigationDrawer = ref(false)
 const selectedAnnouncementId = ref<string | null>(null)
 
 const userInitial = computed(() => (auth.session.username?.trim().slice(0, 1) || '我').toUpperCase())
+const avatarSrc = computed(() => auth.session.avatarUrl || '')
 const activeNav = computed(() => {
   if (route.name === 'vault-templates') return 'templates'
+  if (route.name === 'vault-profile') return 'profile'
   return 'vault'
+})
+
+const pageTitle = computed(() => {
+  if (activeNav.value === 'templates') return '模板'
+  if (activeNav.value === 'profile') return '个人中心'
+  return '保险箱'
 })
 
 const selectedAnnouncement = computed(() => {
@@ -166,7 +174,7 @@ watch(
           <span>Online Safe</span>
         </div>
         <span class="vault-topbar__page" aria-label="当前页面">
-          {{ activeNav === 'templates' ? '模板' : '保险箱' }}
+          {{ pageTitle }}
         </span>
         <div class="vault-topbar__spacer" />
         <div class="vault-topbar__actions">
@@ -198,18 +206,31 @@ watch(
                 v-bind="props"
                 :aria-label="`${auth.session.username ?? '当前用户'}的账户菜单`"
               >
-                <v-avatar color="primary" size="32" class="vault-user-avatar">{{ userInitial }}</v-avatar>
+                <v-avatar color="primary" size="32" class="vault-user-avatar">
+                  <v-img v-if="avatarSrc" :src="avatarSrc" alt="" cover />
+                  <span v-else>{{ userInitial }}</span>
+                </v-avatar>
                 <span class="vault-user-chip__name">{{ auth.session.username ?? '用户' }}</span>
                 <v-icon icon="mdi-chevron-down" size="18" />
               </button>
             </template>
-            <v-list density="compact" min-width="180">
+            <v-list density="compact" class="vault-account-menu" nav>
+              <div class="vault-account-menu__head">
+                <v-avatar color="primary" size="28" class="vault-user-avatar">
+                  <v-img v-if="avatarSrc" :src="avatarSrc" alt="" cover />
+                  <span v-else>{{ userInitial }}</span>
+                </v-avatar>
+                <div class="vault-account-menu__meta">
+                  <strong>{{ auth.session.username ?? '用户' }}</strong>
+                  <span>个人账户</span>
+                </div>
+              </div>
+              <v-divider class="vault-account-menu__divider" />
               <v-list-item
-                :title="auth.session.username ?? '用户'"
-                subtitle="个人账户"
-                prepend-icon="mdi-account-outline"
+                prepend-icon="mdi-account-circle-outline"
+                title="个人中心"
+                to="/vault/profile"
               />
-              <v-divider />
               <v-list-item
                 prepend-icon="mdi-logout"
                 title="退出登录"

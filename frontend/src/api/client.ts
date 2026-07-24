@@ -44,7 +44,7 @@ async function handleSessionExpired(path: string): Promise<void> {
     ])
     useVaultStore().clearSessionData()
     useAuthStore().$patch({
-      session: { authenticated: false, userId: null, username: null, role: null },
+      session: { authenticated: false, userId: null, username: null, role: null, avatarUrl: null },
       ready: true,
     })
     const onAdminSurface = path.startsWith('/api/admin') || window.location.pathname.startsWith('/admin')
@@ -81,6 +81,26 @@ export async function requestJson<T>(path: string, options: RequestInit = {}): P
   }
 
   const response = await fetch(path, { ...options, method, headers, credentials: 'include' })
+  if (!response.ok) {
+    if (response.status === 401 && shouldTreatAsSessionExpiry(path)) {
+      void handleSessionExpired(path)
+    }
+    throw await toApiError(response)
+  }
+  if (response.status === 204) return undefined as T
+  return response.json() as Promise<T>
+}
+
+/** multipart 上传；不要手动设置 Content-Type，以便浏览器带 boundary */
+export async function requestForm<T>(path: string, form: FormData, method = 'POST'): Promise<T> {
+  const verb = method.toUpperCase()
+  if (!csrfToken) await refreshCsrfToken()
+
+  const headers = new Headers()
+  headers.set('Accept', 'application/json')
+  if (csrfToken) headers.set(csrfToken.headerName, csrfToken.token)
+
+  const response = await fetch(path, { method: verb, headers, body: form, credentials: 'include' })
   if (!response.ok) {
     if (response.status === 401 && shouldTreatAsSessionExpiry(path)) {
       void handleSessionExpired(path)

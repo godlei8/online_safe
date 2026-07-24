@@ -1,6 +1,12 @@
 import { requestJson } from './client'
 
-export type Session = { authenticated: boolean; userId: string | null; username: string | null; role: string | null }
+export type Session = {
+  authenticated: boolean
+  userId: string | null
+  username: string | null
+  role: string | null
+  avatarUrl: string | null
+}
 export type RegistrationResponse = { id: string; username: string; maskedPhone: string; phoneVerified: boolean; createdAt: string }
 export type LoginPayload = { identifier: string; password: string }
 export type SmsPurpose = 'REGISTER' | 'RESET_PASSWORD'

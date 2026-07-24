@@ -54,6 +54,14 @@ services:
       SMS_CODE_LENGTH: ${SMS_CODE_LENGTH:-6}
       SMS_SEND_INTERVAL_SECONDS: ${SMS_SEND_INTERVAL_SECONDS:-60}
       SMS_SEND_DAILY_LIMIT: ${SMS_SEND_DAILY_LIMIT:-10}
+      COS_PROVIDER: ${COS_PROVIDER:-tencent}
+      COS_SECRET_ID: ${COS_SECRET_ID:-}
+      COS_SECRET_KEY: ${COS_SECRET_KEY:-}
+      COS_REGION: ${COS_REGION:-}
+      COS_BUCKET: ${COS_BUCKET:-}
+      COS_PREFIX: ${COS_PREFIX:-}
+      COS_PATH_PREFIX: ${COS_PATH_PREFIX:-avatars}
+      COS_PUBLIC_BASE_URL: ${COS_PUBLIC_BASE_URL:-}
     depends_on:
       mysql:
         condition: service_healthy

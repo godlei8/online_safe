@@ -50,6 +50,12 @@ public class AppUser {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
+    @Column(name = "avatar_url", length = 512)
+    private String avatarUrl;
+
+    @Column(name = "username_changed_at")
+    private Instant usernameChangedAt;
+
     @Version
     @Column(name = "version", nullable = false)
     private long version;
@@ -123,12 +129,30 @@ public class AppUser {
         return lastLoginAt;
     }
 
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public Instant getUsernameChangedAt() {
+        return usernameChangedAt;
+    }
+
     public long getVersion() {
         return version;
     }
 
     public void recordLogin(Instant at) {
         this.lastLoginAt = Objects.requireNonNull(at);
+    }
+
+    public void changeUsername(String username, String normalizedUsername, Instant at) {
+        this.username = Objects.requireNonNull(username);
+        this.normalizedUsername = Objects.requireNonNull(normalizedUsername);
+        this.usernameChangedAt = Objects.requireNonNull(at);
+    }
+
+    public void updateAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public void disable() {

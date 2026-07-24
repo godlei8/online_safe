@@ -42,3 +42,14 @@ app:
     template-register: ${ALIYUN_SMS_TEMPLATE_REGISTER:}
     template-reset: ${ALIYUN_SMS_TEMPLATE_RESET:}
     code-ttl-seconds: ${SMS_CODE_TTL_SECONDS:300}
+  cos:
+    # 本地默认可 local；接腾讯云时 provider: tencent 并填密钥
+    provider: ${COS_PROVIDER:local}
+    secret-id: ${COS_SECRET_ID:}
+    secret-key: ${COS_SECRET_KEY:}
+    region: ${COS_REGION:}
+    bucket: ${COS_BUCKET:}
+    prefix: ${COS_PREFIX:}
+    path-prefix: ${COS_PATH_PREFIX:avatars}
+    public-base-url: ${COS_PUBLIC_BASE_URL:}
+    local-dir: ${COS_LOCAL_DIR:./data/avatars}

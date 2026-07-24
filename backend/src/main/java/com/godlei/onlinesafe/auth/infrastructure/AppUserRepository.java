@@ -16,6 +16,8 @@ public interface AppUserRepository extends JpaRepository<AppUser, String>, JpaSp
 
     boolean existsByNormalizedUsername(String normalizedUsername);
 
+    boolean existsByNormalizedUsernameAndIdNot(String normalizedUsername, String id);
+
     Optional<AppUser> findByPhone(String phone);
 
     Optional<AppUser> findByNormalizedUsername(String normalizedUsername);

@@ -63,10 +63,11 @@ public class AuthController {
         securityContextRepository.saveContext(context, servletRequest, servletResponse);
 
         if (authentication.getPrincipal() instanceof AppUserPrincipal principal) {
-            appUserRepository.findById(principal.userId()).ifPresent(user -> {
+            return appUserRepository.findById(principal.userId()).map(user -> {
                 user.recordLogin(clock.instant());
                 appUserRepository.save(user);
-            });
+                return SessionResponse.authenticated(user.getId(), user.getUsername(), user.getAvatarUrl());
+            }).orElseGet(() -> SessionResponse.from(authentication));
         }
 
         return SessionResponse.from(authentication);
@@ -74,6 +75,13 @@ public class AuthController {
 
     @GetMapping("/session")
     public SessionResponse currentSession(Authentication authentication) {
-        return SessionResponse.from(authentication);
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && authentication.getPrincipal() instanceof AppUserPrincipal principal) {
+            return appUserRepository.findById(principal.userId())
+                    .map(user -> SessionResponse.authenticated(user.getId(), user.getUsername(), user.getAvatarUrl()))
+                    .orElseGet(SessionResponse::anonymous);
+        }
+        return SessionResponse.anonymous();
     }
 }
