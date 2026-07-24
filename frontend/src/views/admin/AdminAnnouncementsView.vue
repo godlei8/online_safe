@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useDisplay } from 'vuetify'
 import { ApiRequestError } from '@/api/client'
 import {
   adminAnnouncementsApi,
@@ -9,9 +10,12 @@ import {
   type AnnouncementStatus,
 } from '@/api/announcements'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
+import { useMobileInfiniteScroll } from '@/composables/useMobileInfiniteScroll'
 import { useOsToast } from '@/composables/useOsToast'
 
+const { xs } = useDisplay()
 const loading = ref(false)
+const loadingMore = ref(false)
 const saving = ref(false)
 const errorMessage = ref('')
 const items = ref<AdminAnnouncement[]>([])
@@ -32,6 +36,7 @@ const successToast = ref(false)
 const toastText = ref('')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalElements.value / pageSize)))
+const hasMore = computed(() => items.value.length < totalElements.value)
 const isEdit = computed(() => Boolean(editingId.value))
 
 const statusOptions = [
@@ -47,11 +52,23 @@ const statusLabelMap: Record<AnnouncementStatus, string> = {
   OFFLINE: '已下线',
 }
 
-onMounted(loadData)
-watch([page, statusFilter], loadData)
+onMounted(() => { void loadData() })
+watch(statusFilter, () => {
+  page.value = 1
+  void loadData()
+})
+watch(page, () => {
+  if (!xs.value) void loadData()
+})
 
-async function loadData() {
-  loading.value = true
+async function loadData(options?: { append?: boolean }) {
+  const append = Boolean(options?.append) && xs.value
+  if (append) {
+    if (loadingMore.value || loading.value) return
+    loadingMore.value = true
+  } else {
+    loading.value = true
+  }
   errorMessage.value = ''
   try {
     const result = await adminAnnouncementsApi.list({
@@ -59,15 +76,38 @@ async function loadData() {
       size: pageSize,
       status: statusFilter.value || undefined,
     })
-    items.value = result.content
+    items.value = append ? [...items.value, ...result.content] : result.content
     totalElements.value = result.totalElements
   } catch (error) {
-    items.value = []
-    totalElements.value = 0
+    if (append) page.value = Math.max(1, page.value - 1)
+    else {
+      items.value = []
+      totalElements.value = 0
+    }
     errorMessage.value = error instanceof ApiRequestError ? error.message : '加载公告失败，请稍后重试。'
   } finally {
     loading.value = false
+    loadingMore.value = false
   }
+}
+
+async function loadMore() {
+  if (!xs.value || !hasMore.value) return
+  page.value += 1
+  await loadData({ append: true })
+}
+
+const { scrollEl } = useMobileInfiniteScroll({
+  enabled: xs,
+  loading,
+  loadingMore,
+  hasMore,
+  loadMore,
+})
+
+async function reload() {
+  page.value = 1
+  await loadData()
 }
 
 function openCreate() {
@@ -178,13 +218,14 @@ function formatWindow(item: AdminAnnouncement) {
           item-value="value"
           placeholder="状态"
         />
-        <v-spacer />
-        <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" :loading="loading" @click="loadData">
-          刷新
-        </v-btn>
-        <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
-          新建公告
-        </v-btn>
+        <div class="admin-filter-actions" :class="{ 'admin-filter-actions--primary': xs }">
+          <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" :loading="loading" @click="reload">
+            刷新
+          </v-btn>
+          <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
+            新建公告
+          </v-btn>
+        </div>
       </div>
     </v-card>
 
@@ -196,7 +237,7 @@ function formatWindow(item: AdminAnnouncement) {
     <div class="admin-page__table">
     <v-card class="admin-panel admin-page__table-panel" elevation="0">
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-2" />
-      <div class="admin-page__scroll">
+      <div ref="scrollEl" class="admin-page__scroll">
       <v-table class="admin-table">
         <thead>
           <tr>
@@ -224,7 +265,7 @@ function formatWindow(item: AdminAnnouncement) {
             <td data-label="标题">
               <AdminEllipsisText class="font-weight-medium" :text="item.title" max-width="10rem" />
             </td>
-            <td data-label="正文">
+            <td data-label="正文" data-mobile-hide>
               <AdminEllipsisText :text="item.body" max-width="14rem" />
             </td>
             <td data-label="状态">
@@ -233,13 +274,13 @@ function formatWindow(item: AdminAnnouncement) {
               </span>
             </td>
             <td data-label="置顶">{{ item.pinned ? '是' : '否' }}</td>
-            <td data-label="有效期">
+            <td data-label="有效期" data-mobile-hide>
               <AdminEllipsisText :text="formatWindow(item)" max-width="12rem" />
             </td>
-            <td data-label="发布时间">
+            <td data-label="发布时间" data-mobile-hide>
               <AdminEllipsisText :text="formatTime(item.publishedAt)" max-width="9rem" />
             </td>
-            <td data-label="更新时间">
+            <td data-label="更新时间" data-mobile-hide>
               <AdminEllipsisText :text="formatTime(item.updatedAt)" max-width="9rem" />
             </td>
             <td data-label="操作">
@@ -284,10 +325,18 @@ function formatWindow(item: AdminAnnouncement) {
       </div>
 
       <div class="admin-pagination-row admin-page__pager">
-        <div class="text-caption text-medium-emphasis">
-          共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
-        </div>
-        <v-pagination v-model="page" :length="totalPages" total-visible="5" />
+        <template v-if="xs">
+          <p class="admin-page__infinite-status">
+            <span v-if="loadingMore">已加载 {{ items.length }} / {{ totalElements }} · 加载中…</span>
+            <span v-else-if="items.length > 0 && !hasMore">共 {{ totalElements }} 条 · 已全部加载</span>
+            <span v-else-if="hasMore">已加载 {{ items.length }} / {{ totalElements }} · 上滑加载更多</span>
+            <span v-else>共 {{ totalElements }} 条</span>
+          </p>
+        </template>
+        <template v-else>
+          <div class="text-caption text-medium-emphasis">共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页</div>
+          <v-pagination v-model="page" :length="totalPages" total-visible="5" />
+        </template>
       </div>
     </v-card>
     </div>
@@ -295,7 +344,8 @@ function formatWindow(item: AdminAnnouncement) {
     <v-dialog
       v-model="editorOpen"
       class="admin-announcement-editor-dialog"
-      max-width="680"
+      :fullscreen="xs"
+      :max-width="xs ? undefined : 680"
       persistent
       transition="dialog-transition"
     >
@@ -334,11 +384,11 @@ function formatWindow(item: AdminAnnouncement) {
               label="正文"
               placeholder="写清楚时间、影响范围与用户需要做的事"
               density="comfortable"
-              rows="7"
+              :rows="xs ? 4 : 7"
               maxlength="10000"
               counter
               variant="outlined"
-              auto-grow
+              :auto-grow="!xs"
               hide-details="auto"
             />
           </section>

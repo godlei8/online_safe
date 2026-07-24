@@ -8,10 +8,16 @@ import {
   type SystemTemplateStatus,
 } from '@/api/systemTemplates'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
+import AdminFilterSheet from '@/components/AdminFilterSheet.vue'
+import { useMobileInfiniteScroll } from '@/composables/useMobileInfiniteScroll'
 import { useOsToast } from '@/composables/useOsToast'
 import { fieldTypeItems, type FieldType } from '@/domain/vaultPayload'
+import { useDisplay } from 'vuetify'
 
+const { xs } = useDisplay()
+const filtersOpen = ref(false)
 const loading = ref(false)
+const loadingMore = ref(false)
 const saving = ref(false)
 const errorMessage = ref('')
 const items = ref<AdminSystemTemplate[]>([])
@@ -35,7 +41,18 @@ const successToast = ref(false)
 const toastText = ref('')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalElements.value / pageSize)))
+const hasMore = computed(() => items.value.length < totalElements.value)
 const isEdit = computed(() => Boolean(editingId.value))
+const activeFilterCount = computed(() => (
+  (statusFilter.value ? 1 : 0) + (platformFilter.value.trim() ? 1 : 0)
+))
+
+function resetFilters() {
+  statusFilter.value = ''
+  platformFilter.value = ''
+  page.value = 1
+  void loadData()
+}
 
 const statusOptions = [
   { title: '状态：全部', value: '' },
@@ -50,11 +67,23 @@ const statusLabelMap: Record<SystemTemplateStatus, string> = {
   OFFLINE: '已下线',
 }
 
-onMounted(loadData)
-watch([page, statusFilter], loadData)
+onMounted(() => { void loadData() })
+watch(statusFilter, () => {
+  page.value = 1
+  void loadData()
+})
+watch(page, () => {
+  if (!xs.value) void loadData()
+})
 
-async function loadData() {
-  loading.value = true
+async function loadData(options?: { append?: boolean }) {
+  const append = Boolean(options?.append) && xs.value
+  if (append) {
+    if (loadingMore.value || loading.value) return
+    loadingMore.value = true
+  } else {
+    loading.value = true
+  }
   errorMessage.value = ''
   try {
     const result = await adminSystemTemplatesApi.list({
@@ -64,15 +93,38 @@ async function loadData() {
       platform: platformFilter.value || undefined,
       q: keyword.value || undefined,
     })
-    items.value = result.content
+    items.value = append ? [...items.value, ...result.content] : result.content
     totalElements.value = result.totalElements
   } catch (error) {
-    items.value = []
-    totalElements.value = 0
+    if (append) page.value = Math.max(1, page.value - 1)
+    else {
+      items.value = []
+      totalElements.value = 0
+    }
     errorMessage.value = error instanceof ApiRequestError ? error.message : '加载系统模板失败'
   } finally {
     loading.value = false
+    loadingMore.value = false
   }
+}
+
+async function loadMore() {
+  if (!xs.value || !hasMore.value) return
+  page.value += 1
+  await loadData({ append: true })
+}
+
+const { scrollEl } = useMobileInfiniteScroll({
+  enabled: xs,
+  loading,
+  loadingMore,
+  hasMore,
+  loadMore,
+})
+
+async function reload() {
+  page.value = 1
+  await loadData()
 }
 
 function defaultFields(): SystemTemplateField[] {
@@ -258,43 +310,88 @@ function fieldTone(type: string): string {
     <div class="admin-page__chrome">
     <v-card class="admin-panel mb-4" elevation="0">
       <div class="admin-filter-row">
-        <v-select
-          v-model="statusFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="statusOptions"
-          item-title="title"
-          item-value="value"
-          placeholder="状态"
-        />
-        <v-text-field
-          v-model="platformFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          placeholder="平台"
-          clearable
-          @keyup.enter="loadData"
-        />
         <v-text-field
           v-model="keyword"
-          class="admin-filter-select"
+          class="admin-filter-field"
           density="compact"
           hide-details
           placeholder="名称关键词"
+          prepend-inner-icon="mdi-magnify"
           clearable
           @keyup.enter="loadData"
         />
-        <v-spacer />
-        <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" :loading="loading" @click="loadData">
-          刷新
-        </v-btn>
-        <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
-          新建模板
-        </v-btn>
+        <template v-if="!xs">
+          <v-select
+            v-model="statusFilter"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            :items="statusOptions"
+            item-title="title"
+            item-value="value"
+            placeholder="状态"
+          />
+          <v-text-field
+            v-model="platformFilter"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            placeholder="平台"
+            clearable
+            @keyup.enter="loadData"
+          />
+          <div class="admin-filter-actions">
+            <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" :loading="loading" @click="reload">
+              刷新
+            </v-btn>
+            <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
+              新建模板
+            </v-btn>
+          </div>
+        </template>
+        <template v-else>
+          <div class="admin-filter-actions admin-filter-actions--tools">
+            <v-btn
+              class="admin-toolbar-btn admin-filter-trigger"
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-filter-variant"
+              :aria-label="activeFilterCount ? `筛选，已选 ${activeFilterCount} 项` : '筛选'"
+              @click="filtersOpen = true"
+            >
+              筛选
+              <span v-if="activeFilterCount" class="admin-filter-trigger__badge" aria-hidden="true">{{ activeFilterCount }}</span>
+            </v-btn>
+          </div>
+          <div class="admin-filter-actions admin-filter-actions--primary">
+            <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
+              新建模板
+            </v-btn>
+          </div>
+        </template>
       </div>
     </v-card>
+
+    <AdminFilterSheet
+      v-model="filtersOpen"
+      @apply="() => { page = 1; void loadData() }"
+      @reset="resetFilters"
+    >
+      <v-select
+        v-model="statusFilter"
+        hide-details
+        :items="statusOptions"
+        item-title="title"
+        item-value="value"
+        label="状态"
+      />
+      <v-text-field
+        v-model="platformFilter"
+        hide-details
+        label="平台"
+        clearable
+      />
+    </AdminFilterSheet>
 
     <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4" closable @click:close="errorMessage = ''">
       {{ errorMessage }}
@@ -303,7 +400,7 @@ function fieldTone(type: string): string {
 
     <div class="admin-page__table">
     <v-card class="admin-panel admin-page__table-panel" elevation="0">
-      <div class="admin-page__scroll">
+      <div ref="scrollEl" class="admin-page__scroll">
       <v-table class="admin-table">
         <thead>
           <tr>
@@ -335,7 +432,7 @@ function fieldTone(type: string): string {
             <td data-label="渠道">
               <AdminEllipsisText :text="item.channel" empty="未填渠道" max-width="8rem" />
             </td>
-            <td data-label="渠道网址">
+            <td data-label="渠道网址" data-mobile-hide>
               <AdminEllipsisText :text="item.channelUrl" max-width="12rem" />
             </td>
             <td data-label="状态">
@@ -343,18 +440,18 @@ function fieldTone(type: string): string {
                 {{ statusLabelMap[item.status] }}
               </v-chip>
             </td>
-            <td data-label="字段数">{{ item.fields.length }}</td>
-            <td data-label="排序">
+            <td data-label="字段数" data-mobile-hide>{{ item.fields.length }}</td>
+            <td data-label="排序" data-mobile-hide>
               <div class="d-flex align-center ga-1">
                 <span>{{ item.sortOrder }}</span>
                 <v-btn size="x-small" variant="text" icon="mdi-arrow-up" aria-label="上移" @click="bumpSort(item, -1)" />
                 <v-btn size="x-small" variant="text" icon="mdi-arrow-down" aria-label="下移" @click="bumpSort(item, 1)" />
               </div>
             </td>
-            <td data-label="更新时间">
+            <td data-label="更新时间" data-mobile-hide>
               <AdminEllipsisText :text="formatTime(item.updatedAt)" max-width="9rem" />
             </td>
-            <td>
+            <td data-label="操作">
               <div class="admin-row-actions">
                 <v-btn
                   class="admin-row-actions__btn"
@@ -406,11 +503,19 @@ function fieldTone(type: string): string {
       </v-table>
       </div>
 
-      <div v-if="totalElements > pageSize" class="admin-pagination-row admin-page__pager">
-        <div class="text-caption text-medium-emphasis">
-          共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
-        </div>
-        <v-pagination v-model="page" :length="totalPages" density="compact" total-visible="5" />
+      <div v-if="xs || totalElements > pageSize" class="admin-pagination-row admin-page__pager">
+        <template v-if="xs">
+          <p class="admin-page__infinite-status">
+            <span v-if="loadingMore">已加载 {{ items.length }} / {{ totalElements }} · 加载中…</span>
+            <span v-else-if="items.length > 0 && !hasMore">共 {{ totalElements }} 条 · 已全部加载</span>
+            <span v-else-if="hasMore">已加载 {{ items.length }} / {{ totalElements }} · 上滑加载更多</span>
+            <span v-else>共 {{ totalElements }} 条</span>
+          </p>
+        </template>
+        <template v-else>
+          <div class="text-caption text-medium-emphasis">共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页</div>
+          <v-pagination v-model="page" :length="totalPages" density="compact" total-visible="5" />
+        </template>
       </div>
     </v-card>
     </div>

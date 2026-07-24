@@ -37,6 +37,8 @@ const toast = useOsToast()
 const loading = ref(false)
 const errorMessage = ref('')
 const mobileFiltersOpen = ref(false)
+/** 手机端使用说明默认收起，省纵向空间 */
+const privacyNoteOpen = ref(false)
 const searchKeyword = ref('')
 const selectedPlatform = ref('全部平台')
 const selectedChannel = ref('全部渠道')
@@ -356,7 +358,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="vault-content vault-page" aria-labelledby="vault-title">
+  <section class="vault-content vault-page vault-home" aria-labelledby="vault-title">
     <div class="vault-page__chrome">
     <div class="vault-title-row">
       <div>
@@ -369,6 +371,7 @@ onMounted(() => {
 
       <div class="vault-title-row__actions">
         <v-btn
+          v-if="!xs"
           class="vault-export-current"
           variant="tonal"
           color="primary"
@@ -386,7 +389,7 @@ onMounted(() => {
             prepend-icon="mdi-plus"
             @click="editor.openCreate()"
           >
-            新增记录
+            {{ xs ? '新增' : '新增记录' }}
           </v-btn>
           <v-menu location="bottom end">
             <template #activator="{ props: menuProps }">
@@ -394,7 +397,7 @@ onMounted(() => {
                 v-bind="menuProps"
                 color="primary"
                 class="vault-new-record-group__caret"
-                aria-label="更多创建方式"
+                :aria-label="xs ? '更多操作' : '更多创建方式'"
                 icon="mdi-menu-down"
               />
             </template>
@@ -405,15 +408,44 @@ onMounted(() => {
                 subtitle="选用个人或系统模板"
                 @click="openTemplatePicker"
               />
+              <v-list-item
+                v-if="xs"
+                prepend-icon="mdi-download-outline"
+                title="导出当前"
+                subtitle="导出当前列表为 Markdown"
+                :disabled="loading || filteredRecords.length === 0"
+                @click="askExportCurrent"
+              />
             </v-list>
           </v-menu>
         </div>
       </div>
     </div>
 
-    <div class="vault-privacy-note" role="note">
-      <v-icon icon="mdi-lock-check-outline" size="16" />
-      <span>列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常、编辑或导出，点击卡片进入详情。</span>
+    <div
+      class="vault-privacy-note"
+      :class="{ 'vault-privacy-note--compact': xs }"
+      role="note"
+    >
+      <template v-if="xs">
+        <button
+          type="button"
+          class="vault-privacy-note__toggle"
+          :aria-expanded="privacyNoteOpen"
+          @click="privacyNoteOpen = !privacyNoteOpen"
+        >
+          <v-icon icon="mdi-lock-check-outline" size="16" />
+          <span>使用说明</span>
+          <v-icon :icon="privacyNoteOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="18" />
+        </button>
+        <p v-show="privacyNoteOpen" class="vault-privacy-note__body">
+          列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常、编辑或导出，点击卡片进入详情。
+        </p>
+      </template>
+      <template v-else>
+        <v-icon icon="mdi-lock-check-outline" size="16" />
+        <span>列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常、编辑或导出，点击卡片进入详情。</span>
+      </template>
     </div>
 
     <aside
@@ -446,8 +478,8 @@ onMounted(() => {
       <v-text-field
         v-model="searchKeyword"
         class="vault-search"
-        label="搜索记录"
-        placeholder="搜索记录名称、平台、账号或渠道"
+        :label="xs ? undefined : '搜索记录'"
+        :placeholder="xs ? '搜索记录' : '搜索记录名称、平台、账号或渠道'"
         prepend-inner-icon="mdi-magnify"
         hide-details
         clearable
@@ -459,9 +491,15 @@ onMounted(() => {
         variant="outlined"
         color="primary"
         prepend-icon="mdi-filter-variant"
+        :aria-label="activeFilterCount ? `筛选与排序，已选 ${activeFilterCount} 项` : '筛选与排序'"
         @click="mobileFiltersOpen = true"
       >
-        筛选与排序<span v-if="activeFilterCount">（{{ activeFilterCount }}）</span>
+        筛选
+        <span
+          v-if="activeFilterCount"
+          class="vault-mobile-filter-trigger__badge"
+          aria-hidden="true"
+        >{{ activeFilterCount }}</span>
       </v-btn>
       <div v-if="!xs" class="vault-filters" aria-label="记录筛选">
         <v-select v-model="selectedPlatform" :items="platformOptions" label="平台" hide-details density="compact" />

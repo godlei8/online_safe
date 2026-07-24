@@ -9,11 +9,17 @@ import {
 } from '@/api/invitations'
 import { systemSettingsApi } from '@/api/systemSettings'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
+import AdminFilterSheet from '@/components/AdminFilterSheet.vue'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
 import OsHintBar from '@/components/OsHintBar.vue'
+import { useMobileInfiniteScroll } from '@/composables/useMobileInfiniteScroll'
 import { useOsToast } from '@/composables/useOsToast'
+import { useDisplay } from 'vuetify'
 
+const { xs } = useDisplay()
+const filtersOpen = ref(false)
 const loading = ref(false)
+const loadingMore = ref(false)
 const creating = ref(false)
 const errorMessage = ref('')
 const items = ref<Invitation[]>([])
@@ -40,6 +46,16 @@ const expiresAtLocal = ref('')
 const toast = useOsToast()
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalElements.value / pageSize)))
+const hasMore = computed(() => items.value.length < totalElements.value)
+const activeFilterCount = computed(() => (
+  (statusFilter.value ? 1 : 0) + (purposeFilter.value ? 1 : 0) + (usageFilter.value ? 1 : 0)
+))
+
+function resetFilters() {
+  statusFilter.value = ''
+  purposeFilter.value = ''
+  usageFilter.value = ''
+}
 
 const statusOptions = [
   { title: '状态：全部', value: '' },
@@ -64,33 +80,68 @@ const usageOptions = [
   { title: '多次', value: 'MULTI' },
 ]
 
-onMounted(loadData)
-watch([page, statusFilter, purposeFilter, usageFilter], loadData)
+onMounted(() => { void loadData() })
+watch([statusFilter, purposeFilter, usageFilter], () => {
+  page.value = 1
+  void loadData()
+})
+watch(page, () => {
+  if (!xs.value) void loadData()
+})
 
-async function loadData() {
-  loading.value = true
+async function loadData(options?: { append?: boolean }) {
+  const append = Boolean(options?.append) && xs.value
+  if (append) {
+    if (loadingMore.value || loading.value) return
+    loadingMore.value = true
+  } else {
+    loading.value = true
+  }
   errorMessage.value = ''
   try {
-    const [statsResult, listResult] = await Promise.all([
-      invitationsApi.stats(),
-      invitationsApi.list({
-        page: page.value - 1,
-        size: pageSize,
-        status: statusFilter.value || undefined,
-        purpose: purposeFilter.value || undefined,
-        type: usageFilter.value || undefined,
-        q: query.value.trim() || undefined,
-      }),
-    ])
-    stats.value = statsResult
-    items.value = listResult.content
-    totalElements.value = listResult.totalElements
+    const listParams = {
+      page: page.value - 1,
+      size: pageSize,
+      status: statusFilter.value || undefined,
+      purpose: purposeFilter.value || undefined,
+      type: usageFilter.value || undefined,
+      q: query.value.trim() || undefined,
+    }
+    if (append) {
+      const listResult = await invitationsApi.list(listParams)
+      items.value = [...items.value, ...listResult.content]
+      totalElements.value = listResult.totalElements
+    } else {
+      const [statsResult, listResult] = await Promise.all([
+        invitationsApi.stats(),
+        invitationsApi.list(listParams),
+      ])
+      stats.value = statsResult
+      items.value = listResult.content
+      totalElements.value = listResult.totalElements
+    }
   } catch (error) {
+    if (append) page.value = Math.max(1, page.value - 1)
     errorMessage.value = error instanceof ApiRequestError ? error.message : '加载邀请码失败，请稍后重试。'
   } finally {
     loading.value = false
+    loadingMore.value = false
   }
 }
+
+async function loadMore() {
+  if (!xs.value || !hasMore.value) return
+  page.value += 1
+  await loadData({ append: true })
+}
+
+const { scrollEl } = useMobileInfiniteScroll({
+  enabled: xs,
+  loading,
+  loadingMore,
+  hasMore,
+  loadMore,
+})
 
 async function search() {
   page.value = 1
@@ -331,46 +382,97 @@ function copyCreatedPlainCode() {
           prepend-inner-icon="mdi-magnify"
           @keyup.enter="search"
         />
-        <v-select
-          v-model="statusFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="statusOptions"
-          item-title="title"
-          item-value="value"
-        />
-        <v-select
-          v-model="purposeFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="purposeOptions"
-          item-title="title"
-          item-value="value"
-        />
-        <v-select
-          v-model="usageFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="usageOptions"
-          item-title="title"
-          item-value="value"
-        />
-        <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" @click="search">查询</v-btn>
-        <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
-          创建邀请码
-        </v-btn>
+        <template v-if="!xs">
+          <v-select
+            v-model="statusFilter"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            :items="statusOptions"
+            item-title="title"
+            item-value="value"
+          />
+          <v-select
+            v-model="purposeFilter"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            :items="purposeOptions"
+            item-title="title"
+            item-value="value"
+          />
+          <v-select
+            v-model="usageFilter"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            :items="usageOptions"
+            item-title="title"
+            item-value="value"
+          />
+          <div class="admin-filter-actions">
+            <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" @click="search">查询</v-btn>
+            <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
+              创建邀请码
+            </v-btn>
+          </div>
+        </template>
+        <template v-else>
+          <div class="admin-filter-actions admin-filter-actions--tools">
+            <v-btn
+              class="admin-toolbar-btn admin-filter-trigger"
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-filter-variant"
+              :aria-label="activeFilterCount ? `筛选，已选 ${activeFilterCount} 项` : '筛选'"
+              @click="filtersOpen = true"
+            >
+              筛选
+              <span v-if="activeFilterCount" class="admin-filter-trigger__badge" aria-hidden="true">{{ activeFilterCount }}</span>
+            </v-btn>
+          </div>
+          <div class="admin-filter-actions admin-filter-actions--primary">
+            <v-btn class="admin-toolbar-btn" color="primary" prepend-icon="mdi-plus" @click="openCreate">
+              创建邀请码
+            </v-btn>
+          </div>
+        </template>
       </div>
     </v-card>
+
+    <AdminFilterSheet v-model="filtersOpen" @apply="search" @reset="resetFilters">
+      <v-select
+        v-model="statusFilter"
+        hide-details
+        :items="statusOptions"
+        item-title="title"
+        item-value="value"
+        label="状态"
+      />
+      <v-select
+        v-model="purposeFilter"
+        hide-details
+        :items="purposeOptions"
+        item-title="title"
+        item-value="value"
+        label="类型"
+      />
+      <v-select
+        v-model="usageFilter"
+        hide-details
+        :items="usageOptions"
+        item-title="title"
+        item-value="value"
+        label="使用方式"
+      />
+    </AdminFilterSheet>
 
     <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">{{ errorMessage }}</v-alert>
     </div>
 
     <div class="admin-page__table">
     <v-card class="admin-panel admin-page__table-panel" elevation="0">
-      <div class="admin-page__scroll">
+      <div ref="scrollEl" class="admin-page__scroll">
       <v-table class="admin-table">
         <thead>
           <tr>
@@ -414,7 +516,7 @@ function copyCreatedPlainCode() {
                 />
               </div>
             </td>
-            <td data-label="使用方式">{{ usageLabel(item.type) }}</td>
+            <td data-label="使用方式" data-mobile-hide>{{ usageLabel(item.type) }}</td>
             <td data-label="使用进度" style="min-width: 140px">
               <div class="mb-1">{{ item.usedCount }} / {{ item.maxUses }}</div>
               <v-progress-linear
@@ -435,16 +537,16 @@ function copyCreatedPlainCode() {
                 {{ statusLabel(item.status) }}
               </span>
             </td>
-            <td data-label="创建者">
+            <td data-label="创建者" data-mobile-hide>
               <AdminEllipsisText :text="item.creatorUsername" max-width="8rem" />
             </td>
-            <td data-label="最近使用">
+            <td data-label="最近使用" data-mobile-hide>
               <AdminEllipsisText
                 :text="item.lastUsedAt ? formatTime(item.lastUsedAt) : '—'"
                 max-width="9rem"
               />
             </td>
-            <td data-label="备注">
+            <td data-label="备注" data-mobile-hide>
               <AdminEllipsisText :text="item.note" max-width="10rem" />
             </td>
             <td data-label="操作">
@@ -467,10 +569,18 @@ function copyCreatedPlainCode() {
       </div>
 
       <div class="admin-pagination-row admin-page__pager">
-        <div class="text-caption text-medium-emphasis">
-          共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
-        </div>
-        <v-pagination v-model="page" :length="totalPages" total-visible="5" />
+        <template v-if="xs">
+          <p class="admin-page__infinite-status">
+            <span v-if="loadingMore">已加载 {{ items.length }} / {{ totalElements }} · 加载中…</span>
+            <span v-else-if="items.length > 0 && !hasMore">共 {{ totalElements }} 条 · 已全部加载</span>
+            <span v-else-if="hasMore">已加载 {{ items.length }} / {{ totalElements }} · 上滑加载更多</span>
+            <span v-else>共 {{ totalElements }} 条</span>
+          </p>
+        </template>
+        <template v-else>
+          <div class="text-caption text-medium-emphasis">共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页</div>
+          <v-pagination v-model="page" :length="totalPages" total-visible="5" />
+        </template>
       </div>
     </v-card>
     </div>

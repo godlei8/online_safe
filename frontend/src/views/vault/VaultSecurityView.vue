@@ -344,6 +344,28 @@ onMounted(load)
 
 .vault-security :deep(.vault-title-row) {
   min-width: 0;
+  justify-content: flex-start;
+}
+
+.vault-security :deep(.vault-title-row__heading) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 599px) {
+  .vault-security :deep(.vault-title-row__heading) {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .vault-security__actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .vault-security__actions .vault-security__btn {
+    flex: 1 1 calc(50% - 4px);
+  }
 }
 
 .vault-security__error {

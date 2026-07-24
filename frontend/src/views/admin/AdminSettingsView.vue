@@ -309,22 +309,24 @@ const saveConfirmVariant = computed(() => (
     <template v-else-if="settings">
       <v-card class="admin-panel admin-settings__capabilities" elevation="0">
         <div class="admin-settings__cap-head">
-          <div class="admin-settings__cap-head-text">
+          <div class="admin-settings__cap-title-row">
             <h2 class="admin-settings__section-title">运行能力</h2>
-            <p class="admin-settings__section-subtitle text-medium-emphasis mb-0">
-              只读状态总览，由部署配置决定，不可在线修改
-            </p>
+            <v-btn
+              class="admin-settings__refresh"
+              variant="tonal"
+              color="primary"
+              size="small"
+              density="compact"
+              prepend-icon="mdi-refresh"
+              :loading="loading"
+              @click="loadSettings"
+            >
+              刷新
+            </v-btn>
           </div>
-          <v-btn
-            class="admin-toolbar-btn admin-settings__refresh"
-            variant="tonal"
-            color="primary"
-            prepend-icon="mdi-refresh"
-            :loading="loading"
-            @click="loadSettings"
-          >
-            刷新
-          </v-btn>
+          <p class="admin-settings__section-subtitle text-medium-emphasis mb-0">
+            只读状态总览，由部署配置决定，不可在线修改
+          </p>
         </div>
         <div class="admin-settings__cap-grid">
           <div
@@ -492,13 +494,17 @@ const saveConfirmVariant = computed(() => (
 
 .admin-settings__cap-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 4px;
   margin-bottom: 14px;
+  min-width: 0;
 }
 
-.admin-settings__cap-head-text {
+.admin-settings__cap-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -602,11 +608,28 @@ const saveConfirmVariant = computed(() => (
   font-weight: 600;
 }
 
-.admin-settings__save,
-.admin-settings__refresh {
+.admin-settings__save {
   flex: 0 0 auto;
   min-width: 64px !important;
   padding-inline: 8px !important;
+}
+
+.admin-settings__refresh {
+  flex: 0 0 auto;
+  min-width: 0 !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  padding-inline: 8px 10px !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0;
+
+  :deep(.v-btn__prepend) {
+    margin-inline-end: 4px;
+  }
+
+  :deep(.v-icon) {
+    font-size: 16px !important;
+  }
 }
 
 .admin-settings__fields {
@@ -665,17 +688,37 @@ const saveConfirmVariant = computed(() => (
 }
 
 @media (max-width: 640px) {
-  .admin-settings__cap-head {
-    flex-wrap: wrap;
+  .admin-settings__cap-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
-  .admin-settings__cap-grid,
   .admin-settings__groups {
     grid-template-columns: 1fr;
   }
 
   .admin-settings__cap-card {
-    min-height: 88px;
+    min-height: 0;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .admin-settings__cap-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+
+  .admin-settings__cap-icon .v-icon {
+    font-size: 16px !important;
+  }
+
+  .admin-settings__cap-label {
+    font-size: 0.6875rem;
+  }
+
+  .admin-settings__cap-status {
+    font-size: 0.75rem;
   }
 }
 </style>

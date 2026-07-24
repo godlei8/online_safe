@@ -13,12 +13,16 @@ import {
   type SecurityLogStats,
 } from '@/api/securityLogs'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
+import AdminFilterSheet from '@/components/AdminFilterSheet.vue'
+import { useMobileInfiniteScroll } from '@/composables/useMobileInfiniteScroll'
 
 type TimePreset = '24h' | '7d' | '30d' | 'custom'
 
-const { smAndDown } = useDisplay()
+const { smAndDown, xs } = useDisplay()
 
+const filtersOpen = ref(false)
 const loading = ref(false)
+const loadingMore = ref(false)
 const detailLoading = ref(false)
 const errorMessage = ref('')
 const detailError = ref('')
@@ -47,6 +51,7 @@ const selectedId = ref<string | null>(null)
 const detail = ref<SecurityLogDetail | null>(null)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalElements.value / pageSize)))
+const hasMore = computed(() => items.value.length < totalElements.value)
 
 const hasActiveFilters = computed(() => Boolean(
   categoryFilter.value ||
@@ -55,6 +60,23 @@ const hasActiveFilters = computed(() => Boolean(
   actorTypeFilter.value ||
   query.value.trim(),
 ))
+
+const activeFilterCount = computed(() => (
+  (categoryFilter.value ? 1 : 0) +
+  (resultFilter.value ? 1 : 0) +
+  (riskFilter.value ? 1 : 0) +
+  (actorTypeFilter.value ? 1 : 0) +
+  (timePreset.value !== '7d' ? 1 : 0)
+))
+
+function resetFilters() {
+  categoryFilter.value = ''
+  resultFilter.value = ''
+  riskFilter.value = ''
+  actorTypeFilter.value = ''
+  timePreset.value = '7d'
+  initCustomRange()
+}
 
 const emptyMessage = computed(() => (
   hasActiveFilters.value
@@ -131,8 +153,13 @@ onMounted(() => {
   void loadData()
 })
 
-watch([page, categoryFilter, resultFilter, riskFilter, actorTypeFilter], () => {
+watch([categoryFilter, resultFilter, riskFilter, actorTypeFilter], () => {
+  page.value = 1
   void loadData()
+})
+
+watch(page, () => {
+  if (!xs.value) void loadData()
 })
 
 watch(timePreset, (value) => {
@@ -175,41 +202,75 @@ function resolveTimeRange(): { from: string; to: string } | null {
   return { from: from.toISOString(), to: now.toISOString() }
 }
 
-async function loadData() {
+async function loadData(options?: { append?: boolean }) {
   const range = resolveTimeRange()
   if (!range) {
     errorMessage.value = '请填写有效的时间范围。'
     return
   }
 
-  loading.value = true
+  const append = Boolean(options?.append) && xs.value
+  if (append) {
+    if (loadingMore.value || loading.value) return
+    loadingMore.value = true
+  } else {
+    loading.value = true
+  }
   errorMessage.value = ''
   try {
-    const [statsResult, listResult] = await Promise.all([
-      securityLogsApi.stats(),
-      securityLogsApi.list({
-        page: page.value - 1,
-        size: pageSize,
-        from: range.from,
-        to: range.to,
-        category: (categoryFilter.value || undefined) as SecurityLogCategory | undefined,
-        result: (resultFilter.value || undefined) as SecurityLogResult | undefined,
-        riskLevel: (riskFilter.value || undefined) as SecurityLogRiskLevel | undefined,
-        actorType: (actorTypeFilter.value || undefined) as SecurityLogActorType | undefined,
-        q: query.value.trim() || undefined,
-      }),
-    ])
-    stats.value = statsResult
-    items.value = listResult.content
-    totalElements.value = listResult.totalElements
+    const listParams = {
+      page: page.value - 1,
+      size: pageSize,
+      from: range.from,
+      to: range.to,
+      category: (categoryFilter.value || undefined) as SecurityLogCategory | undefined,
+      result: (resultFilter.value || undefined) as SecurityLogResult | undefined,
+      riskLevel: (riskFilter.value || undefined) as SecurityLogRiskLevel | undefined,
+      actorType: (actorTypeFilter.value || undefined) as SecurityLogActorType | undefined,
+      q: query.value.trim() || undefined,
+    }
+    if (append) {
+      const listResult = await securityLogsApi.list(listParams)
+      items.value = [...items.value, ...listResult.content]
+      totalElements.value = listResult.totalElements
+    } else {
+      const [statsResult, listResult] = await Promise.all([
+        securityLogsApi.stats(),
+        securityLogsApi.list(listParams),
+      ])
+      stats.value = statsResult
+      items.value = listResult.content
+      totalElements.value = listResult.totalElements
+    }
   } catch (error) {
+    if (append) page.value = Math.max(1, page.value - 1)
     errorMessage.value = error instanceof ApiRequestError ? error.message : '加载安全日志失败，请稍后重试。'
   } finally {
     loading.value = false
+    loadingMore.value = false
   }
 }
 
+async function loadMore() {
+  if (!xs.value || !hasMore.value) return
+  page.value += 1
+  await loadData({ append: true })
+}
+
+const { scrollEl } = useMobileInfiniteScroll({
+  enabled: xs,
+  loading,
+  loadingMore,
+  hasMore,
+  loadMore,
+})
+
 async function search() {
+  page.value = 1
+  await loadData()
+}
+
+async function reload() {
   page.value = 1
   await loadData()
 }
@@ -386,51 +447,6 @@ const metadataEntries = computed(() => {
 
     <v-card class="admin-panel mb-4" elevation="0">
       <div class="admin-filter-row">
-        <v-select
-          v-model="timePreset"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="timeOptions"
-          item-title="title"
-          item-value="value"
-        />
-        <v-select
-          v-model="categoryFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="categoryOptions"
-          item-title="title"
-          item-value="value"
-        />
-        <v-select
-          v-model="resultFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="resultOptions"
-          item-title="title"
-          item-value="value"
-        />
-        <v-select
-          v-model="riskFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="riskOptions"
-          item-title="title"
-          item-value="value"
-        />
-        <v-select
-          v-model="actorTypeFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="actorTypeOptions"
-          item-title="title"
-          item-value="value"
-        />
         <v-text-field
           v-model="query"
           class="admin-filter-field"
@@ -440,37 +456,167 @@ const metadataEntries = computed(() => {
           prepend-inner-icon="mdi-magnify"
           @keyup.enter="search"
         />
-        <template v-if="timePreset === 'custom'">
-          <v-text-field
-            v-model="customFromLocal"
-            class="admin-filter-field"
+        <template v-if="!xs">
+          <v-select
+            v-model="timePreset"
+            class="admin-filter-select"
             density="compact"
             hide-details
-            placeholder="开始时间"
-            type="datetime-local"
+            :items="timeOptions"
+            item-title="title"
+            item-value="value"
           />
-          <v-text-field
-            v-model="customToLocal"
-            class="admin-filter-field"
+          <v-select
+            v-model="categoryFilter"
+            class="admin-filter-select"
             density="compact"
             hide-details
-            placeholder="结束时间"
-            type="datetime-local"
+            :items="categoryOptions"
+            item-title="title"
+            item-value="value"
           />
+          <v-select
+            v-model="resultFilter"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            :items="resultOptions"
+            item-title="title"
+            item-value="value"
+          />
+          <v-select
+            v-model="riskFilter"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            :items="riskOptions"
+            item-title="title"
+            item-value="value"
+          />
+          <v-select
+            v-model="actorTypeFilter"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            :items="actorTypeOptions"
+            item-title="title"
+            item-value="value"
+          />
+          <template v-if="timePreset === 'custom'">
+            <v-text-field
+              v-model="customFromLocal"
+              class="admin-filter-field"
+              density="compact"
+              hide-details
+              placeholder="开始时间"
+              type="datetime-local"
+            />
+            <v-text-field
+              v-model="customToLocal"
+              class="admin-filter-field"
+              density="compact"
+              hide-details
+              placeholder="结束时间"
+              type="datetime-local"
+            />
+          </template>
+          <div class="admin-filter-actions">
+            <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" @click="search">查询</v-btn>
+            <v-btn
+              class="admin-toolbar-btn"
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-refresh"
+              :loading="loading"
+              @click="reload"
+            >
+              刷新
+            </v-btn>
+          </div>
         </template>
-        <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" @click="search">查询</v-btn>
-        <v-btn
-          class="admin-toolbar-btn"
-          variant="outlined"
-          color="primary"
-          prepend-icon="mdi-refresh"
-          :loading="loading"
-          @click="loadData"
-        >
-          刷新
-        </v-btn>
+        <template v-else>
+          <div class="admin-filter-actions admin-filter-actions--tools">
+            <v-btn
+              class="admin-toolbar-btn admin-filter-trigger"
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-filter-variant"
+              :aria-label="activeFilterCount ? `筛选，已选 ${activeFilterCount} 项` : '筛选'"
+              @click="filtersOpen = true"
+            >
+              筛选
+              <span v-if="activeFilterCount" class="admin-filter-trigger__badge" aria-hidden="true">{{ activeFilterCount }}</span>
+            </v-btn>
+            <v-btn
+              class="admin-toolbar-btn admin-filter-trigger"
+              variant="outlined"
+              color="primary"
+              icon="mdi-refresh"
+              aria-label="刷新"
+              :loading="loading"
+              @click="reload"
+            />
+          </div>
+        </template>
       </div>
     </v-card>
+
+    <AdminFilterSheet v-model="filtersOpen" @apply="search" @reset="resetFilters">
+      <v-select
+        v-model="timePreset"
+        hide-details
+        :items="timeOptions"
+        item-title="title"
+        item-value="value"
+        label="时间范围"
+      />
+      <template v-if="timePreset === 'custom'">
+        <v-text-field
+          v-model="customFromLocal"
+          hide-details
+          label="开始时间"
+          type="datetime-local"
+        />
+        <v-text-field
+          v-model="customToLocal"
+          hide-details
+          label="结束时间"
+          type="datetime-local"
+        />
+      </template>
+      <v-select
+        v-model="categoryFilter"
+        hide-details
+        :items="categoryOptions"
+        item-title="title"
+        item-value="value"
+        label="分类"
+      />
+      <v-select
+        v-model="resultFilter"
+        hide-details
+        :items="resultOptions"
+        item-title="title"
+        item-value="value"
+        label="结果"
+      />
+      <v-select
+        v-model="riskFilter"
+        hide-details
+        :items="riskOptions"
+        item-title="title"
+        item-value="value"
+        label="风险"
+      />
+      <v-select
+        v-model="actorTypeFilter"
+        hide-details
+        :items="actorTypeOptions"
+        item-title="title"
+        item-value="value"
+        label="操作主体"
+      />
+    </AdminFilterSheet>
 
     <v-alert
       v-if="errorMessage"
@@ -480,7 +626,7 @@ const metadataEntries = computed(() => {
     >
       <div class="d-flex flex-wrap align-center justify-space-between gap-3">
         <span>{{ errorMessage }}</span>
-        <v-btn class="admin-toolbar-btn" size="small" variant="text" color="error" @click="loadData">重新加载</v-btn>
+        <v-btn class="admin-toolbar-btn" size="small" variant="text" color="error" @click="reload">重新加载</v-btn>
       </div>
     </v-alert>
     </div>
@@ -489,7 +635,7 @@ const metadataEntries = computed(() => {
     <v-card class="admin-panel admin-page__table-panel" elevation="0">
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-2" />
 
-      <div class="admin-page__scroll">
+      <div ref="scrollEl" class="admin-page__scroll">
         <div v-if="smAndDown" class="admin-security-log-cards">
           <div v-if="!loading && items.length === 0" class="admin-security-log-empty">
             <v-icon icon="mdi-shield-search" size="28" color="primary" />
@@ -599,21 +745,29 @@ const metadataEntries = computed(() => {
       </div>
 
       <div class="admin-pagination-row admin-page__pager">
-        <div class="text-caption text-medium-emphasis">
-          共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页，每页 {{ pageSize }} 条
-        </div>
-        <v-pagination v-model="page" :length="totalPages" density="comfortable" total-visible="5" />
+        <template v-if="xs">
+          <p class="admin-page__infinite-status">
+            <span v-if="loadingMore">已加载 {{ items.length }} / {{ totalElements }} · 加载中…</span>
+            <span v-else-if="items.length > 0 && !hasMore">共 {{ totalElements }} 条 · 已全部加载</span>
+            <span v-else-if="hasMore">已加载 {{ items.length }} / {{ totalElements }} · 上滑加载更多</span>
+            <span v-else>共 {{ totalElements }} 条</span>
+          </p>
+        </template>
+        <template v-else>
+          <div class="text-caption text-medium-emphasis">共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页，每页 {{ pageSize }} 条</div>
+          <v-pagination v-model="page" :length="totalPages" density="comfortable" total-visible="5" />
+        </template>
       </div>
     </v-card>
     </div>
 
     <v-navigation-drawer
+      v-if="!smAndDown"
       v-model="detailOpen"
       class="admin-security-log-drawer"
-      :class="{ 'admin-security-log-drawer--mobile': smAndDown }"
       location="end"
       temporary
-      :width="smAndDown ? '100%' : 420"
+      :width="420"
       color="surface"
       @update:model-value="(open) => { if (!open) closeDetail() }"
     >
@@ -677,7 +831,86 @@ const metadataEntries = computed(() => {
           </dl>
         </section>
       </div>
+
+      <div v-else class="admin-security-log-drawer__empty">
+        <p class="text-medium-emphasis">选择一条日志查看详情</p>
+      </div>
     </v-navigation-drawer>
+
+    <v-dialog
+      v-else
+      v-model="detailOpen"
+      fullscreen
+      transition="dialog-bottom-transition"
+      @update:model-value="(open) => { if (!open) closeDetail() }"
+    >
+      <v-card class="admin-security-log-sheet">
+        <header class="admin-security-log-drawer__header">
+          <div>
+            <strong>日志详情</strong>
+            <p v-if="selectedId" class="text-caption text-medium-emphasis">{{ selectedId }}</p>
+          </div>
+          <v-btn icon="mdi-close" variant="text" aria-label="关闭详情" @click="closeDetail" />
+        </header>
+
+        <v-progress-linear v-if="detailLoading" indeterminate color="primary" />
+
+        <v-alert v-else-if="detailError" type="error" variant="tonal" class="ma-4">
+          <div class="d-flex flex-wrap align-center justify-space-between gap-3">
+            <span>{{ detailError }}</span>
+            <v-btn
+              v-if="selectedId"
+              class="admin-toolbar-btn"
+              size="small"
+              variant="text"
+              color="error"
+              @click="openDetail(selectedId)"
+            >
+              重试
+            </v-btn>
+          </div>
+        </v-alert>
+
+        <div v-else-if="detail" class="admin-security-log-drawer__body">
+          <section class="admin-security-log-detail-section">
+            <h3 class="admin-panel__title">基本信息</h3>
+            <dl class="admin-security-log-detail-list">
+              <div v-for="field in detailFields" :key="field.label" class="admin-security-log-detail-list__row">
+                <dt>{{ field.label }}</dt>
+                <dd>
+                  <span
+                    v-if="field.tone"
+                    class="admin-status-text"
+                    :data-tone="field.tone"
+                  >
+                    {{ field.value }}
+                  </span>
+                  <template v-else>{{ field.value }}</template>
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section v-if="metadataEntries.length > 0" class="admin-security-log-detail-section">
+            <h3 class="admin-panel__title">事件元数据</h3>
+            <dl class="admin-security-log-detail-list">
+              <div
+                v-for="entry in metadataEntries"
+                :key="entry.key"
+                class="admin-security-log-detail-list__row"
+              >
+                <dt>{{ entry.label }}</dt>
+                <dd>{{ entry.value }}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+
+        <div v-else class="admin-security-log-drawer__empty">
+          <p class="text-medium-emphasis">{{ detailLoading ? '加载中…' : '暂无详情' }}</p>
+        </div>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -792,6 +1025,26 @@ const metadataEntries = computed(() => {
   padding: 16px;
 }
 
+.admin-security-log-drawer__empty {
+  display: grid;
+  place-items: center;
+  min-height: 12rem;
+  padding: 24px 16px;
+}
+
+.admin-security-log-sheet {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0 !important;
+}
+
+.admin-security-log-sheet .admin-security-log-drawer__body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .admin-security-log-detail-section + .admin-security-log-detail-section {
   margin-top: 20px;
 }
@@ -822,7 +1075,7 @@ const metadataEntries = computed(() => {
   word-break: break-word;
 }
 
-.admin-security-log-drawer--mobile .admin-security-log-detail-list__row {
+.admin-security-log-sheet .admin-security-log-detail-list__row {
   grid-template-columns: 1fr;
   gap: 4px;
 }

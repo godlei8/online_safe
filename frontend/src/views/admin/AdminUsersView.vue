@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useDisplay } from 'vuetify'
 import { ApiRequestError } from '@/api/client'
 import { usersApi, type ManagedUser, type ManagedUserStats } from '@/api/users'
 import AdminEllipsisText from '@/components/AdminEllipsisText.vue'
+import AdminFilterSheet from '@/components/AdminFilterSheet.vue'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
 import OsHintBar from '@/components/OsHintBar.vue'
+import { useMobileInfiniteScroll } from '@/composables/useMobileInfiniteScroll'
 
 type UserConfirmAction = 'disable' | 'enable' | 'revokeSessions'
 
+const { xs } = useDisplay()
+const filtersOpen = ref(false)
 const loading = ref(false)
+const loadingMore = ref(false)
 const acting = ref(false)
 const errorMessage = ref('')
 const toast = ref(false)
@@ -23,6 +29,13 @@ const statusFilter = ref('')
 const registeredWithin = ref('30d')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalElements.value / pageSize)))
+const hasMore = computed(() => items.value.length < totalElements.value)
+const activeFilterCount = computed(() => (statusFilter.value ? 1 : 0) + (registeredWithin.value ? 1 : 0))
+
+function resetFilters() {
+  statusFilter.value = ''
+  registeredWithin.value = ''
+}
 
 const statusOptions = [
   { title: '状态：全部', value: '' },
@@ -37,34 +50,74 @@ const registeredOptions = [
   { title: '近 90 天', value: '90d' },
 ]
 
-onMounted(loadData)
-watch([page, statusFilter, registeredWithin], loadData)
+onMounted(() => { void loadData() })
+watch([statusFilter, registeredWithin], () => {
+  page.value = 1
+  void loadData()
+})
+watch(page, () => {
+  if (!xs.value) void loadData()
+})
 
-async function loadData() {
-  loading.value = true
+async function loadData(options?: { append?: boolean }) {
+  const append = Boolean(options?.append) && xs.value
+  if (append) {
+    if (loadingMore.value || loading.value) return
+    loadingMore.value = true
+  } else {
+    loading.value = true
+  }
   errorMessage.value = ''
   try {
-    const [statsResult, listResult] = await Promise.all([
-      usersApi.stats(),
-      usersApi.list({
-        page: page.value - 1,
-        size: pageSize,
-        q: query.value.trim() || undefined,
-        status: statusFilter.value || undefined,
-        registeredWithin: registeredWithin.value || undefined,
-      }),
-    ])
-    stats.value = statsResult
-    items.value = listResult.content
-    totalElements.value = listResult.totalElements
+    const listParams = {
+      page: page.value - 1,
+      size: pageSize,
+      q: query.value.trim() || undefined,
+      status: statusFilter.value || undefined,
+      registeredWithin: registeredWithin.value || undefined,
+    }
+    if (append) {
+      const listResult = await usersApi.list(listParams)
+      items.value = [...items.value, ...listResult.content]
+      totalElements.value = listResult.totalElements
+    } else {
+      const [statsResult, listResult] = await Promise.all([
+        usersApi.stats(),
+        usersApi.list(listParams),
+      ])
+      stats.value = statsResult
+      items.value = listResult.content
+      totalElements.value = listResult.totalElements
+    }
   } catch (error) {
+    if (append) page.value = Math.max(1, page.value - 1)
     errorMessage.value = error instanceof ApiRequestError ? error.message : '加载用户失败，请稍后重试。'
   } finally {
     loading.value = false
+    loadingMore.value = false
   }
 }
 
+async function loadMore() {
+  if (!xs.value || !hasMore.value) return
+  page.value += 1
+  await loadData({ append: true })
+}
+
+const { scrollEl } = useMobileInfiniteScroll({
+  enabled: xs,
+  loading,
+  loadingMore,
+  hasMore,
+  loadMore,
+})
+
 async function search() {
+  page.value = 1
+  await loadData()
+}
+
+async function reload() {
   page.value = 1
   await loadData()
 }
@@ -238,44 +291,91 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
           prepend-inner-icon="mdi-magnify"
           @keyup.enter="search"
         />
-        <v-select
-          v-model="statusFilter"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="statusOptions"
-          item-title="title"
-          item-value="value"
-        />
-        <v-select
-          v-model="registeredWithin"
-          class="admin-filter-select"
-          density="compact"
-          hide-details
-          :items="registeredOptions"
-          item-title="title"
-          item-value="value"
-        />
-        <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" @click="search">查询</v-btn>
-        <v-btn
-          class="admin-toolbar-btn"
-          variant="outlined"
-          color="primary"
-          prepend-icon="mdi-refresh"
-          :loading="loading"
-          @click="loadData"
-        >
-          刷新
-        </v-btn>
+        <template v-if="!xs">
+          <v-select
+            v-model="statusFilter"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            :items="statusOptions"
+            item-title="title"
+            item-value="value"
+          />
+          <v-select
+            v-model="registeredWithin"
+            class="admin-filter-select"
+            density="compact"
+            hide-details
+            :items="registeredOptions"
+            item-title="title"
+            item-value="value"
+          />
+          <div class="admin-filter-actions">
+            <v-btn class="admin-toolbar-btn" variant="tonal" color="primary" @click="search">查询</v-btn>
+            <v-btn
+              class="admin-toolbar-btn"
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-refresh"
+              :loading="loading"
+              @click="reload"
+            >
+              刷新
+            </v-btn>
+          </div>
+        </template>
+        <template v-else>
+          <div class="admin-filter-actions admin-filter-actions--tools">
+            <v-btn
+              class="admin-toolbar-btn admin-filter-trigger"
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-filter-variant"
+              :aria-label="activeFilterCount ? `筛选，已选 ${activeFilterCount} 项` : '筛选'"
+              @click="filtersOpen = true"
+            >
+              筛选
+              <span v-if="activeFilterCount" class="admin-filter-trigger__badge" aria-hidden="true">{{ activeFilterCount }}</span>
+            </v-btn>
+            <v-btn
+              class="admin-toolbar-btn admin-filter-trigger"
+              variant="outlined"
+              color="primary"
+              icon="mdi-refresh"
+              aria-label="刷新"
+              :loading="loading"
+              @click="reload"
+            />
+          </div>
+        </template>
       </div>
     </v-card>
 
     <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">{{ errorMessage }}</v-alert>
     </div>
 
+    <AdminFilterSheet v-model="filtersOpen" @apply="search" @reset="resetFilters">
+      <v-select
+        v-model="statusFilter"
+        hide-details
+        :items="statusOptions"
+        item-title="title"
+        item-value="value"
+        label="账户状态"
+      />
+      <v-select
+        v-model="registeredWithin"
+        hide-details
+        :items="registeredOptions"
+        item-title="title"
+        item-value="value"
+        label="注册时间"
+      />
+    </AdminFilterSheet>
+
     <div class="admin-page__table">
     <v-card class="admin-panel admin-page__table-panel" elevation="0">
-      <div class="admin-page__scroll">
+      <div ref="scrollEl" class="admin-page__scroll">
       <v-table class="admin-table">
         <thead>
           <tr>
@@ -314,13 +414,13 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
                 {{ statusLabel(item.status) }}
               </span>
             </td>
-            <td data-label="注册时间">
+            <td data-label="注册时间" data-mobile-hide>
               <AdminEllipsisText :text="formatTime(item.createdAt)" max-width="9rem" />
             </td>
             <td data-label="最近登录">
               <AdminEllipsisText :text="formatRelative(item.lastLoginAt)" max-width="8rem" />
             </td>
-            <td data-label="密文存储">
+            <td data-label="密文存储" data-mobile-hide>
               <AdminEllipsisText :text="formatBytes(item.cipherStorageBytes)" max-width="6rem" />
             </td>
             <td data-label="记录数">{{ item.recordCount ?? '—' }}</td>
@@ -370,10 +470,18 @@ async function runAction(action: () => Promise<ManagedUser>, successText: string
       </div>
 
       <div class="admin-pagination-row admin-page__pager">
-        <div class="text-caption text-medium-emphasis">
-          共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页
-        </div>
-        <v-pagination v-model="page" :length="totalPages" total-visible="5" />
+        <template v-if="xs">
+          <p class="admin-page__infinite-status">
+            <span v-if="loadingMore">已加载 {{ items.length }} / {{ totalElements }} · 加载中…</span>
+            <span v-else-if="items.length > 0 && !hasMore">共 {{ totalElements }} 条 · 已全部加载</span>
+            <span v-else-if="hasMore">已加载 {{ items.length }} / {{ totalElements }} · 上滑加载更多</span>
+            <span v-else>共 {{ totalElements }} 条</span>
+          </p>
+        </template>
+        <template v-else>
+          <div class="text-caption text-medium-emphasis">共 {{ totalElements }} 条，第 {{ page }} / {{ totalPages }} 页</div>
+          <v-pagination v-model="page" :length="totalPages" total-visible="5" />
+        </template>
       </div>
     </v-card>
     </div>

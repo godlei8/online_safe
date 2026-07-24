@@ -182,6 +182,41 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 0;
 }
 
+.os-hint__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.os-hint__toggle-label {
+  line-height: 1.35;
+}
+
+.os-hint--collapsed {
+  align-items: center;
+  margin-bottom: 10px !important;
+}
+
+.os-hint--expanded {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 10px !important;
+}
+
+.os-hint--expanded .os-hint__body {
+  width: 100%;
+}
+
 .os-hint--info {
   color: var(--os-primary);
   background: var(--os-primary-tint);
@@ -761,6 +796,7 @@ h1, h2, h3, h4, h5, h6 {
 .auth-main {
   display: grid;
   min-height: 0;
+  align-items: stretch;
   grid-template-columns: minmax(380px, 44fr) minmax(0, 56fr);
 }
 
@@ -768,10 +804,12 @@ h1, h2, h3, h4, h5, h6 {
 .auth-aside {
   position: sticky;
   top: 0;
-  align-self: start;
+  align-self: stretch;
   display: grid;
-  height: 100dvh;
-  max-height: 100dvh;
+  /* 勿用 100dvh：会抬高 grid 行最小高度，导致右侧表单相对首屏偏下 */
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   overflow: hidden;
   place-items: center;
   padding: 40px clamp(28px, 3.5vw, 56px);
@@ -889,9 +927,17 @@ h1, h2, h3, h4, h5, h6 {
 .auth-content {
   display: grid;
   min-width: 0;
+  min-height: 0;
   place-items: center;
-  padding: clamp(28px, 4.5vw, 56px) 28px;
+  align-content: center;
+  padding: clamp(24px, 4vh, 48px) 28px;
   background: var(--os-surface);
+}
+
+/* 管理端登录：表单在右侧可视区内垂直居中，略偏上更稳 */
+.auth-page--admin .auth-content {
+  padding-top: clamp(20px, 3.5vh, 36px);
+  padding-bottom: clamp(36px, 8vh, 72px);
 }
 
 .auth-card {
@@ -1689,7 +1735,8 @@ a.vault-nav__item.vault-nav__item--active { color: var(--os-primary); }
   gap: 12px;
   align-items: baseline;
   min-width: 0;
-  flex: 1 1 220px;
+  /* 勿用 220px 作 flex-basis：竖排时会变成高度，标题下空出一大片 */
+  flex: 1 1 auto;
 }
 
 .vault-title-row h1 {
@@ -1930,6 +1977,43 @@ a.vault-nav__item.vault-nav__item--active { color: var(--os-primary); }
 }
 
 .vault-privacy-note .v-icon { color: var(--os-primary); }
+
+.vault-privacy-note__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--os-text-muted);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.vault-privacy-note__toggle:hover {
+  color: var(--os-primary);
+}
+
+.vault-privacy-note__toggle .v-icon {
+  color: var(--os-primary);
+}
+
+.vault-privacy-note__body {
+  margin: 0;
+  color: var(--os-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.vault-privacy-note--compact {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 2px 0 8px;
+}
 
 /* 置顶公告：单行条，文案静态截断 */
 .vault-pinned-announcement {
@@ -2887,13 +2971,30 @@ a.vault-record-card__source-value:hover {
 
 .vault-mobile-filter-trigger { min-height: var(--os-control-touch) !important; }
 
-.vault-mobile-filters {
+.vault-mobile-filter-trigger__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-inline-start: 4px;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--os-primary);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.vault-mobile-filters,
+.os-mobile-filters {
   display: flex;
   overflow: hidden;
   flex-direction: column;
 }
 
-.vault-mobile-filters__header {
+.vault-mobile-filters__header,
+.os-mobile-filters__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2902,9 +3003,11 @@ a.vault-record-card__source-value:hover {
   border-bottom: 1px solid var(--os-border);
 }
 
-.vault-mobile-filters__header h2 { margin: 0; font-size: 1.25rem; }
+.vault-mobile-filters__header h2,
+.os-mobile-filters__header h2 { margin: 0; font-size: 1.25rem; }
 
-.vault-mobile-filters__body {
+.vault-mobile-filters__body,
+.os-mobile-filters__body {
   display: grid;
   min-height: 0;
   gap: var(--os-space-4);
@@ -2921,7 +3024,8 @@ a.vault-record-card__source-value:hover {
   font-size: 0.8125rem;
 }
 
-.vault-mobile-filters__actions {
+.vault-mobile-filters__actions,
+.os-mobile-filters__actions {
   display: flex;
   justify-content: flex-end;
   margin-top: auto;
@@ -3401,6 +3505,21 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   border-top: 1px solid var(--os-border);
 }
 
+.admin-page__infinite-hint {
+  min-height: 20px;
+  text-align: right;
+}
+
+.admin-page__infinite-status {
+  margin: 0;
+  width: 100%;
+  color: color-mix(in srgb, var(--os-text-muted) 72%, transparent);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-align: center;
+}
+
 /* 无表格页：整页内容区滚动 */
 .admin-page--scroll {
   overflow-x: hidden;
@@ -3524,6 +3643,13 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
 .admin-filter-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-filter-actions {
+  display: inline-flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
@@ -3729,6 +3855,9 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
 /* ---------- 公告编辑弹窗 ---------- */
 .admin-announcement-editor {
+  display: flex;
+  flex-direction: column;
+  max-height: min(90dvh, 860px);
   overflow: hidden;
   border: 1px solid var(--os-primary-border) !important;
   border-radius: var(--os-radius-dialog) !important;
@@ -3738,6 +3867,7 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
 .admin-announcement-editor__hero {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 14px;
   align-items: start;
@@ -3782,8 +3912,14 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
 .admin-announcement-editor__body {
   display: grid;
+  flex: 1 1 auto;
   gap: 18px;
+  min-height: 0;
   padding: 18px 22px 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-announcement-editor__section {
@@ -3881,12 +4017,36 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
 .admin-announcement-editor__actions {
   display: flex;
+  flex: 0 0 auto;
   justify-content: flex-end;
   gap: 10px;
-  padding: 8px 22px 20px;
+  padding: 10px 22px 16px;
+  border-top: 1px solid var(--os-border);
+  background: var(--os-surface);
 }
 
 @media (max-width: 599px) {
+  .admin-announcement-editor-dialog .v-overlay__content {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100%;
+    margin: 0 !important;
+  }
+
+  .admin-announcement-editor {
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0 !important;
+  }
+
+  .admin-announcement-editor__hero {
+    padding: 14px 16px 12px;
+  }
+
+  .admin-announcement-editor__body {
+    padding: 14px 16px 8px;
+  }
+
   .admin-announcement-pin {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -3898,6 +4058,7 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
   .admin-announcement-editor__actions {
     flex-direction: column-reverse;
+    padding: 10px 16px max(12px, env(safe-area-inset-bottom));
   }
 
   .admin-announcement-editor__actions .v-btn {
@@ -4039,46 +4200,162 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   .vault-content.vault-page,
   .vault-content.vault-page--scroll { padding-bottom: 88px; }
   .vault-page__body {
-    max-height: min(30rem, calc(100dvh - 20rem));
+    max-height: min(36rem, calc(100dvh - 14rem));
   }
   .vault-title-row {
-    gap: 14px;
+    gap: 10px;
     align-items: stretch;
     flex-direction: column;
+    justify-content: flex-start;
   }
-  .vault-title-row h1 { font-size: 1.5rem; }
+  /* 竖排时勿用大 flex-basis 撑高标题区 */
+  .vault-title-row__heading {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+  .vault-page__chrome > .vault-title-row .vault-eyebrow {
+    display: none;
+  }
+  .vault-title-row h1 { font-size: 1.375rem; }
   .vault-title-row__actions {
     width: 100%;
     justify-content: stretch;
   }
-  .vault-title-row__actions .vault-export-current {
-    flex: 1 1 auto;
-  }
   .vault-title-row__actions .vault-new-record-group {
     flex: 1 1 auto;
+    width: 100%;
   }
   .vault-new-record-group .vault-new-record { flex: 1 1 auto; width: auto; }
+
+  /* 保险箱首页：标题与新增同一行 */
+  .vault-home .vault-title-row {
+    gap: 8px 12px;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+  .vault-home .vault-title-row > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .vault-home .vault-title-row__heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    width: auto;
+  }
+  .vault-home .vault-title-row h1 {
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+  .vault-home .vault-title-row__heading span {
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+  .vault-home .vault-title-row__actions {
+    width: auto;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+  .vault-home .vault-title-row__actions .vault-new-record-group {
+    flex: 0 0 auto;
+    width: auto;
+  }
+  .vault-home .vault-new-record-group .vault-new-record {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: var(--os-control-md) !important;
+    height: var(--os-control-md) !important;
+    padding-inline: 10px !important;
+  }
+  .vault-home .vault-new-record-group__caret {
+    width: 28px;
+    min-width: 28px !important;
+    min-height: var(--os-control-md) !important;
+    height: var(--os-control-md) !important;
+  }
+
   .vault-empty-state__actions { flex-direction: column; width: 100%; }
   .vault-empty-state__actions .vault-new-record-group { width: 100%; }
-  .vault-privacy-note { margin: 4px 0 16px; }
-  .vault-pinned-announcement { margin-bottom: 14px; }
-  .vault-controls { gap: 10px; padding: 0 0 14px; }
+  .vault-privacy-note { margin: 2px 0 6px; }
+  .vault-pinned-announcement { margin-bottom: 8px; min-height: 32px; }
+  .vault-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 0 0 8px;
+  }
+  .vault-search { min-width: 0; }
+  .vault-controls .vault-search {
+    .v-input__control {
+      min-height: var(--os-control-md);
+    }
+
+    .v-field {
+      --v-field-padding-start: 8px;
+      --v-field-padding-end: 8px;
+      --v-field-input-padding-top: 0;
+      --v-field-input-padding-bottom: 0;
+      font-size: 0.8125rem;
+    }
+
+    .v-field__input {
+      min-height: var(--os-control-md) !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+
+    .v-field__prepend-inner,
+    .v-field__append-inner {
+      padding-top: 0;
+      align-self: center;
+    }
+
+    .v-field__prepend-inner .v-icon,
+    .v-field__append-inner .v-icon {
+      font-size: 16px;
+    }
+
+    &.v-input--density-compact .v-field {
+      --v-input-control-height: var(--os-control-md);
+    }
+  }
+  .vault-mobile-filter-trigger {
+    --v-btn-height: var(--os-control-md);
+    flex: 0 0 auto;
+    min-width: 0 !important;
+    min-height: var(--os-control-md) !important;
+    height: var(--os-control-md) !important;
+    padding-inline: 10px 12px !important;
+    font-size: 0.8125rem !important;
+    white-space: nowrap;
+  }
+  .vault-mobile-filter-trigger__badge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.625rem;
+  }
   .vault-filters { grid-template-columns: 1fr 1fr; }
   .vault-filters .v-input:last-of-type { grid-column: 1 / -1; }
   .vault-view-controls .v-input { width: 136px; }
   .vault-empty-state { margin-top: 30px; padding: 28px 20px; }
-  .vault-records { grid-template-columns: 1fr; margin-top: 16px; }
+  .vault-records { grid-template-columns: 1fr; margin-top: 12px; }
   .vault-lock-status { display: none; }
 
-  .vault-mobile-filters {
+  .vault-mobile-filters,
+  .os-mobile-filters {
     width: 100%;
     height: 100dvh;
     max-height: 100dvh;
     border-radius: 0 !important;
   }
 
-  .vault-mobile-filters__body { overflow-y: auto; }
-  .vault-mobile-filters__actions { padding-bottom: max(var(--os-space-5), env(safe-area-inset-bottom)); }
+  .vault-mobile-filters__body,
+  .os-mobile-filters__body { overflow-y: auto; }
+  .vault-mobile-filters__actions,
+  .os-mobile-filters__actions { padding-bottom: max(var(--os-space-5), env(safe-area-inset-bottom)); }
 
   .vault-view-switch .v-btn,
   .vault-secret-row__action,
@@ -4115,40 +4392,149 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 @media (max-width: 599px) {
   .admin-stat-grid,
   .admin-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .admin-topbar__title { font-size: 1.4rem; }
+  .admin-topbar__title { font-size: 1.25rem; line-height: 1.25; }
 
   .admin-topbar {
-    align-items: flex-start;
-    padding-top: 20px;
+    align-items: center;
+    gap: 10px;
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+
+  .admin-topbar__left {
+    align-items: center;
+    min-width: 0;
   }
 
   .admin-topbar__subtitle {
-    display: -webkit-box;
+    display: none;
+  }
+
+  .admin-boundary {
+    margin: 8px 0 10px;
     overflow: hidden;
-    font-size: 0.8125rem;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    font-size: 0.6875rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .admin-panel { padding: 16px; }
-  .admin-stat-card { padding: 12px; }
+  .admin-panel:has(> .admin-filter-row) { padding: 8px 10px; }
 
-  .admin-filter-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  /* 统计卡：标签与数值同行，压低高度 */
+  .admin-stat-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 8px;
+    row-gap: 0;
+    padding: 8px 10px;
+    min-height: 0;
   }
 
-  .admin-filter-field,
-  .admin-filter-select {
-    width: 100%;
+  .admin-stat-card__label {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    font-size: 0.6875rem;
+  }
+
+  .admin-stat-card__value {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    margin: 0;
+    font-size: 1.25rem;
+    line-height: 1.15;
+  }
+
+  .admin-stat-card__icon,
+  .admin-stat-card__hint {
+    display: none;
+  }
+
+  /* 手机端筛选行：搜索 + 工具钮同行；主操作（新建等）换行全宽 */
+  .admin-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .admin-filter-field {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 7.5rem;
     max-width: none;
   }
 
-  .admin-filter-field,
-  .admin-filter-row .admin-toolbar-btn { grid-column: 1 / -1; }
+  .admin-filter-select {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 5.5rem;
+    max-width: none;
+  }
 
-  .admin-panel .v-btn.v-btn--density-default,
-  .admin-toolbar-btn { min-height: var(--os-control-touch) !important; height: var(--os-control-touch) !important; }
+  .admin-filter-trigger {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .admin-filter-trigger__badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 16px;
+    height: 16px;
+    margin-inline-start: 4px;
+    padding: 0 4px;
+    border-radius: 999px;
+    color: #fff;
+    background: var(--os-primary);
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .admin-filter-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* 与搜索同一行的工具钮组 */
+  .admin-filter-actions--tools {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  /* 主操作整行，避免挤掉搜索框 */
+  .admin-filter-actions--primary {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .admin-filter-actions .admin-toolbar-btn {
+    flex: 0 0 auto;
+    min-width: 0 !important;
+  }
+
+  .admin-filter-actions--primary .admin-toolbar-btn {
+    flex: 1 1 0;
+  }
+
+  .admin-filter-actions--tools .admin-toolbar-btn {
+    flex: 0 0 auto;
+  }
+
+  .admin-panel .v-btn.v-btn--density-default.admin-toolbar-btn,
+  .admin-toolbar-btn {
+    --v-btn-height: var(--os-control-field);
+    min-height: var(--os-control-field) !important;
+    height: var(--os-control-field) !important;
+    padding-inline: 10px !important;
+    font-size: 0.8125rem !important;
+  }
 
   .admin-table table { min-width: 0; }
   .admin-table thead { display: none; }
@@ -4156,7 +4542,7 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
   .admin-table tbody tr,
   .admin-table tbody tr:hover {
     display: grid;
-    padding: var(--os-space-3);
+    padding: 10px 12px;
     border: 1px solid var(--os-border);
     border-radius: var(--os-radius-card);
     background: var(--os-surface);
@@ -4169,7 +4555,7 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
     gap: var(--os-space-3);
     align-items: start;
     height: auto !important;
-    padding: 10px 0 !important;
+    padding: 6px 0 !important;
     border-bottom: 1px solid var(--os-border) !important;
     white-space: normal;
   }
@@ -4184,8 +4570,27 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
 
   .admin-table tbody td[colspan] { display: block; }
   .admin-table tbody td[colspan]::before { content: none; }
+  .admin-table tbody td[data-mobile-hide] { display: none !important; }
+
+  .admin-table tbody td[data-label="操作"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    padding-top: 8px !important;
+  }
+
+  .admin-table tbody td[data-label="操作"]::before { content: none; }
+
   .admin-table tbody td .v-btn:not(.admin-row-actions__btn) {
     min-height: var(--os-control-touch);
+  }
+
+  .admin-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
   }
 
   .admin-row-actions__btn {
@@ -4198,7 +4603,42 @@ a.vault-mobile-nav__item.vault-mobile-nav__item--active { color: var(--os-primar
     flex-direction: column;
   }
 
+  .admin-pagination-row:has(.admin-page__infinite-status) {
+    align-items: center;
+  }
+
   .admin-pagination-row .v-pagination { align-self: center; max-width: 100%; }
+
+  .admin-page__pager:has(.admin-page__infinite-status) {
+    margin-top: 8px;
+    padding-top: 6px;
+  }
+
+  /* 概览快捷入口：并排矮按钮 */
+  .admin-quick-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .admin-quick-item {
+    display: inline-flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 0.8125rem;
+  }
+
+  .admin-quick-item .v-icon {
+    margin: 0 !important;
+    font-size: 18px !important;
+  }
+
+  .admin-quick-item .mb-2 {
+    margin-bottom: 0 !important;
+  }
 }
 
 /* 减少动效：禁用位移与过渡 */

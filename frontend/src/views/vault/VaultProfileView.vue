@@ -192,6 +192,16 @@ onMounted(load)
 </template>
 
 <style scoped>
+.vault-profile :deep(.vault-title-row) {
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.vault-profile :deep(.vault-title-row__heading) {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
 .vault-profile__panel {
   display: grid;
   gap: 22px;
