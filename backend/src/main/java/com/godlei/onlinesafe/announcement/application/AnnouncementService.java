@@ -9,6 +9,9 @@ import com.godlei.onlinesafe.announcement.web.AnnouncementAdminResponse;
 import com.godlei.onlinesafe.announcement.web.AnnouncementInboxResponse;
 import com.godlei.onlinesafe.announcement.web.AnnouncementUpsertRequest;
 import com.godlei.onlinesafe.announcement.web.AnnouncementUserResponse;
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
+import com.godlei.onlinesafe.audit.domain.AuditEventType;
+import com.godlei.onlinesafe.audit.domain.AuditResult;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,13 +29,16 @@ public class AnnouncementService {
 
     private final AnnouncementRepository announcementRepository;
     private final AnnouncementReadRepository announcementReadRepository;
+    private final SecurityAuditService securityAuditService;
 
     public AnnouncementService(
             AnnouncementRepository announcementRepository,
-            AnnouncementReadRepository announcementReadRepository
+            AnnouncementReadRepository announcementReadRepository,
+            SecurityAuditService securityAuditService
     ) {
         this.announcementRepository = announcementRepository;
         this.announcementReadRepository = announcementReadRepository;
+        this.securityAuditService = securityAuditService;
     }
 
     @Transactional(readOnly = true)
@@ -53,7 +60,9 @@ public class AnnouncementService {
                 request.endsAt(),
                 adminId
         );
-        return AnnouncementAdminResponse.from(announcementRepository.save(announcement));
+        Announcement saved = announcementRepository.save(announcement);
+        auditAnnouncement(AuditEventType.ANNOUNCEMENT_CREATED, saved);
+        return AnnouncementAdminResponse.from(saved);
     }
 
     @Transactional
@@ -67,7 +76,9 @@ public class AnnouncementService {
                 request.startsAt(),
                 request.endsAt()
         );
-        return AnnouncementAdminResponse.from(announcementRepository.save(announcement));
+        Announcement saved = announcementRepository.save(announcement);
+        auditAnnouncement(AuditEventType.ANNOUNCEMENT_UPDATED, saved);
+        return AnnouncementAdminResponse.from(saved);
     }
 
     @Transactional
@@ -79,7 +90,9 @@ public class AnnouncementService {
         announcement.publish(Instant.now());
         // 重新发布视为新一轮触达：清除已读，用户端按最新 publishedAt 强制弹窗
         announcementReadRepository.deleteByAnnouncementId(id);
-        return AnnouncementAdminResponse.from(announcementRepository.save(announcement));
+        Announcement saved = announcementRepository.save(announcement);
+        auditAnnouncement(AuditEventType.ANNOUNCEMENT_PUBLISHED, saved);
+        return AnnouncementAdminResponse.from(saved);
     }
 
     @Transactional
@@ -89,7 +102,25 @@ public class AnnouncementService {
             throw new InvalidAnnouncementOperationException("ANNOUNCEMENT_NOT_PUBLISHED", "仅已发布公告可下线");
         }
         announcement.offline();
-        return AnnouncementAdminResponse.from(announcementRepository.save(announcement));
+        Announcement saved = announcementRepository.save(announcement);
+        auditAnnouncement(AuditEventType.ANNOUNCEMENT_OFFLINED, saved);
+        return AnnouncementAdminResponse.from(saved);
+    }
+
+    private void auditAnnouncement(AuditEventType type, Announcement announcement) {
+        SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
+        securityAuditService.recordInTx(
+                type,
+                AuditResult.SUCCESS,
+                actor.type(),
+                actor.id(),
+                actor.label(),
+                "ANNOUNCEMENT",
+                announcement.getId(),
+                announcement.getTitle(),
+                null,
+                Map.of("title", announcement.getTitle())
+        );
     }
 
     @Transactional(readOnly = true)

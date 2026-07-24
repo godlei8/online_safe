@@ -1,5 +1,6 @@
 package com.godlei.onlinesafe.auth.web;
 
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
 import com.godlei.onlinesafe.security.AppUserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
@@ -29,6 +31,7 @@ public class AuthController {
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
     private final SecurityContextRepository securityContextRepository;
     private final AppUserRepository appUserRepository;
+    private final SecurityAuditService securityAuditService;
     private final Clock clock;
 
     public AuthController(
@@ -36,12 +39,14 @@ public class AuthController {
             SessionAuthenticationStrategy sessionAuthenticationStrategy,
             SecurityContextRepository securityContextRepository,
             AppUserRepository appUserRepository,
+            SecurityAuditService securityAuditService,
             Clock clock
     ) {
         this.authenticationManager = authenticationManager;
         this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
         this.securityContextRepository = securityContextRepository;
         this.appUserRepository = appUserRepository;
+        this.securityAuditService = securityAuditService;
         this.clock = clock;
     }
 
@@ -52,9 +57,15 @@ public class AuthController {
             HttpServletRequest servletRequest,
             HttpServletResponse servletResponse
     ) {
-        Authentication authentication = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(request.identifier(), request.password())
-        );
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated(request.identifier(), request.password())
+            );
+        } catch (AuthenticationException exception) {
+            securityAuditService.recordAuthFailureUser(request.identifier(), servletRequest);
+            throw exception;
+        }
 
         sessionAuthenticationStrategy.onAuthentication(authentication, servletRequest, servletResponse);
         SecurityContext context = SecurityContextHolder.createEmptyContext();
@@ -66,6 +77,7 @@ public class AuthController {
             return appUserRepository.findById(principal.userId()).map(user -> {
                 user.recordLogin(clock.instant());
                 appUserRepository.save(user);
+                securityAuditService.recordAuthSuccessUser(user.getId(), user.getUsername(), servletRequest);
                 return SessionResponse.authenticated(user.getId(), user.getUsername(), user.getAvatarUrl());
             }).orElseGet(() -> SessionResponse.from(authentication));
         }

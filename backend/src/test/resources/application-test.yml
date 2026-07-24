@@ -25,6 +25,11 @@ app:
   vault:
     encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
     current-key-id: 1
+  audit:
+    fingerprint-key: test-audit-fingerprint-key
+    trusted-proxies: ""
+    failure-aggregate-limit-per-minute: 5
+    purge-batch-size: 100
   sms:
     provider: recording
     code-ttl-seconds: 300

@@ -3,6 +3,9 @@ package com.godlei.onlinesafe.admin.application;
 import com.godlei.onlinesafe.admin.infrastructure.UserSessionRepository;
 import com.godlei.onlinesafe.admin.web.ManagedUserResponse;
 import com.godlei.onlinesafe.admin.web.ManagedUserStatsResponse;
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
+import com.godlei.onlinesafe.audit.domain.AuditEventType;
+import com.godlei.onlinesafe.audit.domain.AuditResult;
 import com.godlei.onlinesafe.auth.domain.AppUser;
 import com.godlei.onlinesafe.auth.domain.AppUserStatus;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
@@ -28,17 +31,20 @@ public class UserManagementService {
     private final AppUserRepository appUserRepository;
     private final UserSessionRepository userSessionRepository;
     private final PhoneMasker phoneMasker;
+    private final SecurityAuditService securityAuditService;
     private final Clock clock;
 
     public UserManagementService(
             AppUserRepository appUserRepository,
             UserSessionRepository userSessionRepository,
             PhoneMasker phoneMasker,
+            SecurityAuditService securityAuditService,
             Clock clock
     ) {
         this.appUserRepository = appUserRepository;
         this.userSessionRepository = userSessionRepository;
         this.phoneMasker = phoneMasker;
+        this.securityAuditService = securityAuditService;
         this.clock = clock;
     }
 
@@ -67,25 +73,67 @@ public class UserManagementService {
     @Transactional
     public ManagedUserResponse disable(String userId) {
         AppUser user = requireUser(userId);
+        AppUserStatus previous = user.getStatus();
         user.disable();
         appUserRepository.save(user);
         userSessionRepository.deleteByPrincipalName(user.getUsername());
+        SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
+        securityAuditService.recordInTx(
+                AuditEventType.USER_DISABLED_BY_ADMIN,
+                AuditResult.SUCCESS,
+                actor.type(),
+                actor.id(),
+                actor.label(),
+                "USER",
+                user.getId(),
+                user.getUsername(),
+                null,
+                Map.of("previousStatus", previous.name(), "newStatus", AppUserStatus.DISABLED.name())
+        );
         return toResponse(user, 0);
     }
 
     @Transactional
     public ManagedUserResponse enable(String userId) {
         AppUser user = requireUser(userId);
+        AppUserStatus previous = user.getStatus();
         user.enable();
         appUserRepository.save(user);
         int sessions = userSessionRepository.countByPrincipalName(user.getUsername());
+        SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
+        securityAuditService.recordInTx(
+                AuditEventType.USER_ENABLED_BY_ADMIN,
+                AuditResult.SUCCESS,
+                actor.type(),
+                actor.id(),
+                actor.label(),
+                "USER",
+                user.getId(),
+                user.getUsername(),
+                null,
+                Map.of("previousStatus", previous.name(), "newStatus", AppUserStatus.ACTIVE.name())
+        );
         return toResponse(user, sessions);
     }
 
     @Transactional
     public ManagedUserResponse revokeSessions(String userId) {
         AppUser user = requireUser(userId);
+        int revoked = userSessionRepository.countByPrincipalName(user.getUsername());
         userSessionRepository.deleteByPrincipalName(user.getUsername());
+        SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
+        securityAuditService.recordInTx(
+                AuditEventType.USER_SESSIONS_REVOKED_BY_ADMIN,
+                AuditResult.SUCCESS,
+                actor.type(),
+                actor.id(),
+                actor.label(),
+                "USER",
+                user.getId(),
+                user.getUsername(),
+                null,
+                Map.of("sessionsRevoked", revoked)
+        );
         return toResponse(user, 0);
     }
 

@@ -48,3 +48,13 @@
 - 组件：`frontend/src/components/OsConfirmDialog.vue`
 - 样式：`frontend/src/styles/main.scss`（搜索 `os-confirm-dialog`）
 - 已接入：保险箱删除模板、标记异常；管理端邀请码删除、用户禁用/启用/使会话失效
+
+## 安全日志（2026-07-24）
+
+| 项 | 约定 |
+| --- | --- |
+| 路由 | `/admin/security-logs` |
+| 审计表 | `security_audit_event`（Flyway V16） |
+| 日志保留 | 默认 180 天；每天 03:30 清理 |
+| 指纹密钥 | 环境变量 `AUDIT_FINGERPRINT_KEY` |
+| 禁止 | 日志导出、单条删除、保险箱明文、完整 IP/UA/邀请码明文入日志 |

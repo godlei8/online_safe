@@ -1,6 +1,7 @@
 package com.godlei.onlinesafe.security;
 
 import tools.jackson.databind.ObjectMapper;
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
 import com.godlei.onlinesafe.common.web.ApiError;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,6 +19,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -68,10 +70,19 @@ public class SecurityConfig {
     }
 
     @Bean
+    LogoutSuccessHandler userLogoutSuccessHandler(SecurityAuditService securityAuditService) {
+        return (request, response, authentication) -> {
+            securityAuditService.recordLogoutUser(authentication, request);
+            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        };
+    }
+
+    @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             SecurityContextRepository securityContextRepository,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            LogoutSuccessHandler userLogoutSuccessHandler
     ) throws Exception {
         http
                 .securityContext(context -> context
@@ -109,8 +120,7 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                         .deleteCookies("ONLINE_SAFE_SESSION")
-                        .logoutSuccessHandler((request, response, authentication) ->
-                                response.setStatus(HttpServletResponse.SC_NO_CONTENT)))
+                        .logoutSuccessHandler(userLogoutSuccessHandler))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, exception) ->
                                 writeSecurityError(response, objectMapper, 401, "UNAUTHENTICATED", "请先登录", request.getRequestURI()))

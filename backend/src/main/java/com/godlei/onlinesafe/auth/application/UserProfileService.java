@@ -1,5 +1,10 @@
 package com.godlei.onlinesafe.auth.application;
 
+import com.godlei.onlinesafe.audit.application.IdentifierMasker;
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
+import com.godlei.onlinesafe.audit.domain.AuditActorType;
+import com.godlei.onlinesafe.audit.domain.AuditEventType;
+import com.godlei.onlinesafe.audit.domain.AuditResult;
 import com.godlei.onlinesafe.auth.domain.AppUser;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
 import com.godlei.onlinesafe.auth.web.ProfileResponse;
@@ -23,6 +28,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -42,6 +48,8 @@ public class UserProfileService {
     private final AvatarObjectStorage avatarObjectStorage;
     private final CosProperties cosProperties;
     private final SecurityContextRepository securityContextRepository;
+    private final SecurityAuditService securityAuditService;
+    private final IdentifierMasker identifierMasker;
     private final Clock clock;
 
     public UserProfileService(
@@ -50,6 +58,8 @@ public class UserProfileService {
             AvatarObjectStorage avatarObjectStorage,
             CosProperties cosProperties,
             SecurityContextRepository securityContextRepository,
+            SecurityAuditService securityAuditService,
+            IdentifierMasker identifierMasker,
             Clock clock
     ) {
         this.userRepository = userRepository;
@@ -57,6 +67,8 @@ public class UserProfileService {
         this.avatarObjectStorage = avatarObjectStorage;
         this.cosProperties = cosProperties;
         this.securityContextRepository = securityContextRepository;
+        this.securityAuditService = securityAuditService;
+        this.identifierMasker = identifierMasker;
         this.clock = clock;
     }
 
@@ -88,8 +100,22 @@ public class UserProfileService {
             throw new ProfileException("USERNAME_ALREADY_EXISTS", "该用户名已被占用");
         }
 
+        String previousHint = identifierMasker.maskUsername(user.getUsername());
+        String newHint = identifierMasker.maskUsername(username.display());
         user.changeUsername(username.display(), username.normalized(), now);
         userRepository.save(user);
+        securityAuditService.recordInTx(
+                AuditEventType.USERNAME_CHANGED,
+                AuditResult.SUCCESS,
+                AuditActorType.USER,
+                user.getId(),
+                user.getUsername(),
+                "USER",
+                user.getId(),
+                user.getUsername(),
+                null,
+                Map.of("previousUsernameHint", previousHint, "newUsernameHint", newHint)
+        );
         refreshPrincipal(user, request, response);
         return toResponse(user);
     }
@@ -118,6 +144,18 @@ public class UserProfileService {
             String url = avatarObjectStorage.upload(objectKey, inputStream, file.getSize(), contentType);
             user.updateAvatarUrl(url);
             userRepository.save(user);
+            securityAuditService.recordInTx(
+                    AuditEventType.USER_AVATAR_CHANGED,
+                    AuditResult.SUCCESS,
+                    AuditActorType.USER,
+                    user.getId(),
+                    user.getUsername(),
+                    "USER",
+                    user.getId(),
+                    user.getUsername(),
+                    null,
+                    null
+            );
             return toResponse(user);
         } catch (IOException exception) {
             throw new ProfileException("COS_UPLOAD_FAILED", "头像上传失败，请稍后再试");

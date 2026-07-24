@@ -1,5 +1,6 @@
 package com.godlei.onlinesafe.auth.application;
 
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
 import com.godlei.onlinesafe.auth.domain.SmsPurpose;
 import com.godlei.onlinesafe.auth.domain.SmsVerification;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
@@ -25,6 +26,7 @@ public class SmsVerificationService {
     private final SmsProperties properties;
     private final PasswordEncoder passwordEncoder;
     private final PhoneNormalizer phoneNormalizer;
+    private final SecurityAuditService securityAuditService;
     private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -35,6 +37,7 @@ public class SmsVerificationService {
             SmsProperties properties,
             PasswordEncoder passwordEncoder,
             PhoneNormalizer phoneNormalizer,
+            SecurityAuditService securityAuditService,
             Clock clock
     ) {
         this.repository = repository;
@@ -43,6 +46,7 @@ public class SmsVerificationService {
         this.properties = properties;
         this.passwordEncoder = passwordEncoder;
         this.phoneNormalizer = phoneNormalizer;
+        this.securityAuditService = securityAuditService;
         this.clock = clock;
     }
 
@@ -68,6 +72,7 @@ public class SmsVerificationService {
         repository.findFirstByPhoneAndPurposeOrderByCreatedAtDesc(phone, purpose).ifPresent(latest -> {
             Instant earliestNext = latest.getCreatedAt().plusSeconds(properties.sendIntervalSeconds());
             if (earliestNext.isAfter(now)) {
+                securityAuditService.recordSmsBlocked(phone, purpose.name(), "SMS_SEND_TOO_FREQUENT");
                 throw new SmsException("SMS_SEND_TOO_FREQUENT", "发送过于频繁，请稍后再试");
             }
         });
@@ -75,6 +80,7 @@ public class SmsVerificationService {
         Instant dayStart = now.truncatedTo(ChronoUnit.DAYS);
         long dailyCount = repository.countByPhoneAndPurposeAndCreatedAtAfter(phone, purpose, dayStart);
         if (dailyCount >= properties.sendDailyLimit()) {
+            securityAuditService.recordSmsBlocked(phone, purpose.name(), "SMS_SEND_DAILY_LIMIT");
             throw new SmsException("SMS_SEND_DAILY_LIMIT", "今日发送次数已达上限");
         }
 

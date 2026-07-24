@@ -72,6 +72,11 @@ app:
     code-length: ${SMS_CODE_LENGTH:6}
     send-interval-seconds: ${SMS_SEND_INTERVAL_SECONDS:60}
     send-daily-limit: ${SMS_SEND_DAILY_LIMIT:10}
+  audit:
+    fingerprint-key: ${AUDIT_FINGERPRINT_KEY:}
+    trusted-proxies: ${AUDIT_TRUSTED_PROXIES:}
+    failure-aggregate-limit-per-minute: ${AUDIT_FAILURE_AGGREGATE_LIMIT:5}
+    purge-batch-size: ${AUDIT_PURGE_BATCH_SIZE:5000}
   cos:
     # provider=tencent 上传腾讯云；local 写本地目录（开发默认）
     provider: ${COS_PROVIDER:local}

@@ -1,6 +1,7 @@
 package com.godlei.onlinesafe.auth.application;
 
 import com.godlei.onlinesafe.admin.infrastructure.UserSessionRepository;
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
 import com.godlei.onlinesafe.auth.domain.AppUser;
 import com.godlei.onlinesafe.auth.domain.SmsPurpose;
 import com.godlei.onlinesafe.auth.infrastructure.AppUserRepository;
@@ -23,6 +24,7 @@ public class PasswordResetService {
     private final PhoneNormalizer phoneNormalizer;
     private final UserSessionRepository userSessionRepository;
     private final PasswordResetRateLimiter rateLimiter;
+    private final SecurityAuditService securityAuditService;
 
     public PasswordResetService(
             AppUserRepository userRepository,
@@ -30,7 +32,8 @@ public class PasswordResetService {
             PasswordEncoder passwordEncoder,
             PhoneNormalizer phoneNormalizer,
             UserSessionRepository userSessionRepository,
-            PasswordResetRateLimiter rateLimiter
+            PasswordResetRateLimiter rateLimiter,
+            SecurityAuditService securityAuditService
     ) {
         this.userRepository = userRepository;
         this.smsVerificationService = smsVerificationService;
@@ -38,6 +41,7 @@ public class PasswordResetService {
         this.phoneNormalizer = phoneNormalizer;
         this.userSessionRepository = userSessionRepository;
         this.rateLimiter = rateLimiter;
+        this.securityAuditService = securityAuditService;
     }
 
     @Transactional
@@ -46,6 +50,7 @@ public class PasswordResetService {
         try {
             phone = phoneNormalizer.normalize(request.phone());
         } catch (InvalidRegistrationException exception) {
+            securityAuditService.recordPasswordResetFailed(request.phone(), "PASSWORD_RESET_FAILED");
             throw new PasswordResetException("PASSWORD_RESET_FAILED", FAILED_MESSAGE);
         }
 
@@ -58,12 +63,16 @@ public class PasswordResetService {
             throw new PasswordResetException("PASSWORD_TOO_LONG", "密码内容过长");
         }
 
-        AppUser user = userRepository.findByPhone(phone)
-                .orElseThrow(() -> new PasswordResetException("PASSWORD_RESET_FAILED", FAILED_MESSAGE));
+        AppUser user = userRepository.findByPhone(phone).orElse(null);
+        if (user == null) {
+            securityAuditService.recordPasswordResetFailed(phone, "PASSWORD_RESET_FAILED");
+            throw new PasswordResetException("PASSWORD_RESET_FAILED", FAILED_MESSAGE);
+        }
 
         try {
             smsVerificationService.verifyAndConsume(phone, SmsPurpose.RESET_PASSWORD, request.smsCode());
         } catch (SmsException exception) {
+            securityAuditService.recordPasswordResetFailed(phone, "SMS_CODE_INVALID");
             throw new PasswordResetException("PASSWORD_RESET_FAILED", FAILED_MESSAGE);
         }
 
@@ -72,5 +81,6 @@ public class PasswordResetService {
         // 登录密码与保险箱加解密无关：仅吊销会话，保留账密记录
         userSessionRepository.deleteByPrincipalName(user.getUsername());
         rateLimiter.clear("confirm:" + clientKey + ":" + phone);
+        securityAuditService.recordPasswordResetSuccess(user.getId(), user.getUsername());
     }
 }

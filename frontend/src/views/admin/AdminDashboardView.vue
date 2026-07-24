@@ -7,6 +7,7 @@ const quickLinks = [
   { title: '创建邀请码', to: '/admin/invitations', icon: 'mdi-key-plus' },
   { title: '发布公告', to: '/admin/announcements', icon: 'mdi-bullhorn-outline' },
   { title: '系统模板', to: '/admin/templates', icon: 'mdi-view-grid-plus-outline' },
+  { title: '安全日志', to: '/admin/security-logs', icon: 'mdi-shield-search' },
 ]
 
 const userStats = ref<ManagedUserStats | null>(null)
@@ -23,7 +24,7 @@ onMounted(async () => {
 <template>
   <div class="admin-dashboard">
     <v-alert type="info" variant="tonal" class="mb-6">
-      保险箱、邀请码、用户管理、公告与系统模板已开放；安全日志将陆续接入。
+      用户管理、邀请码、公告、系统模板与安全日志已开放。管理员仅可见元数据，不可查看用户保险箱明文。
     </v-alert>
 
     <div class="admin-stat-grid mb-4">

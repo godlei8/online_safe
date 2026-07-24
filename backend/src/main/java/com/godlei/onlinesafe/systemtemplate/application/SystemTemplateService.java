@@ -3,6 +3,9 @@ package com.godlei.onlinesafe.systemtemplate.application;
 import com.godlei.onlinesafe.systemtemplate.domain.SystemTemplate;
 import com.godlei.onlinesafe.systemtemplate.domain.SystemTemplateStatus;
 import com.godlei.onlinesafe.systemtemplate.infrastructure.SystemTemplateRepository;
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
+import com.godlei.onlinesafe.audit.domain.AuditEventType;
+import com.godlei.onlinesafe.audit.domain.AuditResult;
 import com.godlei.onlinesafe.systemtemplate.web.SystemTemplateAdminResponse;
 import com.godlei.onlinesafe.systemtemplate.web.SystemTemplateSortRequest;
 import com.godlei.onlinesafe.systemtemplate.web.SystemTemplateUpsertRequest;
@@ -15,16 +18,23 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class SystemTemplateService {
 
     private final SystemTemplateRepository repository;
     private final ObjectMapper objectMapper;
+    private final SecurityAuditService securityAuditService;
 
-    public SystemTemplateService(SystemTemplateRepository repository, ObjectMapper objectMapper) {
+    public SystemTemplateService(
+            SystemTemplateRepository repository,
+            ObjectMapper objectMapper,
+            SecurityAuditService securityAuditService
+    ) {
         this.repository = repository;
         this.objectMapper = objectMapper;
+        this.securityAuditService = securityAuditService;
     }
 
     @Transactional(readOnly = true)
@@ -58,6 +68,7 @@ public class SystemTemplateService {
                 sortOrder,
                 adminId
         ));
+        auditTemplate(AuditEventType.SYSTEM_TEMPLATE_CREATED, saved);
         return SystemTemplateAdminResponse.from(saved, objectMapper);
     }
 
@@ -73,7 +84,9 @@ public class SystemTemplateService {
                 request.sortOrder(),
                 adminId
         );
-        return SystemTemplateAdminResponse.from(repository.save(template), objectMapper);
+        SystemTemplate saved = repository.save(template);
+        auditTemplate(AuditEventType.SYSTEM_TEMPLATE_UPDATED, saved);
+        return SystemTemplateAdminResponse.from(saved, objectMapper);
     }
 
     @Transactional
@@ -84,7 +97,9 @@ public class SystemTemplateService {
         }
         template.publish(Instant.now());
         template.updateSortOrder(template.getSortOrder(), adminId);
-        return SystemTemplateAdminResponse.from(repository.save(template), objectMapper);
+        SystemTemplate saved = repository.save(template);
+        auditTemplate(AuditEventType.SYSTEM_TEMPLATE_PUBLISHED, saved);
+        return SystemTemplateAdminResponse.from(saved, objectMapper);
     }
 
     @Transactional
@@ -95,7 +110,9 @@ public class SystemTemplateService {
         }
         template.offline();
         template.updateSortOrder(template.getSortOrder(), adminId);
-        return SystemTemplateAdminResponse.from(repository.save(template), objectMapper);
+        SystemTemplate saved = repository.save(template);
+        auditTemplate(AuditEventType.SYSTEM_TEMPLATE_OFFLINED, saved);
+        return SystemTemplateAdminResponse.from(saved, objectMapper);
     }
 
     @Transactional
@@ -111,7 +128,27 @@ public class SystemTemplateService {
         if (template.getStatus() != SystemTemplateStatus.DRAFT) {
             throw new InvalidSystemTemplateOperationException("SYSTEM_TEMPLATE_INVALID_STATUS", "仅草稿模板可删除");
         }
+        auditTemplate(AuditEventType.SYSTEM_TEMPLATE_DELETED, template);
         repository.delete(template);
+    }
+
+    private void auditTemplate(AuditEventType type, SystemTemplate template) {
+        SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
+        Map<String, Object> metadata = type == AuditEventType.SYSTEM_TEMPLATE_DELETED
+                ? Map.of("name", template.getName())
+                : Map.of("name", template.getName(), "status", template.getStatus().name());
+        securityAuditService.recordInTx(
+                type,
+                AuditResult.SUCCESS,
+                actor.type(),
+                actor.id(),
+                actor.label(),
+                "TEMPLATE",
+                template.getId(),
+                template.getName(),
+                null,
+                metadata
+        );
     }
 
     @Transactional(readOnly = true)

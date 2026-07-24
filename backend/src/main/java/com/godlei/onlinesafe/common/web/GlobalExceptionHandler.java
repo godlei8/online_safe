@@ -6,6 +6,7 @@ import com.godlei.onlinesafe.admin.application.InvitationNotFoundException;
 import com.godlei.onlinesafe.admin.application.UserNotFoundException;
 import com.godlei.onlinesafe.announcement.application.AnnouncementNotFoundException;
 import com.godlei.onlinesafe.announcement.application.InvalidAnnouncementOperationException;
+import com.godlei.onlinesafe.audit.application.AuditQueryException;
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
 import com.godlei.onlinesafe.auth.application.PasswordResetException;
 import com.godlei.onlinesafe.auth.application.ProfileException;
@@ -181,6 +182,11 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return response(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(AuditQueryException.class)
+    ResponseEntity<ApiError> handleAuditQuery(AuditQueryException exception, HttpServletRequest request) {
+        return response(exception.getStatus(), exception.getCode(), exception.getMessage(), request, null);
     }
 
     @ExceptionHandler(AuthenticationException.class)

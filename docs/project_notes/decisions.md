@@ -60,3 +60,20 @@
 
 - 新按钮默认跟令牌走，不再写死 40/48。
 - 手机触控命中区仍用 `--os-control-touch`（40px）保证点按。
+
+## 2026-07-24 — 管理端安全日志
+
+### 背景
+
+管理端「安全日志」长期为占位页；需要可追溯登录与高权限管理操作，且不得泄露保险箱明文。
+
+### 决策
+
+1. 新增 `security_audit_event` 与统一 `SecurityAuditRecorder`。
+2. 管理写操作与审计同事务；认证失败用独立事务，不把 401 变成 500。
+3. 第一版不做日志导出与单条删除。
+4. 规格：`docs/superpowers/specs/2026-07-24-security-logs-system-settings-design.md`。
+
+### 后果
+
+- 新高权限写操作必须接入 `SecurityAuditService` / `SecurityAuditRecorder`。

@@ -14,6 +14,7 @@ import AdminInvitationsView from '@/views/admin/AdminInvitationsView.vue'
 import AdminAnnouncementsView from '@/views/admin/AdminAnnouncementsView.vue'
 import AdminUsersView from '@/views/admin/AdminUsersView.vue'
 import AdminTemplatesView from '@/views/admin/AdminTemplatesView.vue'
+import AdminSecurityLogsView from '@/views/admin/AdminSecurityLogsView.vue'
 import AdminPlaceholderView from '@/views/admin/AdminPlaceholderView.vue'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 import { useAuthStore } from '@/stores/auth'
@@ -111,7 +112,7 @@ const router = createRouter({
         {
           path: 'security-logs',
           name: 'admin-security-logs',
-          component: AdminPlaceholderView,
+          component: AdminSecurityLogsView,
           meta: { title: '安全日志', subtitle: '查看登录与管理操作日志。' },
         },
         {

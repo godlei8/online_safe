@@ -13,6 +13,9 @@ import com.godlei.onlinesafe.admin.web.CreateInvitationResponse;
 import com.godlei.onlinesafe.admin.web.InvitationResponse;
 import com.godlei.onlinesafe.admin.web.InvitationStatsResponse;
 import com.godlei.onlinesafe.admin.web.PlainInvitationCodeResponse;
+import com.godlei.onlinesafe.audit.application.SecurityAuditService;
+import com.godlei.onlinesafe.audit.domain.AuditEventType;
+import com.godlei.onlinesafe.audit.domain.AuditResult;
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +40,7 @@ public class InvitationService {
     private final InvitationCodeGenerator codeGenerator;
     private final InvitationCodeHasher codeHasher;
     private final InvitationCodeCipher codeCipher;
+    private final SecurityAuditService securityAuditService;
     private final Clock clock;
 
     public InvitationService(
@@ -46,6 +50,7 @@ public class InvitationService {
             InvitationCodeGenerator codeGenerator,
             InvitationCodeHasher codeHasher,
             InvitationCodeCipher codeCipher,
+            SecurityAuditService securityAuditService,
             Clock clock
     ) {
         this.inviteRepository = inviteRepository;
@@ -54,6 +59,7 @@ public class InvitationService {
         this.codeGenerator = codeGenerator;
         this.codeHasher = codeHasher;
         this.codeCipher = codeCipher;
+        this.securityAuditService = securityAuditService;
         this.clock = clock;
     }
 
@@ -79,6 +85,26 @@ public class InvitationService {
                 blankToNull(request.note())
         );
         inviteRepository.save(invite);
+        int validDays = request.expiresAt() == null
+                ? 0
+                : (int) Math.max(1, Duration.between(now, request.expiresAt()).toDays());
+        SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
+        securityAuditService.recordInTx(
+                AuditEventType.INVITATION_CREATED,
+                AuditResult.SUCCESS,
+                actor.type(),
+                actor.id(),
+                actor.label(),
+                "INVITATION",
+                invite.getId(),
+                invite.getCodeHint(),
+                null,
+                Map.of(
+                        "codeHint", invite.getCodeHint(),
+                        "maxUses", request.maxUses(),
+                        "validDays", validDays
+                )
+        );
         return CreateInvitationResponse.from(toResponse(invite, creatorName(adminId)), plainCode);
     }
 
@@ -116,7 +142,7 @@ public class InvitationService {
         return new InvitationStatsResponse(total, active, expiringSoon, disabledOrExhausted);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PlainInvitationCodeResponse revealPlainCode(String inviteId) {
         RegistrationInvite invite = inviteRepository.findById(inviteId)
                 .orElseThrow(InvitationNotFoundException::new);
@@ -124,6 +150,19 @@ public class InvitationService {
             throw new InvalidInvitationOperationException("INVITATION_CODE_UNAVAILABLE", "邀请码明文不可用，请新建邀请码");
         }
         String plainCode = codeCipher.decrypt(invite.getCodeEncrypted());
+        SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
+        securityAuditService.recordInTx(
+                AuditEventType.INVITATION_PLAIN_CODE_VIEWED,
+                AuditResult.SUCCESS,
+                actor.type(),
+                actor.id(),
+                actor.label(),
+                "INVITATION",
+                invite.getId(),
+                invite.getCodeHint(),
+                null,
+                Map.of("codeHint", invite.getCodeHint())
+        );
         return new PlainInvitationCodeResponse(invite.getId(), invite.getCodeHint(), plainCode);
     }
 
@@ -131,6 +170,19 @@ public class InvitationService {
     public void delete(String inviteId) {
         RegistrationInvite invite = inviteRepository.findById(inviteId)
                 .orElseThrow(InvitationNotFoundException::new);
+        SecurityAuditService.ActorSnapshot actor = securityAuditService.requireAdminActor();
+        securityAuditService.recordInTx(
+                AuditEventType.INVITATION_DELETED,
+                AuditResult.SUCCESS,
+                actor.type(),
+                actor.id(),
+                actor.label(),
+                "INVITATION",
+                invite.getId(),
+                invite.getCodeHint(),
+                null,
+                Map.of("codeHint", invite.getCodeHint())
+        );
         redemptionRepository.deleteByInviteId(invite.getId());
         inviteRepository.delete(invite);
     }
@@ -149,6 +201,18 @@ public class InvitationService {
         }
         invite.redeem(now);
         redemptionRepository.save(RegistrationInviteRedemption.of(invite.getId(), userId));
+        securityAuditService.recordInTx(
+                AuditEventType.INVITATION_REDEEMED,
+                AuditResult.SUCCESS,
+                com.godlei.onlinesafe.audit.domain.AuditActorType.USER,
+                userId,
+                null,
+                "INVITATION",
+                invite.getId(),
+                invite.getCodeHint(),
+                null,
+                Map.of("codeHint", invite.getCodeHint())
+        );
     }
 
     private InvitationResponse toResponse(RegistrationInvite invite, String creatorUsername) {
