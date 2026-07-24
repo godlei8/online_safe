@@ -5,10 +5,12 @@ import { z } from 'zod'
 import AuthShell from '@/components/AuthShell.vue'
 import { ApiRequestError } from '@/api/client'
 import { authApi } from '@/api/auth'
+import { useOsToast } from '@/composables/useOsToast'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
+const toast = useOsToast()
 const currentStep = ref(1)
 const phone = ref('')
 const username = ref('')
@@ -62,13 +64,18 @@ onBeforeUnmount(() => {
 
 function collectErrors(result: ReturnType<typeof accountSchema.safeParse> | ReturnType<typeof passwordSchema.safeParse>, target: Record<string, string>, fields: string[]) {
   for (const field of fields) delete target[field]
+  let fieldsOk = true
   if (!result.success) {
     for (const issue of result.error.issues) {
       const field = String(issue.path[0] ?? '')
-      if (fields.includes(field) && !target[field]) target[field] = issue.message
+      if (fields.includes(field) && !target[field]) {
+        target[field] = issue.message
+        fieldsOk = false
+      }
     }
   }
-  return result.success
+  // 只按本次校验字段判定，避免「仅校验手机号」时因用户名/验证码为空被误判失败
+  return fieldsOk
 }
 
 function validateAccount(fields = ['phone', 'username', 'smsCode']) {
@@ -117,19 +124,23 @@ function startCountdown(seconds = 60) {
 
 async function sendSms() {
   errorMessage.value = ''
-  if (!validateAccount(['phone'])) return
+  if (!validateAccount(['phone'])) {
+    toast.error(accountErrors.value.phone || '请先填写有效手机号')
+    return
+  }
   if (countdown.value > 0 || sendingSms.value) return
 
   sendingSms.value = true
   try {
     await authApi.sendSms(phone.value.trim(), 'REGISTER')
     startCountdown(60)
+    toast.success('验证码已发送')
   } catch (error) {
-    if (error instanceof ApiRequestError) {
-      errorMessage.value = error.message
-    } else {
-      errorMessage.value = '验证码发送失败，请稍后再试'
-    }
+    const message = error instanceof ApiRequestError
+      ? error.message
+      : '验证码发送失败，请稍后再试'
+    errorMessage.value = message
+    toast.error(message)
   } finally {
     sendingSms.value = false
   }

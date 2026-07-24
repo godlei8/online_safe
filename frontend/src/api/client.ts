@@ -30,6 +30,7 @@ function shouldTreatAsSessionExpiry(path: string): boolean {
   if (path === '/api/auth/login' || path === '/api/admin/auth/login') return false
   if (path.startsWith('/api/auth/register')) return false
   if (path.startsWith('/api/auth/password-reset')) return false
+  if (path === '/api/auth/sms/send') return false
   return path.startsWith('/api/')
 }
 
