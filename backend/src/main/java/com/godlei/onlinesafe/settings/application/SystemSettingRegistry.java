@@ -21,11 +21,14 @@ public class SystemSettingRegistry {
     public static final String INVITATION_DEFAULT_MAX_USES = "invitation.default_max_uses";
     public static final String AUDIT_RETENTION_DAYS = "security.audit_retention_days";
     public static final String MAX_ACTIVE_USER_SESSIONS = "security.max_active_user_sessions";
+    public static final String RECYCLE_BIN_RETENTION_DAYS = "security.recycle_bin_retention_days";
+    public static final String BACKUP_REMINDER_DAYS = "security.backup_reminder_days";
 
     public static final String GROUP_ACCOUNT = "ACCOUNT";
     public static final String GROUP_INVITATION = "INVITATION";
     public static final String GROUP_SECURITY_LOG = "SECURITY_LOG";
     public static final String GROUP_SESSION = "SESSION";
+    public static final String GROUP_DATA_SECURITY = "DATA_SECURITY";
 
     private final Map<String, SystemSettingDefinition> definitions;
 
@@ -95,6 +98,22 @@ public class SystemSettingRegistry {
                 180,
                 List.of(90, 180, 365),
                 AuditRiskLevel.HIGH
+        ));
+        put(map, SystemSettingDefinition.enumSetting(
+                RECYCLE_BIN_RETENTION_DAYS,
+                GROUP_DATA_SECURITY,
+                "回收站保留天数",
+                30,
+                List.of(7, 30, 90),
+                AuditRiskLevel.HIGH
+        ));
+        put(map, SystemSettingDefinition.enumSetting(
+                BACKUP_REMINDER_DAYS,
+                GROUP_DATA_SECURITY,
+                "备份提醒天数",
+                30,
+                List.of(30, 60, 90),
+                AuditRiskLevel.INFO
         ));
         this.definitions = Map.copyOf(map);
     }

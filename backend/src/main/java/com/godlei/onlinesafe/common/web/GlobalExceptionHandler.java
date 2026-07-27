@@ -8,6 +8,7 @@ import com.godlei.onlinesafe.announcement.application.AnnouncementNotFoundExcept
 import com.godlei.onlinesafe.announcement.application.InvalidAnnouncementOperationException;
 import com.godlei.onlinesafe.audit.application.AuditQueryException;
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
+import com.godlei.onlinesafe.datarecovery.application.DataRecoveryException;
 import com.godlei.onlinesafe.session.application.SessionException;
 import com.godlei.onlinesafe.settings.application.SystemSettingException;
 import com.godlei.onlinesafe.auth.application.PasswordResetException;
@@ -199,6 +200,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SessionException.class)
     ResponseEntity<ApiError> handleSession(SessionException exception, HttpServletRequest request) {
         return response(exception.getStatus(), exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(DataRecoveryException.class)
+    ResponseEntity<ApiError> handleDataRecovery(DataRecoveryException exception, HttpServletRequest request) {
+        HttpStatus status = switch (exception.getCode()) {
+            case "REAUTH_REQUIRED", "REAUTH_FAILED" -> HttpStatus.UNAUTHORIZED;
+            case "REAUTH_RATE_LIMITED" -> HttpStatus.TOO_MANY_REQUESTS;
+            case "TRASH_ASSET_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            case "RESTORE_ALREADY_RUNNING", "RESTORE_OPERATION_EXPIRED", "RESTORE_BATCH_CONFLICT" -> HttpStatus.CONFLICT;
+            case "BACKUP_FILE_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
+            case "VAULT_KEY_UNAVAILABLE", "VAULT_DATA_CORRUPTED" -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case "BACKUP_SNAPSHOT_FAILED", "RESTORE_FAILED" -> HttpStatus.INTERNAL_SERVER_ERROR;
+            default -> HttpStatus.BAD_REQUEST;
+        };
+        return response(status, exception.getCode(), exception.getMessage(), request, null);
     }
 
     @ExceptionHandler(AuthenticationException.class)

@@ -7,6 +7,15 @@
 | 表单录入弹窗（记录/模板） | `os-form-dialog*` | `docs/Design.md` |
 | 二次确认（删除/异常/禁用等） | `OsConfirmDialog` / `os-confirm-dialog*` | `docs/Design.md` §5.3.1 |
 | 表单校验/保存失败提示 | `useOsToast` / `OsToastHost`（独立弹出，勿用弹窗内红条） | `docs/Design.md` §5 |
+| 数据安全与恢复 | `/vault/security/data`、`dataSecurityApi`、`.osvault` | `docs/Design.md` §5.3.2；规格 2026-07-27 |
+
+## 数据安全 API（用户）
+
+| 能力 | 路径 |
+| --- | --- |
+| 二次验证 | `POST /api/v1/security/reauth` |
+| 摘要 / 回收站 / 备份快照 / 恢复 | `/api/v1/data-security/**` |
+| Flyway | V18 `data_recovery_operation` / `data_recovery_batch` |
 
 ## 按钮高度（相对旧规范 −10px）
 
@@ -47,7 +56,7 @@
 
 - 组件：`frontend/src/components/OsConfirmDialog.vue`
 - 样式：`frontend/src/styles/main.scss`（搜索 `os-confirm-dialog`）
-- 已接入：保险箱删除模板、标记异常；管理端邀请码删除、用户禁用/启用/使会话失效
+- 已接入：保险箱删除记录/模板（进回收站）、标记异常；管理端邀请码删除、用户禁用/启用/使会话失效
 
 ## 会话 Cookie（2026-07-24）
 

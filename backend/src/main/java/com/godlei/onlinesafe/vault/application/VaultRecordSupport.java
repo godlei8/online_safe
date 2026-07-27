@@ -4,12 +4,12 @@ import tools.jackson.databind.JsonNode;
 
 import java.util.UUID;
 
-final class VaultRecordSupport {
+public final class VaultRecordSupport {
 
     private VaultRecordSupport() {
     }
 
-    static void requireUuid(String id) {
+    public static void requireUuid(String id) {
         if (id == null || id.isBlank()) {
             throw new InvalidVaultEnvelopeException("VALIDATION_FAILED", "id 不能为空");
         }
@@ -20,7 +20,7 @@ final class VaultRecordSupport {
         }
     }
 
-    static void requireItemPayload(JsonNode payload) {
+    public static void requireItemPayload(JsonNode payload) {
         requireObject(payload);
         requireNonBlankText(payload, "name", "记录名称不能为空");
         requireNonBlankText(payload, "platform", "所属平台不能为空");
@@ -29,7 +29,7 @@ final class VaultRecordSupport {
         }
     }
 
-    static void requireTemplatePayload(JsonNode payload) {
+    public static void requireTemplatePayload(JsonNode payload) {
         requireObject(payload);
         requireNonBlankText(payload, "name", "模板名称不能为空");
         if (!payload.path("fields").isArray()) {

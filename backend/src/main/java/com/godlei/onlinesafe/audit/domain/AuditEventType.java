@@ -49,7 +49,21 @@ public enum AuditEventType {
     SECURITY_LOG_RETENTION_CHANGED("修改日志保留期限", AuditCategory.SETTINGS, AuditRiskLevel.HIGH, Set.of("previousDays", "newDays")),
     SECURITY_LOG_PURGE_SUCCEEDED("安全日志定时清理完成", AuditCategory.SYSTEM, AuditRiskLevel.INFO, Set.of("deletedCount", "cutoffAt")),
     SECURITY_LOG_PURGE_FAILED("安全日志定时清理失败", AuditCategory.SYSTEM, AuditRiskLevel.HIGH, Set.of("errorCode")),
-    AUTH_FAILURES_AGGREGATED("高频认证失败已聚合", AuditCategory.AUTH, AuditRiskLevel.HIGH, Set.of("windowSeconds"));
+    AUTH_FAILURES_AGGREGATED("高频认证失败已聚合", AuditCategory.AUTH, AuditRiskLevel.HIGH, Set.of("windowSeconds")),
+
+    USER_REAUTH_SUCCEEDED("二次验证成功", AuditCategory.AUTH, AuditRiskLevel.INFO, Set.of()),
+    USER_REAUTH_FAILED("二次验证失败", AuditCategory.AUTH, AuditRiskLevel.WARNING, Set.of("reason")),
+    USER_BACKUP_SNAPSHOT_CREATED("创建加密备份快照", AuditCategory.DATA_RECOVERY, AuditRiskLevel.WARNING, Set.of("itemCount", "templateCount", "includesTrash", "formatVersion")),
+    USER_BACKUP_RESTORE_STARTED("开始备份恢复", AuditCategory.DATA_RECOVERY, AuditRiskLevel.WARNING, Set.of("totalCount", "formatVersion")),
+    USER_BACKUP_RESTORE_SUCCEEDED("备份恢复成功", AuditCategory.DATA_RECOVERY, AuditRiskLevel.WARNING, Set.of("createdCount", "restoredCount", "skippedCount")),
+    USER_BACKUP_RESTORE_FAILED("备份恢复失败", AuditCategory.DATA_RECOVERY, AuditRiskLevel.HIGH, Set.of("errorCode", "processedCount")),
+    USER_TRASH_ASSET_RESTORED("回收站资产已恢复", AuditCategory.DATA_RECOVERY, AuditRiskLevel.INFO, Set.of("assetType")),
+    USER_TRASH_ASSET_PURGED("回收站资产永久删除", AuditCategory.DATA_RECOVERY, AuditRiskLevel.HIGH, Set.of("assetType")),
+    USER_TRASH_EMPTIED("清空回收站", AuditCategory.DATA_RECOVERY, AuditRiskLevel.HIGH, Set.of("itemCount", "templateCount")),
+    VAULT_TRASH_PURGE_SUCCEEDED("回收站定时清理完成", AuditCategory.SYSTEM, AuditRiskLevel.INFO, Set.of("deletedCount", "cutoffAt")),
+    VAULT_TRASH_PURGE_FAILED("回收站定时清理失败", AuditCategory.SYSTEM, AuditRiskLevel.HIGH, Set.of("errorCode")),
+    VAULT_INTEGRITY_SCAN_SUCCEEDED("保险箱完整性扫描完成", AuditCategory.SYSTEM, AuditRiskLevel.INFO, Set.of("checkedCount", "failedCount")),
+    VAULT_INTEGRITY_SCAN_FAILED("保险箱完整性扫描失败", AuditCategory.SYSTEM, AuditRiskLevel.HIGH, Set.of("errorCode"));
 
     private final String labelZh;
     private final AuditCategory category;

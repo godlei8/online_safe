@@ -8,5 +8,6 @@ public enum AuditCategory {
     ANNOUNCEMENT,
     TEMPLATE,
     SETTINGS,
-    SYSTEM
+    SYSTEM,
+    DATA_RECOVERY
 }

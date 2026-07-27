@@ -35,6 +35,8 @@ const updatedAt = ref('')
 const hiddenFields = ref<Record<string, boolean>>({})
 const exportConfirmOpen = ref(false)
 const exporting = ref(false)
+const deleteConfirmOpen = ref(false)
+const deleting = ref(false)
 const sortedFields = computed(() =>
   [...(payload.value?.fields ?? [])].sort((a, b) => a.order - b.order),
 )
@@ -114,6 +116,31 @@ function askExportOne() {
   exportConfirmOpen.value = true
 }
 
+function askDeleteItem() {
+  if (!payload.value) {
+    toast.error('记录尚未加载完成')
+    return
+  }
+  deleteConfirmOpen.value = true
+}
+
+async function confirmDeleteItem() {
+  if (!payload.value || deleting.value) return
+  deleting.value = true
+  try {
+    await vault.deleteItem(String(route.params.id))
+    deleteConfirmOpen.value = false
+    toast.success('已移入回收站')
+    await router.replace('/vault')
+  } catch (error) {
+    toast.error(error instanceof Error && /[\u4e00-\u9fff]/.test(error.message)
+      ? error.message
+      : '删除失败，请重试')
+  } finally {
+    deleting.value = false
+  }
+}
+
 function confirmExportOne() {
   if (!payload.value) return
   exporting.value = true
@@ -158,6 +185,17 @@ const statusTone = computed(() => {
         返回列表
       </v-btn>
       <div class="vault-detail-panel__toolbar-actions">
+        <v-btn
+          class="vault-detail-panel__action"
+          variant="outlined"
+          color="error"
+          size="small"
+          prepend-icon="mdi-delete-outline"
+          :disabled="loading || !payload || deleting"
+          @click="askDeleteItem"
+        >
+          删除
+        </v-btn>
         <v-btn
           class="vault-detail-panel__action"
           variant="outlined"
@@ -277,6 +315,17 @@ const statusTone = computed(() => {
         <p class="vault-notes">{{ payload.notes }}</p>
       </section>
     </template>
+
+    <OsConfirmDialog
+      v-model="deleteConfirmOpen"
+      variant="danger"
+      icon="mdi-delete-outline"
+      title="确认删除记录？"
+      :message="`将把「${payload?.name || '未命名'}」移入回收站，可在安全中心恢复；保留期满后自动永久删除。`"
+      confirm-text="确认删除"
+      :loading="deleting"
+      @confirm="confirmDeleteItem"
+    />
 
     <OsConfirmDialog
       v-model="exportConfirmOpen"

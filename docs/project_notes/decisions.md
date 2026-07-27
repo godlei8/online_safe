@@ -1,5 +1,25 @@
 # 架构与交互决策
 
+## 2026-07-27 — 数据安全与恢复中心（用户侧 Phase A–C）
+
+### 背景
+
+软删除无法自助恢复；Markdown 导出为明文不适合备份；`key_id` 单钥校验阻碍轮换；需要可验证的本地加密备份与安全合并恢复。
+
+### 决策
+
+1. 采用 `VaultKeyRing`：加密用当前写钥，解密按行 `key_id`；兼容单钥 env，可选密钥环文件。
+2. Session 二次验证 10 分钟（`os.security.reauthenticatedAt`），覆盖备份快照、批量恢复、永久删除。
+3. 回收站复用 `deleted_at`；保留天数白名单设置 7/30/90；定时清理 04:10。
+4. `.osvault`：浏览器 PBKDF2+AES-GCM，独立备份密码；服务端只提供明文快照且 `Cache-Control: no-store`。
+5. 恢复仅安全合并；同用户活跃 ID 跳过；跨用户 ID 重分配；批次幂等。
+6. 系统灾备 Phase D–E（离站备份、管理端灾备页）另开，本期不做。
+
+### 后果
+
+- 入口：`/vault/security/data`；API：`/api/v1/data-security/**`、`/api/v1/security/reauth`。
+- Flyway V18：`data_recovery_operation` / `data_recovery_batch`。
+
 ## 2026-07-24 — 手机 Web 布局通则（筛选栏 / 无限滚动 / chrome）
 
 ### 背景

@@ -50,6 +50,10 @@ const snackbarText = ref('')
 const abnormalConfirmOpen = ref(false)
 const abnormalTargetId = ref<string | null>(null)
 const markingAbnormal = ref(false)
+const deleteConfirmOpen = ref(false)
+const deleteTargetId = ref<string | null>(null)
+const deleteTargetName = ref('')
+const deleting = ref(false)
 const exportConfirmOpen = ref(false)
 const exporting = ref(false)
 /** null = 批量导出当前列表；有值 = 单条导出 */
@@ -157,6 +161,33 @@ function statusTone(status: string) {
 function askMarkAbnormal(id: string) {
   abnormalTargetId.value = id
   abnormalConfirmOpen.value = true
+}
+
+function askDeleteItem(id: string, name: string) {
+  deleteTargetId.value = id
+  deleteTargetName.value = name
+  deleteConfirmOpen.value = true
+}
+
+async function confirmDeleteItem() {
+  const id = deleteTargetId.value
+  if (!id) return
+  deleting.value = true
+  try {
+    await vault.deleteItem(id)
+    snackbarText.value = '已移入回收站'
+    snackbar.value = true
+    deleteConfirmOpen.value = false
+    deleteTargetId.value = null
+    deleteTargetName.value = ''
+  } catch (error) {
+    snackbarText.value = error instanceof Error && /[\u4e00-\u9fff]/.test(error.message)
+      ? error.message
+      : '删除失败，请重试'
+    snackbar.value = true
+  } finally {
+    deleting.value = false
+  }
 }
 
 const pinningId = ref<string | null>(null)
@@ -439,12 +470,12 @@ onMounted(() => {
           <v-icon :icon="privacyNoteOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'" size="18" />
         </button>
         <p v-show="privacyNoteOpen" class="vault-privacy-note__body">
-          列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常、编辑或导出，点击卡片进入详情。
+          列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常、编辑、导出或删除（进回收站），点击卡片进入详情。
         </p>
       </template>
       <template v-else>
         <v-icon icon="mdi-lock-check-outline" size="16" />
-        <span>列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常、编辑或导出，点击卡片进入详情。</span>
+        <span>列表默认显示账号与密码暗文，可点眼睛临时查看明文；左下图标可标记异常、编辑、导出或删除（进回收站），点击卡片进入详情。</span>
       </template>
     </div>
 
@@ -710,6 +741,15 @@ onMounted(() => {
             >
               <v-icon icon="mdi-download-outline" size="16" />
             </button>
+            <button
+              type="button"
+              class="vault-record-card__icon-btn vault-record-card__icon-btn--delete"
+              aria-label="删除"
+              title="删除到回收站"
+              @click="askDeleteItem(item.id, item.名称)"
+            >
+              <v-icon icon="mdi-delete-outline" size="16" />
+            </button>
           </div>
           <time v-if="item.有效期">有效期截至 {{ item.有效期 }}</time>
           <span v-else class="vault-record-card__expiry-empty">永久有效</span>
@@ -733,7 +773,7 @@ onMounted(() => {
       </div>
       <p class="vault-eyebrow">从第一条记录开始</p>
       <h2>你的保险箱还是空的</h2>
-      <p>新增后可按平台、渠道、状态在本地搜索；可复制账号密码，也可直接编辑或标记异常。</p>
+      <p>新增后可按平台、渠道、状态在本地搜索；可复制账号密码，也可编辑、标记异常或删除到回收站。</p>
       <div class="vault-empty-state__actions">
         <div class="vault-new-record-group">
           <v-btn
@@ -798,6 +838,17 @@ onMounted(() => {
       confirm-text="确认标记"
       :loading="markingAbnormal"
       @confirm="confirmMarkAbnormal"
+    />
+
+    <OsConfirmDialog
+      v-model="deleteConfirmOpen"
+      variant="danger"
+      icon="mdi-delete-outline"
+      title="确认删除记录？"
+      :message="`将把「${deleteTargetName || '未命名'}」移入回收站，可在安全中心恢复；保留期满后自动永久删除。`"
+      confirm-text="确认删除"
+      :loading="deleting"
+      @confirm="confirmDeleteItem"
     />
 
     <OsConfirmDialog

@@ -8,6 +8,7 @@ import VaultItemDetailView from '@/views/vault/VaultItemDetailView.vue'
 import VaultTemplatesView from '@/views/vault/VaultTemplatesView.vue'
 import VaultProfileView from '@/views/vault/VaultProfileView.vue'
 import VaultSecurityView from '@/views/vault/VaultSecurityView.vue'
+import VaultDataSecurityView from '@/views/vault/VaultDataSecurityView.vue'
 import AdminLoginView from '@/views/AdminLoginView.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import AdminDashboardView from '@/views/admin/AdminDashboardView.vue'
@@ -40,6 +41,7 @@ const router = createRouter({
         { path: 'templates', name: 'vault-templates', component: VaultTemplatesView },
         { path: 'profile', name: 'vault-profile', component: VaultProfileView },
         { path: 'security', name: 'vault-security', component: VaultSecurityView },
+        { path: 'security/data', name: 'vault-security-data', component: VaultDataSecurityView },
         { path: 'items/:id', name: 'vault-item', component: VaultItemDetailView },
       ],
     },

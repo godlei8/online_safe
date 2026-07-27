@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ApiRequestError } from '@/api/client'
 import { userSessionsApi, type UserSession } from '@/api/userSessions'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+import VaultSecurityNav from '@/components/data-recovery/VaultSecurityNav.vue'
 import { publishAuthBroadcast } from '@/composables/useAuthBroadcast'
 import { useOsToast } from '@/composables/useOsToast'
 import { useAuthStore } from '@/stores/auth'
@@ -163,6 +164,8 @@ onMounted(load)
         </v-btn>
       </div>
     </div>
+
+    <VaultSecurityNav />
 
     <p class="vault-privacy-note" role="note">
       <v-icon icon="mdi-shield-lock-outline" size="16" />

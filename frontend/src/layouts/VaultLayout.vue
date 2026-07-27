@@ -25,7 +25,7 @@ const avatarSrc = computed(() => auth.session.avatarUrl || '')
 const activeNav = computed(() => {
   if (route.name === 'vault-templates') return 'templates'
   if (route.name === 'vault-profile') return 'profile'
-  if (route.name === 'vault-security') return 'security'
+  if (route.name === 'vault-security' || route.name === 'vault-security-data') return 'security'
   return 'vault'
 })
 

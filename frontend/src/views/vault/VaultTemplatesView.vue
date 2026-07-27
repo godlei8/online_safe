@@ -454,7 +454,7 @@ function fieldFlags(field: { required: boolean; sensitive: boolean; copyable: bo
       v-model="deleteConfirmOpen"
       variant="danger"
       title="确认删除模板？"
-      :message="`将删除个人模板「${deleteTargetName || '未命名'}」。此操作不可恢复，是否继续？`"
+      :message="`将把个人模板「${deleteTargetName || '未命名'}」移入回收站，可在安全中心恢复；保留期满后自动永久删除。`"
       confirm-text="确认删除"
       :loading="deleting"
       @confirm="confirmRemove"

@@ -97,6 +97,7 @@ online-word/
     - 第 1 行：搜索（勿挤没）+ `admin-filter-actions--tools`（筛选/刷新）；第 2 行：`admin-filter-actions--primary`（创建/新建全宽）。
     - 次级筛选 → `AdminFilterSheet`；列表 → `useMobileInfiniteScroll` + 单行弱提示底栏。
     - 标题与小动作同行；藏副标题、收起 `OsHintBar`、统计卡压扁、`data-mobile-hide`；详情用全屏 `v-dialog`。
+15. **数据安全与恢复**：`/vault/security/data`；备份/批量恢复/永久删除须 reauth；`.osvault` 浏览器本地加密；恢复只合并不覆盖；管理员不可读用户内容。见 `AGENTS.md` 与规格 `2026-07-27-data-security-recovery-center-design.md`。
 
 ## 6. 关键 API（现状）
 

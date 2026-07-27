@@ -235,6 +235,37 @@ public class SystemSettingService {
         }
     }
 
+    /** 读取失败返回 null，回收站清理任务应跳过。 */
+    public Integer recycleBinRetentionDaysOrNull() {
+        try {
+            Object value = effectiveValue(SystemSettingRegistry.RECYCLE_BIN_RETENTION_DAYS);
+            int days = toInt(value);
+            if (days == 7 || days == 30 || days == 90) {
+                return days;
+            }
+            return null;
+        } catch (RuntimeException exception) {
+            return null;
+        }
+    }
+
+    public int recycleBinRetentionDaysSafe() {
+        Integer days = recycleBinRetentionDaysOrNull();
+        return days == null ? 30 : days;
+    }
+
+    public int backupReminderDaysSafe() {
+        try {
+            int days = toInt(effectiveValue(SystemSettingRegistry.BACKUP_REMINDER_DAYS));
+            if (days == 30 || days == 60 || days == 90) {
+                return days;
+            }
+            return 30;
+        } catch (RuntimeException exception) {
+            return 30;
+        }
+    }
+
     public void invalidateCache() {
         cache.set(null);
     }

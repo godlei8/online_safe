@@ -3,6 +3,7 @@ package com.godlei.onlinesafe.security;
 import tools.jackson.databind.ObjectMapper;
 import com.godlei.onlinesafe.audit.application.SecurityAuditService;
 import com.godlei.onlinesafe.common.web.ApiError;
+import com.godlei.onlinesafe.datarecovery.application.RecentReauthenticationService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -65,9 +66,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    LogoutSuccessHandler userLogoutSuccessHandler(SecurityAuditService securityAuditService) {
+    LogoutSuccessHandler userLogoutSuccessHandler(
+            SecurityAuditService securityAuditService,
+            RecentReauthenticationService reauthenticationService
+    ) {
         return (request, response, authentication) -> {
             securityAuditService.recordLogoutUser(authentication, request);
+            reauthenticationService.clear(request.getSession(false));
             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
         };
     }

@@ -24,6 +24,14 @@
 
 弹窗内校验失败、保存失败使用 `useOsToast().error(...)` 独立弹出，禁止再在表单顶部挂红色 `v-alert` 横幅。
 
+## 数据安全与恢复
+
+- 用户入口：`/vault/security/data`（安全中心二级导航，不占手机底栏）。
+- 创建加密备份、批量恢复、永久删除/清空回收站：须 10 分钟内二次验证（`POST /api/v1/security/reauth`）。
+- `.osvault` 在浏览器本地用独立备份密码加密；备份密码不得发往服务端或写入 storage。
+- 恢复只允许安全合并，禁止覆盖活跃记录；管理员不得下载备份或查看用户账密。
+- 危险操作使用 `OsConfirmDialog`；详见规格 `docs/superpowers/specs/2026-07-27-data-security-recovery-center-design.md`。
+
 ## 手机 Web 布局（≤599px / `xs`）
 
 新增或改版列表/工具栏时必须遵循 `docs/Design.md` §7.1，核心经验可全局复用：

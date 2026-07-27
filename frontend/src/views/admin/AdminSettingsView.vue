@@ -12,7 +12,7 @@ import {
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
 import { useOsToast } from '@/composables/useOsToast'
 
-type SettingGroup = 'ACCOUNT' | 'SESSION' | 'INVITATION' | 'SECURITY_LOG'
+type SettingGroup = 'ACCOUNT' | 'SESSION' | 'INVITATION' | 'SECURITY_LOG' | 'DATA_SECURITY'
 
 const GROUP_META: Record<SettingGroup, { title: string; subtitle: string }> = {
   ACCOUNT: { title: '注册与账号', subtitle: '注册模式、密码规则与用户名冷却期' },
@@ -22,6 +22,7 @@ const GROUP_META: Record<SettingGroup, { title: string; subtitle: string }> = {
   },
   INVITATION: { title: '邀请码默认值', subtitle: '仅影响新建邀请码表单' },
   SECURITY_LOG: { title: '安全日志', subtitle: '下次清理任务时生效' },
+  DATA_SECURITY: { title: '数据安全', subtitle: '回收站保留与备份提醒；缩短保留期不立即删除' },
 }
 
 const MODE_LABELS: Record<string, string> = {
@@ -165,7 +166,7 @@ function capabilityColor(status: string) {
   return 'info'
 }
 
-const editableGroups: SettingGroup[] = ['ACCOUNT', 'SESSION', 'INVITATION', 'SECURITY_LOG']
+const editableGroups: SettingGroup[] = ['ACCOUNT', 'SESSION', 'INVITATION', 'SECURITY_LOG', 'DATA_SECURITY']
 
 function rangeHint(item: SystemSettingItem) {
   if (item.min == null || item.max == null) return undefined
