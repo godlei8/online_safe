@@ -723,8 +723,11 @@ function restart() {
               :aria-checked="importMode === 'FAST'"
               @click="importMode = 'FAST'"
             >
-              <strong>快速导入</strong>
-              <span>按表头本地映射，速度快、不调用大模型</span>
+              <span class="vault-import-dialog__mode-title">
+                <v-icon icon="mdi-flash-outline" size="18" aria-hidden="true" />
+                <strong>快速导入</strong>
+              </span>
+              <span>对文档格式要求较高。适合表头清晰、字段规范的表格；本地映射，速度快且不调用大模型。</span>
             </button>
             <button
               type="button"
@@ -734,8 +737,11 @@ function restart() {
               :aria-checked="importMode === 'AI'"
               @click="importMode = 'AI'"
             >
-              <strong>AI 智能识别</strong>
-              <span>适合自由文本或表头不规范；需等待模型响应</span>
+              <span class="vault-import-dialog__mode-title">
+                <v-icon icon="mdi-brain" size="18" aria-hidden="true" />
+                <strong>AI 智能识别</strong>
+              </span>
+              <span>识别能力更强、对格式更宽容。适合自由文本或表头不规范的文件；需等待模型响应。</span>
             </button>
           </div>
 
@@ -773,9 +779,6 @@ function restart() {
               <p class="vault-import-dialog__drop-title">拖拽文件到此处，或点击选择</p>
               <p class="vault-import-dialog__drop-meta">支持 xlsx / xls / csv / md / txt</p>
             </template>
-          </div>
-          <div class="vault-import-dialog__formats">
-            <span v-for="ext in ['xlsx', 'xls', 'csv', 'md', 'txt']" :key="ext">.{{ ext }}</span>
           </div>
         </template>
 
@@ -1372,7 +1375,7 @@ function restart() {
 
 .vault-import-dialog__mode-card {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   padding: 10px 12px;
   border: 1px solid var(--os-border);
   border-radius: 8px;
@@ -1385,21 +1388,32 @@ function restart() {
     box-shadow 0.14s ease;
 }
 
-.vault-import-dialog__mode-card strong {
+.vault-import-dialog__mode-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--os-primary);
+}
+
+.vault-import-dialog__mode-title strong {
   color: var(--os-text-title);
   font-size: 0.875rem;
 }
 
-.vault-import-dialog__mode-card span {
+.vault-import-dialog__mode-card > span:not(.vault-import-dialog__mode-title) {
   color: var(--os-text-muted);
   font-size: 0.75rem;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .vault-import-dialog__mode-card--active {
   border-color: #9db7f5;
   background: var(--os-primary-tint);
   box-shadow: 0 0 0 3px var(--os-focus-ring);
+}
+
+.vault-import-dialog__mode-card--active .vault-import-dialog__mode-title {
+  color: var(--os-primary);
 }
 
 .vault-import-dialog__drop {
@@ -1458,21 +1472,6 @@ function restart() {
   margin: 0;
   color: var(--os-text-muted);
   font-size: 0.75rem;
-}
-
-.vault-import-dialog__formats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.vault-import-dialog__formats span {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #eef2f6;
-  color: var(--os-text-muted);
-  font-size: 0.6875rem;
-  font-weight: 600;
 }
 
 .vault-import-dialog__working {

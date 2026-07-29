@@ -62,6 +62,12 @@ services:
       COS_PREFIX: ${COS_PREFIX:-}
       COS_PATH_PREFIX: ${COS_PATH_PREFIX:-avatars}
       COS_PUBLIC_BASE_URL: ${COS_PUBLIC_BASE_URL:-}
+      IMPORT_AI_ENABLED: ${IMPORT_AI_ENABLED:-false}
+      IMPORT_AI_BASE_URL: ${IMPORT_AI_BASE_URL:-}
+      IMPORT_AI_API_KEY: ${IMPORT_AI_API_KEY:-}
+      IMPORT_AI_MODEL: ${IMPORT_AI_MODEL:-}
+      IMPORT_AI_TIMEOUT: ${IMPORT_AI_TIMEOUT:-60s}
+      IMPORT_AI_MAX_RETRIES: ${IMPORT_AI_MAX_RETRIES:-2}
     depends_on:
       mysql:
         condition: service_healthy
