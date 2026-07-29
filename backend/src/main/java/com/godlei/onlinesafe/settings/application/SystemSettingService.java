@@ -57,25 +57,36 @@ public class SystemSettingService {
         this.clock = clock;
     }
 
+    public static final String SECRET_MASK = "********";
+
     @Transactional(readOnly = true)
     public SystemSettingsResponse getAll() {
         Map<String, EffectiveValue> values = loadEffective();
         Map<String, List<SystemSettingItemResponse>> groups = new LinkedHashMap<>();
         for (SystemSettingDefinition definition : registry.all()) {
             EffectiveValue effective = values.get(definition.key());
+            Object displayValue = effective.value();
+            boolean configured = true;
+            if (definition.secret()) {
+                String raw = displayValue == null ? "" : String.valueOf(displayValue).trim();
+                configured = !raw.isBlank();
+                displayValue = configured ? SECRET_MASK : "";
+            }
             groups.computeIfAbsent(definition.group(), key -> new ArrayList<>())
                     .add(new SystemSettingItemResponse(
                             definition.key(),
                             definition.labelZh(),
                             definition.type().name(),
-                            effective.value(),
-                            definition.defaultValue(),
+                            displayValue,
+                            definition.secret() ? "" : definition.defaultValue(),
                             effective.version(),
                             definition.min(),
                             definition.max(),
                             definition.allowedValues().stream().map(String::valueOf).toList(),
                             definition.editable(),
-                            definition.riskLevel().name()
+                            definition.riskLevel().name(),
+                            definition.secret(),
+                            configured
                     ));
         }
         return new SystemSettingsResponse(groups, capabilityService.capabilities());
@@ -266,6 +277,127 @@ public class SystemSettingService {
         }
     }
 
+    public boolean smartImportEnabled() {
+        try {
+            Object value = effectiveValue(SystemSettingRegistry.SMART_IMPORT_ENABLED);
+            if (value instanceof Boolean bool) {
+                return bool;
+            }
+            return Boolean.parseBoolean(String.valueOf(value));
+        } catch (RuntimeException exception) {
+            return true;
+        }
+    }
+
+    public int smartImportConfidenceThresholdPercent() {
+        try {
+            int value = toInt(effectiveValue(SystemSettingRegistry.SMART_IMPORT_CONFIDENCE_THRESHOLD));
+            if (value < 50 || value > 95) {
+                return 75;
+            }
+            return value;
+        } catch (RuntimeException exception) {
+            return 75;
+        }
+    }
+
+    public long smartImportMaxFileBytes() {
+        try {
+            long value = toInt(effectiveValue(SystemSettingRegistry.SMART_IMPORT_MAX_FILE_BYTES));
+            if (value < 1_048_576L || value > 10_485_760L) {
+                return 5_242_880L;
+            }
+            return value;
+        } catch (RuntimeException exception) {
+            return 5_242_880L;
+        }
+    }
+
+    public int smartImportMaxRows() {
+        try {
+            int value = toInt(effectiveValue(SystemSettingRegistry.SMART_IMPORT_MAX_ROWS));
+            if (value < 10 || value > 500) {
+                return 200;
+            }
+            return value;
+        } catch (RuntimeException exception) {
+            return 200;
+        }
+    }
+
+    public int smartImportSessionTtlMinutes() {
+        try {
+            int value = toInt(effectiveValue(SystemSettingRegistry.SMART_IMPORT_SESSION_TTL_MINUTES));
+            if (value < 10 || value > 120) {
+                return 30;
+            }
+            return value;
+        } catch (RuntimeException exception) {
+            return 30;
+        }
+    }
+
+    public boolean aiModelEnabled() {
+        try {
+            Object value = effectiveValue(SystemSettingRegistry.AI_MODEL_ENABLED);
+            if (value instanceof Boolean bool) {
+                return bool;
+            }
+            return Boolean.parseBoolean(String.valueOf(value));
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
+    public String aiModelBaseUrl() {
+        try {
+            return String.valueOf(effectiveValue(SystemSettingRegistry.AI_MODEL_BASE_URL)).trim();
+        } catch (RuntimeException exception) {
+            return "";
+        }
+    }
+
+    public String aiModelName() {
+        try {
+            return String.valueOf(effectiveValue(SystemSettingRegistry.AI_MODEL_NAME)).trim();
+        } catch (RuntimeException exception) {
+            return "";
+        }
+    }
+
+    /** 内部使用：返回真实 API Key，切勿写入日志或接口响应。 */
+    public String aiModelApiKeyRaw() {
+        try {
+            return String.valueOf(effectiveValue(SystemSettingRegistry.AI_MODEL_API_KEY)).trim();
+        } catch (RuntimeException exception) {
+            return "";
+        }
+    }
+
+    public int aiModelTimeoutSeconds() {
+        try {
+            int value = toInt(effectiveValue(SystemSettingRegistry.AI_MODEL_TIMEOUT_SECONDS));
+            if (value < 10 || value > 300) {
+                return 60;
+            }
+            return value;
+        } catch (RuntimeException exception) {
+            return 60;
+        }
+    }
+
+    public int aiModelMaxRetries() {
+        try {
+            int value = toInt(effectiveValue(SystemSettingRegistry.AI_MODEL_MAX_RETRIES));
+            if (value < 0 || value > 5) {
+                return 2;
+            }
+            return value;
+        } catch (RuntimeException exception) {
+            return 2;
+        }
+    }
+
     public void invalidateCache() {
         cache.set(null);
     }
@@ -319,10 +451,24 @@ public class SystemSettingService {
             } else if (!group.equals(definition.group())) {
                 throw new SystemSettingException(HttpStatus.BAD_REQUEST, "SETTING_GROUP_MIXED", "一次只能保存同一分组的设置");
             }
+            if (definition.secret() && isSecretUnchanged(change.value())) {
+                continue;
+            }
             Object value = coerceAndValidate(definition, change.value());
             parsed.add(new ParsedChange(definition, value, change.expectedVersion()));
         }
+        if (parsed.isEmpty()) {
+            throw new SystemSettingException(HttpStatus.BAD_REQUEST, "SETTING_EMPTY", "请至少提交一项设置变更");
+        }
         return parsed;
+    }
+
+    private static boolean isSecretUnchanged(Object raw) {
+        if (raw == null) {
+            return true;
+        }
+        String text = String.valueOf(raw).trim();
+        return text.isEmpty() || SECRET_MASK.equals(text);
     }
 
     private Object coerceAndValidate(SystemSettingDefinition definition, Object raw) {

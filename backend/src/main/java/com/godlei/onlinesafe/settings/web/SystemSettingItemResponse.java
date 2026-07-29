@@ -13,6 +13,8 @@ public record SystemSettingItemResponse(
         Integer max,
         List<String> allowedValues,
         boolean editable,
-        String riskLevel
+        String riskLevel,
+        boolean secret,
+        boolean configured
 ) {
 }

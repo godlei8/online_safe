@@ -12,6 +12,8 @@ export type SystemSettingItem = {
   allowedValues: string[]
   editable: boolean
   riskLevel: string
+  secret?: boolean
+  configured?: boolean
 }
 
 export type SystemSettingCapability = {

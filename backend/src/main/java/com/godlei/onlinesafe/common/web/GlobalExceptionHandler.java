@@ -9,6 +9,7 @@ import com.godlei.onlinesafe.announcement.application.InvalidAnnouncementOperati
 import com.godlei.onlinesafe.audit.application.AuditQueryException;
 import com.godlei.onlinesafe.auth.application.InvalidRegistrationException;
 import com.godlei.onlinesafe.datarecovery.application.DataRecoveryException;
+import com.godlei.onlinesafe.vaultimport.application.VaultImportException;
 import com.godlei.onlinesafe.session.application.SessionException;
 import com.godlei.onlinesafe.settings.application.SystemSettingException;
 import com.godlei.onlinesafe.auth.application.PasswordResetException;
@@ -212,6 +213,19 @@ public class GlobalExceptionHandler {
             case "BACKUP_FILE_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
             case "VAULT_KEY_UNAVAILABLE", "VAULT_DATA_CORRUPTED" -> HttpStatus.UNPROCESSABLE_ENTITY;
             case "BACKUP_SNAPSHOT_FAILED", "RESTORE_FAILED" -> HttpStatus.INTERNAL_SERVER_ERROR;
+            default -> HttpStatus.BAD_REQUEST;
+        };
+        return response(status, exception.getCode(), exception.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(VaultImportException.class)
+    ResponseEntity<ApiError> handleVaultImport(VaultImportException exception, HttpServletRequest request) {
+        HttpStatus status = switch (exception.getCode()) {
+            case "IMPORT_REAUTH_REQUIRED" -> HttpStatus.UNAUTHORIZED;
+            case "IMPORT_SESSION_NOT_FOUND", "IMPORT_SESSION_EXPIRED" -> HttpStatus.NOT_FOUND;
+            case "IMPORT_FILE_TOO_LARGE" -> HttpStatus.PAYLOAD_TOO_LARGE;
+            case "IMPORT_DISABLED" -> HttpStatus.FORBIDDEN;
+            case "IMPORT_AI_UNAVAILABLE" -> HttpStatus.BAD_GATEWAY;
             default -> HttpStatus.BAD_REQUEST;
         };
         return response(status, exception.getCode(), exception.getMessage(), request, null);

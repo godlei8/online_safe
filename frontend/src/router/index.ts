@@ -18,6 +18,7 @@ import AdminUsersView from '@/views/admin/AdminUsersView.vue'
 import AdminTemplatesView from '@/views/admin/AdminTemplatesView.vue'
 import AdminSecurityLogsView from '@/views/admin/AdminSecurityLogsView.vue'
 import AdminSettingsView from '@/views/admin/AdminSettingsView.vue'
+import AdminAiSettingsView from '@/views/admin/AdminAiSettingsView.vue'
 import { useAdminAuthStore } from '@/stores/adminAuth'
 import { useAuthStore } from '@/stores/auth'
 import { useVaultStore } from '@/stores/vault'
@@ -118,6 +119,15 @@ const router = createRouter({
           name: 'admin-security-logs',
           component: AdminSecurityLogsView,
           meta: { title: '安全日志', subtitle: '查看登录与管理操作日志。' },
+        },
+        {
+          path: 'ai',
+          name: 'admin-ai',
+          component: AdminAiSettingsView,
+          meta: {
+            title: 'AI 能力',
+            subtitle: '智能导入与 OpenAI 兼容模型配置；API Key 脱敏展示。',
+          },
         },
         {
           path: 'settings',

@@ -16,7 +16,8 @@ public record SystemSettingDefinition(
         Integer max,
         boolean editable,
         String effectMode,
-        AuditRiskLevel riskLevel
+        AuditRiskLevel riskLevel,
+        boolean secret
 ) {
     public static SystemSettingDefinition enumSetting(
             String key,
@@ -28,7 +29,7 @@ public record SystemSettingDefinition(
     ) {
         return new SystemSettingDefinition(
                 key, group, labelZh, SettingValueType.ENUM, defaultValue,
-                Set.copyOf(allowed), null, null, true, "IMMEDIATE", riskLevel
+                Set.copyOf(allowed), null, null, true, "IMMEDIATE", riskLevel, false
         );
     }
 
@@ -43,7 +44,45 @@ public record SystemSettingDefinition(
     ) {
         return new SystemSettingDefinition(
                 key, group, labelZh, SettingValueType.INTEGER, defaultValue,
-                Set.of(), min, max, true, "IMMEDIATE", riskLevel
+                Set.of(), min, max, true, "IMMEDIATE", riskLevel, false
+        );
+    }
+
+    public static SystemSettingDefinition booleanSetting(
+            String key,
+            String group,
+            String labelZh,
+            boolean defaultValue,
+            AuditRiskLevel riskLevel
+    ) {
+        return new SystemSettingDefinition(
+                key, group, labelZh, SettingValueType.BOOLEAN, defaultValue,
+                Set.of(), null, null, true, "IMMEDIATE", riskLevel, false
+        );
+    }
+
+    public static SystemSettingDefinition stringSetting(
+            String key,
+            String group,
+            String labelZh,
+            String defaultValue,
+            AuditRiskLevel riskLevel
+    ) {
+        return new SystemSettingDefinition(
+                key, group, labelZh, SettingValueType.STRING, defaultValue == null ? "" : defaultValue,
+                Set.of(), null, null, true, "IMMEDIATE", riskLevel, false
+        );
+    }
+
+    public static SystemSettingDefinition secretStringSetting(
+            String key,
+            String group,
+            String labelZh,
+            AuditRiskLevel riskLevel
+    ) {
+        return new SystemSettingDefinition(
+                key, group, labelZh, SettingValueType.STRING, "",
+                Set.of(), null, null, true, "IMMEDIATE", riskLevel, true
         );
     }
 }

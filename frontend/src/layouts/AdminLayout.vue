@@ -18,6 +18,7 @@ const navItems = [
   { title: '公告', icon: 'mdi-bullhorn-outline', to: '/admin/announcements' },
   { title: '系统模板', icon: 'mdi-view-grid-plus-outline', to: '/admin/templates' },
   { title: '安全日志', icon: 'mdi-shield-search', to: '/admin/security-logs' },
+  { title: 'AI 能力', icon: 'mdi-brain', to: '/admin/ai' },
   { title: '系统设置', icon: 'mdi-cog-outline', to: '/admin/settings' },
 ]
 

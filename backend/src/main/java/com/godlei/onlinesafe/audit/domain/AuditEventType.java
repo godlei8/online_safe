@@ -63,7 +63,14 @@ public enum AuditEventType {
     VAULT_TRASH_PURGE_SUCCEEDED("回收站定时清理完成", AuditCategory.SYSTEM, AuditRiskLevel.INFO, Set.of("deletedCount", "cutoffAt")),
     VAULT_TRASH_PURGE_FAILED("回收站定时清理失败", AuditCategory.SYSTEM, AuditRiskLevel.HIGH, Set.of("errorCode")),
     VAULT_INTEGRITY_SCAN_SUCCEEDED("保险箱完整性扫描完成", AuditCategory.SYSTEM, AuditRiskLevel.INFO, Set.of("checkedCount", "failedCount")),
-    VAULT_INTEGRITY_SCAN_FAILED("保险箱完整性扫描失败", AuditCategory.SYSTEM, AuditRiskLevel.HIGH, Set.of("errorCode"));
+    VAULT_INTEGRITY_SCAN_FAILED("保险箱完整性扫描失败", AuditCategory.SYSTEM, AuditRiskLevel.HIGH, Set.of("errorCode")),
+
+    VAULT_IMPORT_CREATED("创建智能导入会话", AuditCategory.DATA_RECOVERY, AuditRiskLevel.INFO, Set.of("sessionId", "fileFormat", "byteSize", "importMode")),
+    VAULT_IMPORT_PARSED("智能导入文件已解析", AuditCategory.DATA_RECOVERY, AuditRiskLevel.INFO, Set.of("sessionId", "rowCount", "fileFormat", "importMode")),
+    VAULT_IMPORT_AI_DONE("智能导入 AI 映射完成", AuditCategory.DATA_RECOVERY, AuditRiskLevel.INFO, Set.of("sessionId", "readyCount", "needsReviewCount", "skippedCount", "modelName", "degraded", "importMode")),
+    VAULT_IMPORT_COMMITTED("智能导入已提交", AuditCategory.DATA_RECOVERY, AuditRiskLevel.WARNING, Set.of("sessionId", "succeededCount", "failedCount")),
+    VAULT_IMPORT_FAILED("智能导入失败", AuditCategory.DATA_RECOVERY, AuditRiskLevel.HIGH, Set.of("sessionId", "errorCode")),
+    VAULT_IMPORT_DISCARDED("智能导入会话已放弃", AuditCategory.DATA_RECOVERY, AuditRiskLevel.INFO, Set.of("sessionId"));
 
     private final String labelZh;
     private final AuditCategory category;

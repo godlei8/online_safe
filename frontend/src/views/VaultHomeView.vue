@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useRouter } from 'vue-router'
 import OsConfirmDialog from '@/components/OsConfirmDialog.vue'
+import VaultImportDialog from '@/components/vault/VaultImportDialog.vue'
 import { useOsToast } from '@/composables/useOsToast'
 import { useVaultItemEditor } from '@/composables/useVaultItemEditor'
 import {
@@ -63,6 +64,7 @@ const revealedPasswordIds = ref<Record<string, boolean>>({})
 const templatePickerOpen = ref(false)
 const templatePickerTab = ref<TemplatePickerTab>('private')
 const templatePickerLoading = ref(false)
+const importOpen = ref(false)
 
 const records = computed(() => vault.items.map(({ envelope, payload }) => {
   const { account, password } = pickListCredentials(payload.fields)
@@ -404,6 +406,18 @@ onMounted(() => {
         <v-btn
           v-if="!xs"
           class="vault-export-current"
+          variant="outlined"
+          color="primary"
+          prepend-icon="mdi-file-upload-outline"
+          :disabled="loading"
+          aria-label="智能导入"
+          @click="importOpen = true"
+        >
+          导入
+        </v-btn>
+        <v-btn
+          v-if="!xs"
+          class="vault-export-current"
           variant="tonal"
           color="primary"
           prepend-icon="mdi-download-outline"
@@ -438,6 +452,14 @@ onMounted(() => {
                 title="从模板创建"
                 subtitle="选用个人或系统模板"
                 @click="openTemplatePicker"
+              />
+              <v-list-item
+                v-if="xs"
+                prepend-icon="mdi-file-upload-outline"
+                title="智能导入"
+                subtitle="从 Excel / Markdown / 文本导入"
+                :disabled="loading"
+                @click="importOpen = true"
               />
               <v-list-item
                 v-if="xs"
@@ -861,6 +883,8 @@ onMounted(() => {
       :loading="exporting"
       @confirm="confirmExport"
     />
+
+    <VaultImportDialog v-model="importOpen" @imported="loadRecords" />
 
     <v-dialog
       v-model="templatePickerOpen"

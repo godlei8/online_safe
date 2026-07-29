@@ -408,6 +408,16 @@ const saveConfirmVariant = computed(() => (
                   density="compact"
                   hide-details
                 />
+                <v-switch
+                  v-else-if="item.type === 'BOOLEAN'"
+                  v-model="drafts[item.key]"
+                  class="admin-settings__field"
+                  :label="item.labelZh"
+                  color="primary"
+                  density="compact"
+                  hide-details
+                  :disabled="!item.editable || savingGroup !== null"
+                />
                 <v-text-field
                   v-else
                   v-model.number="drafts[item.key]"
@@ -575,7 +585,8 @@ const saveConfirmVariant = computed(() => (
   display: flex;
   align-items: center;
   min-height: 0;
-  margin: 2px 0 -2px;
+  margin: 0;
+  padding: 2px 0 4px;
 }
 
 .admin-settings__groups {

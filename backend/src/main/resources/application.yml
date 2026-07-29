@@ -21,8 +21,8 @@ spring:
       initialize-schema: never
   servlet:
     multipart:
-      max-file-size: 2MB
-      max-request-size: 2MB
+      max-file-size: 5MB
+      max-request-size: 5MB
 
 server:
   shutdown: graceful
@@ -68,6 +68,14 @@ app:
     max-templates: ${DATA_RECOVERY_MAX_TEMPLATES:500}
     batch-size: ${DATA_RECOVERY_BATCH_SIZE:100}
     max-file-bytes: ${DATA_RECOVERY_MAX_FILE_BYTES:20971520}
+  import:
+    ai:
+      enabled: ${IMPORT_AI_ENABLED:false}
+      base-url: ${IMPORT_AI_BASE_URL:}
+      api-key: ${IMPORT_AI_API_KEY:}
+      model: ${IMPORT_AI_MODEL:}
+      timeout: ${IMPORT_AI_TIMEOUT:60s}
+      max-retries: ${IMPORT_AI_MAX_RETRIES:2}
   version: ${APP_VERSION:dev}
   sms:
     # provider=aliyun 正式发送；本地未配密钥时自动降级为 logging（日志输出验证码）。
